@@ -19,6 +19,7 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+	let selectedRole = 'kids'; // Default to kids role
 
 	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
 
@@ -40,12 +41,13 @@
 			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
+				localStorage.setItem('selectedRole', selectedRole);
 			}
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-			const redirectPath = querystringValue('redirect') || '/';
+			const redirectPath = selectedRole === 'parents' ? '/parent' : (querystringValue('redirect') || '/');
 			goto(redirectPath);
 		}
 	};
@@ -237,6 +239,32 @@
 										)}
 									</div>
 								{/if}
+							</div>
+
+							<!-- Role selector - between title and form -->
+							<div class="flex justify-center gap-4 mt-4 mb-4">
+								<button
+									type="button"
+									class={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+										selectedRole === 'kids'
+											? 'bg-blue-500 text-white'
+											: 'bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white'
+									}`}
+									on:click={() => (selectedRole = 'kids')}
+								>
+									{$i18n.t('For Kids')}
+								</button>
+								<button
+									type="button"
+									class={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+										selectedRole === 'parents'
+											? 'bg-blue-500 text-white'
+											: 'bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white'
+									}`}
+									on:click={() => (selectedRole = 'parents')}
+								>
+									{$i18n.t('For Parents')}
+								</button>
 							</div>
 
 							{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
