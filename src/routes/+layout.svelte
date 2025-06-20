@@ -33,6 +33,7 @@
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { applyTheme } from '$lib/utils/theme';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -462,8 +463,8 @@
 	};
 
 	onMount(async () => {
-		if (typeof window !== 'undefined' && window.applyTheme) {
-			window.applyTheme();
+		if (typeof window !== 'undefined') {
+			applyTheme();
 		}
 
 		if (window?.electronAPI) {
@@ -512,6 +513,13 @@
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
+
+		// Subscribe to theme changes
+		theme.subscribe((newTheme) => {
+			if (typeof window !== 'undefined') {
+				applyTheme();
+			}
+		});
 
 		const onResize = () => {
 			if (window.innerWidth < BREAKPOINT) {

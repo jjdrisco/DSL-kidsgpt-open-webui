@@ -11,7 +11,8 @@
 		showControls,
 		showSidebar,
 		temporaryChatEnabled,
-		user
+		user,
+		theme
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -23,10 +24,14 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import Sun from '../icons/Sun.svelte';
+	import Moon from '../icons/Moon.svelte';
 	import Map from '../icons/Map.svelte';
 	import { stringify } from 'postcss';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Plus from '../icons/Plus.svelte';
+
+	import { toggleTheme, getEffectiveTheme } from '$lib/utils/theme';
 
 	const i18n = getContext('i18n');
 
@@ -40,6 +45,9 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+	
+	// Reactive statement to get effective theme
+	$: effectiveTheme = getEffectiveTheme();
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -146,6 +154,24 @@
 						</button>
 					</Tooltip>
 				{/if}
+
+				<Tooltip content={effectiveTheme === 'dark' ? $i18n.t('Switch to Light Mode') : $i18n.t('Switch to Dark Mode')}>
+					<button
+						class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						on:click={() => {
+							toggleTheme();
+						}}
+						aria-label={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+					>
+						<div class=" m-auto self-center">
+							{#if effectiveTheme === 'dark'}
+								<Sun className=" size-5" strokeWidth="2" />
+							{:else}
+								<Moon className=" size-5" strokeWidth="2" />
+							{/if}
+						</div>
+					</button>
+				</Tooltip>
 
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
