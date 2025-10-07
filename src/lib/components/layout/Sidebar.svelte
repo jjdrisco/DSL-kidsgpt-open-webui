@@ -626,6 +626,32 @@
 					</div>
 				{/if}
 
+				{#if localStorage.getItem('selectedRole') === 'kids'}
+					<div class="">
+						<Tooltip content="Child Profile" placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/kids/profile"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/kids/profile');
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label="Child Profile"
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<svg class="size-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+									</svg>
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
 				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 					<div class="">
 						<Tooltip content={$i18n.t('Workspace')} placement="right">

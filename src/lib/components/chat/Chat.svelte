@@ -93,6 +93,22 @@ import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 import SelectionInput from './SelectionInput.svelte';
 let selectionSwitchAfterResponse = false;
 let lastMessageIdAtDone: string | null = null;
+
+// Child profile related variables
+interface ChildProfileItem {
+	name: string;
+	age: string;
+	gender: string;
+	characteristics: string;
+	parentingStyle: string;
+	parentGender: string;
+	parentAge: string;
+	parentPreferences: string;
+}
+
+let showChildProfilePopup = false;
+let childProfiles: ChildProfileItem[] = [];
+let selectedChildIndex = 0;
 $: {
     if (
         selectionSwitchAfterResponse &&
@@ -468,6 +484,10 @@ $: if (selectedModels && chatIdProp !== '') {
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
+
+		// Clear popup flag on every page refresh to ensure it shows
+		sessionStorage.removeItem('childProfilePopupShown');
+		loadChildProfiles();
 
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
@@ -1392,6 +1412,41 @@ const initNewChat = async () => {
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
+
+	// Child profile functions
+	const loadChildProfiles = () => {
+		const savedProfiles = localStorage.getItem('childProfiles');
+		if (savedProfiles) {
+			try {
+				childProfiles = JSON.parse(savedProfiles);
+				// Show popup if we have profiles and haven't shown it yet
+				if (childProfiles.length > 0 && !sessionStorage.getItem('childProfilePopupShown')) {
+					showChildProfilePopup = true;
+					sessionStorage.setItem('childProfilePopupShown', 'true');
+				}
+			} catch (error) {
+				console.error('Error parsing child profiles:', error);
+				childProfiles = [];
+			}
+		} else {
+			// Show popup even if no profiles exist to guide user setup
+			if (!sessionStorage.getItem('childProfilePopupShown')) {
+				showChildProfilePopup = true;
+				sessionStorage.setItem('childProfilePopupShown', 'true');
+			}
+		}
+	};
+
+	const closeChildProfilePopup = () => {
+		showChildProfilePopup = false;
+	};
+
+	const selectChildInPopup = (index: number) => {
+		selectedChildIndex = index;
+	};
+
+	$: currentChild = childProfiles[selectedChildIndex];
+	$: isKidsMode = localStorage.getItem('selectedRole') === 'kids';
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
@@ -2481,6 +2536,43 @@ Key guidelines:
 								/>
 							</div>
 						{/if}
+
+						<!-- Child Profile Info Display -->
+						{#if isKidsMode}
+							<div class="bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 border-l-4 border-blue-500 mx-4 mb-3 p-3 rounded-lg shadow-md">
+								<div class="flex items-center justify-between">
+									<div class="flex items-center space-x-3">
+										<div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+											{currentChild?.name ? currentChild.name.charAt(0).toUpperCase() : 'K'}
+										</div>
+										<div>
+											{#if currentChild}
+												<p class="text-sm font-medium text-gray-900 dark:text-white">
+													{currentChild.name || 'Kid'} • Age: {currentChild.age || 'Not set'} • Gender: {currentChild.gender || 'Not set'}
+												</p>
+												<p class="text-xs text-gray-600 dark:text-gray-400 truncate max-w-xs">
+													{currentChild.characteristics || 'No characteristics set'}
+												</p>
+											{:else}
+												<p class="text-sm font-medium text-gray-900 dark:text-white">
+													Kids Mode
+												</p>
+												<p class="text-xs text-gray-600 dark:text-gray-400">
+													Set up your profile for a personalized experience
+												</p>
+											{/if}
+										</div>
+									</div>
+									<button
+										type="button"
+										class="text-xs bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors"
+										on:click={() => goto('/kids/profile')}
+									>
+										{currentChild ? 'Edit Profile' : 'Set Up Profile'}
+									</button>
+								</div>
+							</div>
+						{/if}
 					</div>
 				</Pane>
 
@@ -2511,6 +2603,156 @@ Key guidelines:
 		<div class=" flex items-center justify-center h-full w-full">
 			<div class="m-auto">
 				<Spinner />
+			</div>
+		</div>
+	{/if}
+
+	<!-- Child Profile Popup -->
+	{#if showChildProfilePopup}
+		<div 
+			class="fixed inset-0 z-50 overflow-y-auto bg-black/50"
+			on:click={closeChildProfilePopup}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Child Profile Popup"
+		>
+			<div class="flex min-h-screen items-center justify-center p-4">
+				<div 
+					class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full"
+					on:click|stopPropagation
+				>
+					<!-- Close button -->
+					<button
+						type="button"
+						class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+						on:click={closeChildProfilePopup}
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+
+					{#if childProfiles.length > 1}
+						<!-- Multiple children - show selection -->
+						<div class="text-center mb-6">
+							<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+								Your Saved Child Profiles
+							</h2>
+							<p class="text-gray-600 dark:text-gray-400">
+								Select a child profile to continue
+							</p>
+						</div>
+
+						<div class="space-y-3 mb-6">
+							{#each childProfiles as child, index}
+								<button
+									type="button"
+									class="w-full p-4 border-2 rounded-lg transition-all duration-200 {selectedChildIndex === index 
+										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+										: 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'}"
+									on:click={() => selectChildInPopup(index)}
+								>
+									<div class="flex items-center space-x-3">
+										<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+											{child.name ? child.name.charAt(0).toUpperCase() : 'K'}
+										</div>
+										<div class="flex-1 text-left">
+											<h3 class="font-medium text-gray-900 dark:text-white">
+												{child.name || `Kid ${index + 1}`}
+											</h3>
+											<p class="text-sm text-gray-600 dark:text-gray-400">
+												Age: {child.age || 'Not set'} • Gender: {child.gender || 'Not set'}
+											</p>
+											{#if child.characteristics}
+												<p class="text-xs text-gray-500 dark:text-gray-500 truncate">
+													{child.characteristics}
+												</p>
+											{/if}
+										</div>
+										{#if selectedChildIndex === index}
+											<div class="text-blue-500">
+												<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+													<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+												</svg>
+											</div>
+										{/if}
+									</div>
+								</button>
+							{/each}
+						</div>
+					{:else if childProfiles.length === 1}
+						<!-- Single child - show directly -->
+						<div class="text-center mb-6">
+							<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+								Your Saved Child Profile
+							</h2>
+							<div class="flex items-center justify-center space-x-3 mb-4">
+								<div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+									{childProfiles[0].name ? childProfiles[0].name.charAt(0).toUpperCase() : 'K'}
+								</div>
+								<div class="text-left">
+									<h3 class="font-semibold text-gray-900 dark:text-white">
+										{childProfiles[0].name || 'Kid'}
+									</h3>
+									<p class="text-sm text-gray-600 dark:text-gray-400">
+										Age: {childProfiles[0].age || 'Not set'}
+									</p>
+									<p class="text-sm text-gray-600 dark:text-gray-400">
+										Gender: {childProfiles[0].gender || 'Not set'}
+									</p>
+								</div>
+							</div>
+							{#if childProfiles[0].characteristics}
+								<p class="text-sm text-gray-600 dark:text-gray-400">
+									{childProfiles[0].characteristics}
+								</p>
+							{/if}
+						</div>
+					{:else}
+						<!-- No profiles - show setup prompt -->
+						<div class="text-center mb-6">
+							<div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center">
+								<svg class="w-8 h-8 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+								</svg>
+							</div>
+							<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+								Welcome to Kids Mode!
+							</h2>
+							<p class="text-gray-600 dark:text-gray-400 mb-4">
+								To get the best personalized experience, set up your child profile first.
+							</p>
+						</div>
+					{/if}
+
+					<!-- Action buttons -->
+					<div class="flex gap-3">
+						{#if childProfiles.length === 0}
+							<button
+								type="button"
+								class="flex-1 bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+								on:click={() => { window.location.href = '/kids/profile'; }}
+							>
+								Set Up Child Profile
+							</button>
+						{:else}
+							<button
+								type="button"
+								class="flex-1 bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+								on:click={closeChildProfilePopup}
+							>
+								Continue
+							</button>
+						{/if}
+						<button
+							type="button"
+							class="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+							on:click={closeChildProfilePopup}
+						>
+							Skip for now
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
