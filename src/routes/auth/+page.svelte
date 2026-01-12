@@ -9,14 +9,20 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import {
+		ldapUserSignIn,
+		getSessionUser,
+		userSignIn,
+		userSignUp,
+		updateUserTimezone
+	} from '$lib/apis/auths';
 	import { authenticateWithProlific } from '$lib/apis/prolific';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 import { childProfileSync } from '$lib/services/childProfileSync';
 
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -56,6 +62,7 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
+<<<<<<< HEAD
             // If no explicit redirect, fetch workflow state to resume last step
             if (!redirectPath) {
                 try {
@@ -107,6 +114,17 @@ let signupServerDisabled = false; // when backend rejects signup by policy
                     redirectPath = $page.url.searchParams.get('redirectPath') || '/';
                 }
             }
+=======
+			// Update user timezone
+			const timezone = getUserTimezone();
+			if (sessionUser.token && timezone) {
+				updateUserTimezone(sessionUser.token, timezone);
+			}
+
+			if (!redirectPath) {
+				redirectPath = $page.url.searchParams.get('redirect') || '/';
+			}
+>>>>>>> upstream/main
 
 			goto(redirectPath);
 			localStorage.removeItem('redirectPath');
@@ -466,7 +484,7 @@ function clearAllAppStoragePreserveRedirect() {
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full sm:max-w-md">
 						<div
-							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold dark:text-gray-200"
+							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-medium dark:text-gray-200"
 						>
 							<div>
 								{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
