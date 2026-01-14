@@ -44,7 +44,9 @@ from open_webui.env import (
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    INTERVIEWEE_STUDY_ID_WHITELIST,
 )
+from open_webui.config import get_config
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -413,7 +415,8 @@ def get_current_user_by_api_key(request, api_key: str):
 
 
 def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in {"user", "admin"}:
+    # Accept new roles: interviewee, parent, child (in addition to user, admin)
+    if user.role not in {"user", "admin", "interviewee", "parent", "child"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -428,6 +431,61 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def is_interviewee_user(study_id: Optional[str]) -> bool:
+    """
+    Check if a user's STUDY_ID matches the whitelist.
+    Only STUDY_ID is checked (prolific_pid is not whitelisted).
+    Checks both config database and environment variable.
+    """
+    if not study_id:
+        return False
+    
+    study_id = study_id.strip()
+    
+    # First check config database (admin-managed)
+    try:
+        config = get_config()
+        config_whitelist = config.get("interviewee_study_id_whitelist", [])
+        if study_id in config_whitelist:
+            return True
+    except Exception:
+        pass  # Fall back to environment variable
+    
+    # Fall back to environment variable
+    return study_id in INTERVIEWEE_STUDY_ID_WHITELIST
+
+
+def get_user_type(user, study_id: Optional[str] = None) -> str:
+    """
+    Determine user type based on role and STUDY_ID whitelist.
+    Returns: "interviewee", "parent", "child", "admin", or "user"
+    """
+    if user.role == "admin":
+        return "admin"
+    
+    if user.role == "child":
+        return "child"
+    
+    if user.role == "parent":
+        return "parent"
+    
+    if user.role == "interviewee":
+        return "interviewee"
+    
+    # For users with role "user", check STUDY_ID to determine if they should be interviewee
+    # If they have parent_id, they're a child
+    if hasattr(user, 'parent_id') and user.parent_id:
+        return "child"
+    
+    # Check STUDY_ID against whitelist
+    study_id_to_check = study_id or (user.study_id if hasattr(user, 'study_id') else None)
+    if is_interviewee_user(study_id_to_check):
+        return "interviewee"
+    
+    # Default to parent for regular users
+    return "parent"
 
 
 def create_admin_user(email: str, password: str, name: str = "Admin"):

@@ -48,8 +48,6 @@
 	import '../app.css';
 	import 'tippy.js/dist/tippy.css';
 
-	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
-	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 
@@ -626,10 +624,6 @@
 	};
 
 	onMount(async () => {
-<<<<<<< HEAD
-		if (typeof window !== 'undefined') {
-			applyTheme();
-=======
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
@@ -663,10 +657,7 @@
 		});
 
 		if (typeof window !== 'undefined') {
-			if (window.applyTheme) {
-				window.applyTheme();
-			}
->>>>>>> upstream/main
+			applyTheme();
 		}
 
 		if (window?.electronAPI) {
@@ -734,7 +725,6 @@
 
 		user.subscribe(async (value) => {
 			if (value) {
-<<<<<<< HEAD
 				// Check if Prolific user needs to consent
 				// Check by prolific_pid in user object OR by localStorage (for new users without prolific_pid stored yet)
 				// Also check URL params directly in case localStorage was cleared or user arrived directly
@@ -779,12 +769,8 @@
 					console.log('[CONSENT DEBUG] Subscription: NOT showing modal - conditions not met');
 				}
 				
-				$socket?.off('chat-events', chatEventHandler);
-				$socket?.off('channel-events', channelEventHandler);
-=======
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
->>>>>>> upstream/main
 
 				$socket?.on('events', chatEventHandler);
 				$socket?.on('events:channel', channelEventHandler);
@@ -951,7 +937,6 @@
 		};
 	});
 
-<<<<<<< HEAD
 	const handleConsent = async () => {
 		if (!localStorage.token) {
 			toast.error('No authentication token found');
@@ -1016,12 +1001,11 @@
 		const completionCode = (typeof window !== 'undefined' && window.PROLIFIC_COMPLETION_CODE) || 'RETURN_CODE';
 		window.location.href = `https://app.prolific.co/submissions/complete?cc=${completionCode}`;
 	};
-=======
+
 	onDestroy(() => {
 		window.removeEventListener('message', windowMessageEventHandler);
 		bc.close();
 	});
->>>>>>> upstream/main
 </script>
 
 <svelte:head>

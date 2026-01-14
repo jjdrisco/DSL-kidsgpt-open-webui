@@ -550,3 +550,133 @@ export const getUserGroupsById = async (token: string, userId: string) => {
 
 	return res;
 };
+
+export interface IntervieweeWhitelistResponse {
+	study_ids: string[];
+}
+
+export interface IntervieweeWhitelistUpdateForm {
+	study_ids: string[];
+}
+
+export const getIntervieweeWhitelist = async (token: string): Promise<IntervieweeWhitelistResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/admin/interviewee-whitelist`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateIntervieweeWhitelist = async (
+	token: string,
+	formData: IntervieweeWhitelistUpdateForm
+): Promise<IntervieweeWhitelistResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/admin/interviewee-whitelist`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(formData)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export interface CreateChildAccountForm {
+	name: string;
+	email: string;
+	password?: string;
+}
+
+export const createChildAccount = async (
+	token: string,
+	formData: CreateChildAccountForm
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/child`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(formData)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChildAccounts = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/child/accounts`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

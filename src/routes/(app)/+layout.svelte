@@ -13,6 +13,7 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
+	import { getUserType } from '$lib/utils';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -268,12 +269,6 @@
 		};
 		setupKeyboardShortcuts();
 
-<<<<<<< HEAD
-			// Disabled: What's New popup
-			// if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-			// 	showChangelog.set($settings?.version !== $config.version);
-			// }
-=======
 		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
 			showChangelog.set($settings?.version !== $config.version);
 		}
@@ -282,30 +277,12 @@
 			if ($page.url.searchParams.get('temporary-chat') === 'true') {
 				temporaryChatEnabled.set(true);
 			}
->>>>>>> upstream/main
 
 			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 				temporaryChatEnabled.set(true);
 			}
 		}
 
-<<<<<<< HEAD
-			// Disabled: Version update checking
-			// if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
-			// 	// Check if the user has dismissed the update toast in the last 24 hours
-			// 	if (localStorage.dismissedUpdateToast) {
-			// 		const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
-			// 		const now = new Date();
-
-			// 		if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
-			// 			checkForVersionUpdates();
-			// 		}
-			// 	} else {
-			// 		checkForVersionUpdates();
-			// 	}
-			// }
-			await tick();
-=======
 		// Check for version updates
 		if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
 			// Check if the user has dismissed the update toast in the last 24 hours
@@ -319,7 +296,6 @@
 			} else {
 				checkForVersionUpdates();
 			}
->>>>>>> upstream/main
 		}
 		await tick();
 
@@ -433,7 +409,27 @@
 			return;
 		}
 
-		// Define step-to-route mapping
+		// Determine user type
+		const userType = await getUserType($user);
+		
+		// Allow parent users to access /parent freely
+		if (userType === 'parent' && currentPath.startsWith('/parent')) {
+			return;
+		}
+		
+		// Allow child users to access / freely
+		if (userType === 'child' && currentPath === '/') {
+			return;
+		}
+		
+		// Only enforce workflow steps for interviewee users
+		if (userType !== 'interviewee') {
+			// For parent/child users, don't enforce workflow steps
+			return;
+		}
+
+		// Define step-to-route mapping (for interviewees only)
+		// Skip step 2 (moderation-scenario) is handled by backend, but we still need the mapping
 		const stepRoutes: { [key: number]: string } = {
 			1: '/kids/profile',
 			2: '/moderation-scenario',

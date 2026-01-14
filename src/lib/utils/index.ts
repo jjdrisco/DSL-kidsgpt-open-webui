@@ -14,6 +14,7 @@ dayjs.extend(isYesterday);
 dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
+import type { SessionUser } from '$lib/stores';
 
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
@@ -1706,3 +1707,44 @@ export const getCodeBlockContents = (content: string): object => {
 		js: jsContent.trim()
 	};
 };
+
+/**
+ * Determine user type based on role and STUDY_ID whitelist.
+ * Returns: "interviewee", "parent", "child", "admin", or "user"
+ */
+export async function getUserType(user: SessionUser | null, studyIdWhitelist: string[] = []): Promise<string> {
+	if (!user) return "user";
+	
+	if (user.role === "admin") return "admin";
+	if (user.role === "child") return "child";
+	if (user.role === "parent") return "parent";
+	if (user.role === "interviewee") return "interviewee";
+	
+	// For users with role "user", check STUDY_ID against whitelist
+	// Check if user has parent_id (child account)
+	if ((user as any).parent_id) {
+		return "child";
+	}
+	
+	// If whitelist not provided, try to fetch it (for admin users viewing other users)
+	let whitelist = studyIdWhitelist;
+	if (whitelist.length === 0 && typeof window !== 'undefined' && localStorage.getItem('token')) {
+		try {
+			const { getIntervieweeWhitelist } = await import('$lib/apis/users');
+			const whitelistResponse = await getIntervieweeWhitelist(localStorage.token);
+			whitelist = whitelistResponse?.study_ids || [];
+		} catch (e) {
+			// If fetch fails, continue with empty whitelist
+			console.warn('Failed to fetch whitelist:', e);
+		}
+	}
+	
+	// Check STUDY_ID against whitelist
+	const studyId = (user as any).study_id;
+	if (studyId && whitelist.includes(studyId.trim())) {
+		return "interviewee";
+	}
+	
+	// Default to parent for regular users
+	return "parent";
+}

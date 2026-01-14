@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func
 
-from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.auth import get_verified_user, get_admin_user, is_interviewee_user, get_user_type
 from open_webui.models.users import UserModel, Users
 from open_webui.models.moderation import ModerationSession, ModerationSessions, ModerationSessionActivity
 from open_webui.models.child_profiles import ChildProfile, ChildProfiles
@@ -60,11 +60,23 @@ async def get_workflow_state(user: UserModel = Depends(get_verified_user)) -> Wo
             )
             progress["exit_survey_completed"] = latest_exit is not None
 
-            # Determine next route
+            # Determine user type based on STUDY_ID whitelist
+            user_type = get_user_type(user, user.study_id)
+            
+            # Determine next route based on user type
+            # For non-interviewees (parent/child), skip moderation-scenario
+            if user_type == "parent":
+                return WorkflowStateResponse(next_route="/parent", substep=None, progress_by_section=progress)
+            
+            if user_type == "child":
+                return WorkflowStateResponse(next_route="/", substep=None, progress_by_section=progress)
+            
+            # For interviewees, follow the workflow
             if not progress["has_child_profile"]:
                 return WorkflowStateResponse(next_route="/kids/profile", substep=None, progress_by_section=progress)
 
-            if progress["moderation_completed_count"] < progress["moderation_total"]:
+            # Only show moderation-scenario for interviewees
+            if user_type == "interviewee" and progress["moderation_completed_count"] < progress["moderation_total"]:
                 return WorkflowStateResponse(next_route="/moderation-scenario", substep=None, progress_by_section=progress)
 
             if not progress["exit_survey_completed"]:

@@ -17,6 +17,8 @@
 		updateUserTimezone
 	} from '$lib/apis/auths';
 	import { authenticateWithProlific } from '$lib/apis/prolific';
+	import { getUserType } from '$lib/utils';
+	import { getWorkflowState } from '$lib/apis/workflow';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -62,69 +64,70 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-<<<<<<< HEAD
-            // If no explicit redirect, fetch workflow state to resume last step
-            if (!redirectPath) {
-                try {
-                    const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/state`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionUser.token}` }
-                    });
-                    if (res.ok) {
-                        const state = await res.json();
-                        // Sync sidebar progress flags for reactive updates
-                        try {
-                            const p = state?.progress_by_section || {};
-                            // Reset first
-                            localStorage.removeItem('unlock_kids');
-                            localStorage.removeItem('unlock_moderation');
-                            localStorage.removeItem('unlock_exit');
-                            localStorage.removeItem('unlock_completion');
-                            localStorage.removeItem('assignmentCompleted');
-                            // Determine step and unlocks
-                            if (p.has_child_profile) {
-                                localStorage.setItem('unlock_kids', 'true');
-                                localStorage.setItem('assignmentStep', '1');
-                            }
-                            if ((p.moderation_completed_count ?? 0) > 0 || p.has_child_profile) {
-                                localStorage.setItem('unlock_moderation', 'true');
-                                if (!localStorage.getItem('moderationScenariosAccessed')) {
-                                    localStorage.setItem('moderationScenariosAccessed', 'true');
-                                }
-                                localStorage.setItem('assignmentStep', '2');
-                            }
-                            if (p.exit_survey_completed) {
-                                localStorage.setItem('unlock_exit', 'true');
-                                localStorage.setItem('assignmentStep', '4');
-                                localStorage.setItem('assignmentCompleted', 'true');
-                                localStorage.setItem('unlock_completion', 'true');
-                            } else if ((p.moderation_completed_count ?? 0) >= (p.moderation_total ?? 12)) {
-                                // Completed moderation; ready for survey
-                                localStorage.setItem('unlock_exit', 'true');
-                                localStorage.setItem('assignmentStep', '3');
-                            }
-                            window.dispatchEvent(new Event('storage'));
-                            window.dispatchEvent(new Event('workflow-updated'));
-                        } catch {}
-                        redirectPath = state?.next_route || '/';
-                    } else {
-                        redirectPath = $page.url.searchParams.get('redirectPath') || '/';
-                    }
-                } catch {
-                    redirectPath = $page.url.searchParams.get('redirectPath') || '/';
-                }
-            }
-=======
 			// Update user timezone
 			const timezone = getUserTimezone();
 			if (sessionUser.token && timezone) {
 				updateUserTimezone(sessionUser.token, timezone);
 			}
 
+			// Determine redirect path based on user type
 			if (!redirectPath) {
-				redirectPath = $page.url.searchParams.get('redirect') || '/';
+				const userType = await getUserType(sessionUser);
+				
+				// Route based on user type
+				if (userType === 'parent') {
+					redirectPath = '/parent';
+				} else if (userType === 'child') {
+					redirectPath = '/';
+				} else if (userType === 'admin') {
+					redirectPath = '/admin/users';
+				} else if (userType === 'interviewee') {
+					// For interviewees, fetch workflow state
+					try {
+						const state = await getWorkflowState(sessionUser.token);
+						// Sync sidebar progress flags for reactive updates
+						try {
+							const p = state?.progress_by_section || {};
+							// Reset first
+							localStorage.removeItem('unlock_kids');
+							localStorage.removeItem('unlock_moderation');
+							localStorage.removeItem('unlock_exit');
+							localStorage.removeItem('unlock_completion');
+							localStorage.removeItem('assignmentCompleted');
+							// Determine step and unlocks
+							if (p.has_child_profile) {
+								localStorage.setItem('unlock_kids', 'true');
+								localStorage.setItem('assignmentStep', '1');
+							}
+							if ((p.moderation_completed_count ?? 0) > 0 || p.has_child_profile) {
+								localStorage.setItem('unlock_moderation', 'true');
+								if (!localStorage.getItem('moderationScenariosAccessed')) {
+									localStorage.setItem('moderationScenariosAccessed', 'true');
+								}
+								localStorage.setItem('assignmentStep', '2');
+							}
+							if (p.exit_survey_completed) {
+								localStorage.setItem('unlock_exit', 'true');
+								localStorage.setItem('assignmentStep', '4');
+								localStorage.setItem('assignmentCompleted', 'true');
+								localStorage.setItem('unlock_completion', 'true');
+							} else if ((p.moderation_completed_count ?? 0) >= (p.moderation_total ?? 12)) {
+								// Completed moderation; ready for survey
+								localStorage.setItem('unlock_exit', 'true');
+								localStorage.setItem('assignmentStep', '3');
+							}
+							window.dispatchEvent(new Event('storage'));
+							window.dispatchEvent(new Event('workflow-updated'));
+						} catch {}
+						redirectPath = state?.next_route || '/assignment-instructions';
+					} catch {
+						redirectPath = '/assignment-instructions';
+					}
+				} else {
+					// Default fallback
+					redirectPath = $page.url.searchParams.get('redirect') || '/';
+				}
 			}
->>>>>>> upstream/main
 
 			goto(redirectPath);
 			localStorage.removeItem('redirectPath');

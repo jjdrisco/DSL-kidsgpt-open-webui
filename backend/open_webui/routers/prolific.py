@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from open_webui.models.users import Users, UserModel
 from open_webui.models.auths import Auths
 from open_webui.models.consent_audit import ConsentAudits, ConsentAuditForm
-from open_webui.utils.auth import create_token, get_password_hash, get_verified_user
+from open_webui.utils.auth import create_token, get_password_hash, get_verified_user, is_interviewee_user
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.env import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER, VERSION
 from open_webui.constants import ERROR_MESSAGES
@@ -96,13 +96,17 @@ async def prolific_auth(request: Request, response: Response, form_data: Prolifi
         password = str(uuid.uuid4())
         hashed_password = get_password_hash(password)
         
+        # Determine role based on STUDY_ID whitelist
+        # Check STUDY_ID against whitelist to determine if interviewee
+        role = "interviewee" if is_interviewee_user(form_data.study_id) else "parent"
+        
         # Create auth record (without Prolific fields)
         auth_user = Auths.insert_new_auth(
             email=email,
             password=hashed_password,
             name=name,
             profile_image_url="/user.png",
-            role="user"
+            role=role
         )
         
         if not auth_user:
@@ -177,12 +181,16 @@ async def submit_consent(
     }
     
     if form_data.consented and not user.prolific_pid:
+        # Determine role based on STUDY_ID whitelist
+        role = "interviewee" if is_interviewee_user(form_data.study_id) else "parent"
+        
         # Store Prolific IDs only after consent is given
         update_data.update({
             "prolific_pid": form_data.prolific_pid,
             "study_id": form_data.study_id,
             "current_session_id": form_data.session_id,
-            "session_number": 1
+            "session_number": 1,
+            "role": role  # Set role based on STUDY_ID whitelist
         })
     elif form_data.consented and user.prolific_pid:
         # Existing user - check if this is a new session

@@ -66,6 +66,29 @@ export interface UserSubmissionsResponse {
   assignment_time_totals?: Record<string, number>;
 }
 
+export interface WorkflowStateResponse {
+  next_route: string;
+  substep: string | null;
+  progress_by_section: {
+    has_child_profile: boolean;
+    moderation_completed_count: number;
+    moderation_total: number;
+    exit_survey_completed: boolean;
+  };
+}
+
+export const getWorkflowState = async (token: string): Promise<WorkflowStateResponse> => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/state`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
+
 export const finalizeModeration = async (
   token: string,
   payload: { child_id?: string; session_number?: number }

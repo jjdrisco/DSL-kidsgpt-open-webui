@@ -7,7 +7,7 @@
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity, assignScenario, startScenario, completeScenario, skipScenario, abandonScenario, createHighlight, getHighlights, type ScenarioAssignResponse, getAssignmentsForChild, type AssignmentWithScenario } from '$lib/apis/moderation';
-import { getChildProfileById } from '$lib/apis/child-profiles';
+	import { getChildProfileById, getChildProfilesForUser } from '$lib/apis/child-profiles';
 import { finalizeModeration } from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -758,8 +758,18 @@ import { finalizeModeration } from '$lib/apis/workflow';
     // Load child profiles and generate personality-based scenarios
 	async function loadChildProfiles() {
 		try {
-			childProfiles = await childProfileSync.getChildProfiles();
-			console.log('Loaded child profiles:', childProfiles);
+			// Check if admin is viewing another user's quiz
+			const adminUserId = $page.url.searchParams.get('user_id');
+			if (adminUserId && $user?.role === 'admin') {
+				// Load child profiles for the target user
+				childProfiles = await getChildProfilesForUser(localStorage.token, adminUserId);
+				console.log('Admin loaded child profiles for user:', adminUserId, childProfiles);
+			} else {
+				// Load child profiles for current user
+				childProfiles = await childProfileSync.getChildProfiles();
+				console.log('Loaded child profiles:', childProfiles);
+			}
+			
 			if (childProfiles.length > 0) {
 				// Get the current child ID from the service (set by sidebar/profile page)
 				const currentChildId = childProfileSync.getCurrentChildId();
@@ -3629,6 +3639,18 @@ function cancelReset() {}
 onMount(async () => {
     // Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
     showSidebar.set(false);
+    
+    // Check for admin access via user_id query parameter
+    const adminUserId = $page.url.searchParams.get('user_id');
+    let targetUserId = $user?.id;
+    let isAdminView = false;
+    
+    if (adminUserId && $user?.role === 'admin') {
+        // Admin is viewing another user's quiz
+        isAdminView = true;
+        targetUserId = adminUserId;
+        console.log('Admin viewing quiz for user:', adminUserId);
+    }
     
     try {
         // Initialize sidebar state based on screen size for mobile

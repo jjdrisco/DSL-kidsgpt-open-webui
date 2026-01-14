@@ -10,7 +10,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.models.child_profiles import ChildProfileModel, ChildProfileForm, ChildProfiles
 from open_webui.models.users import UserModel
 
@@ -163,4 +163,20 @@ async def get_child_profile_stats(
         return ChildProfileStatsResponse(**stats)
     except Exception as e:
         log.error(f"Error getting child profile stats: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.get("/child-profiles/admin/{user_id}", response_model=List[ChildProfileResponse])
+async def get_child_profiles_for_user(
+    user_id: str,
+    admin_user: UserModel = Depends(get_admin_user)
+):
+    """Admin endpoint to get child profiles for a specific user"""
+    try:
+        profiles = ChildProfiles.get_child_profiles_by_user(user_id)
+        return [
+            ChildProfileResponse(**profile.model_dump())
+            for profile in profiles
+        ]
+    except Exception as e:
+        log.error(f"Error getting child profiles for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

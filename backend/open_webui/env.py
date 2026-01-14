@@ -924,3 +924,15 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+####################################
+# INTERVIEWEE STUDY ID WHITELIST
+####################################
+
+# Comma-separated list of STUDY_IDs that should be treated as interviewees
+# Only users with STUDY_ID matching this whitelist will see the quiz workflow
+INTERVIEWEE_STUDY_ID_WHITELIST = [
+    study_id.strip()
+    for study_id in os.environ.get("INTERVIEWEE_STUDY_ID_WHITELIST", "").split(",")
+    if study_id.strip()
+]
