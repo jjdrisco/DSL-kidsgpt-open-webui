@@ -103,13 +103,14 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	
 	// Attention check marker and instruction suffix
 	// Marker is embedded in response text to identify attention check scenarios.
-	// Suffix contains 3-step instructions appended to attention check responses.
+	// Updated instructions for the 2-step flow and explicit phrase requirement.
 	const ATTENTION_CHECK_MARKER = "<!--ATTN-CHECK-->";
-	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the response, then click \"Continue\".\n2) Step 2: In the \"Explain why this content concerns you\" field, enter \"attention check\", then click \"Continue\".\n3) Step 3: Select 'I read the instructions' from the \"Attention Check\" dropdown under \"Step 3: Moderate\". " + ATTENTION_CHECK_MARKER;
+	const ATTENTION_CHECK_SUFFIX = "\n\nAttention check — please follow these steps:\n1) Highlight any text in the prompt or response, then press \"Continue\".\n2) In the \"Explain why this content concerns you\" box, type the phrase \"attention check\" and submit. " + ATTENTION_CHECK_MARKER;
 	
-	// Custom scenario constant - always appears last
+	// Custom scenario constant - always appears last (disabled for this study)
 	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
 	const CUSTOM_SCENARIO_PLACEHOLDER = "Enter your custom child prompt here...";
+	const ENABLE_CUSTOM_SCENARIO = false;
 	
     let selectedScenarioIndex: number = 0;
     let scenarioList: Array<[string, string]> = []; // Initialized empty - populated by personality-based scenarios
@@ -478,15 +479,17 @@ import { finalizeModeration } from '$lib/apis/workflow';
 			// Continue without attention check if loading fails
 		}
 		
-		// Ensure custom scenario is last
-        const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-        if (!hasCustom) {
-			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-        } else {
-			// Move existing custom to the end
-			list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
-			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-        }
+		// Ensure custom scenario is last (disabled for this study)
+        if (ENABLE_CUSTOM_SCENARIO) {
+			const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+			if (!hasCustom) {
+				list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+			} else {
+				// Move existing custom to the end
+				list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
+				list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+			}
+		}
         return list;
     }
 
@@ -1027,7 +1030,7 @@ function clearModerationLocalKeys() {
 	$: isAttentionCheckScenario = ((scenarioList[selectedScenarioIndex]?.[1] || '').includes(ATTENTION_CHECK_MARKER));
 	
 	// Custom scenario helper - reactive variable (NOT a function!)
-	$: isCustomScenario = scenarioList[selectedScenarioIndex]?.[0] === CUSTOM_SCENARIO_PROMPT;
+	$: isCustomScenario = ENABLE_CUSTOM_SCENARIO && scenarioList[selectedScenarioIndex]?.[0] === CUSTOM_SCENARIO_PROMPT;
 	
 	// Reactive debug logging
 	$: {
@@ -3706,6 +3709,11 @@ function cancelReset() {}
 			toast.error('Please provide at least 10 characters in your explanation');
 			return;
 		}
+	// Attention check requirement: must include the phrase "attention check"
+	if (isAttentionCheckScenario && !concernReason.toLowerCase().includes('attention check')) {
+		toast.error('Attention check: please include the phrase "attention check" in your explanation.');
+		return;
+	}
 		
 		// Mark step 2 and step 3 as complete (simplified flow - no Step 3)
 		step2Completed = true;
@@ -5085,17 +5093,42 @@ onMount(async () => {
 		</div>
 
 		<!-- Right Side: Chat Thread -->
-		<div class="flex-1 flex flex-col">
+		<div class="flex-1 flex flex-col relative">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					Please the conversation below, and answer the questions that follow.
 				</p>
+				{#if isAttentionCheckScenario}
+					<div class="mt-3 p-3 rounded-lg border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100">
+						<div class="flex items-start space-x-2">
+							<svg class="w-5 h-5 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 5a7 7 0 11-7 7 7 7 0 017-7z"></path>
+							</svg>
+							<div class="text-sm">
+								<p class="font-semibold">Attention check</p>
+								<p>Highlight any text, then in the explanation box type the phrase <strong>“attention check”</strong> before submitting.</p>
+							</div>
+						</div>
+					</div>
+				{/if}
 		</div>
 
+			{#if isLoadingScenario}
+				<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
+					<div class="flex items-center space-x-3 text-gray-700 dark:text-gray-200">
+						<svg class="animate-spin h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						</svg>
+						<span class="text-sm font-medium">Loading scenario...</span>
+					</div>
+				</div>
+			{/if}
+
 		<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
-			<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
-			{#if isCustomScenario && !customScenarioGenerated}
+			<!-- Custom Scenario Input (disabled for this study) -->
+			{#if ENABLE_CUSTOM_SCENARIO && isCustomScenario && !customScenarioGenerated}
 				<div class="max-w-3xl mx-auto mt-2 space-y-6">
 					<div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg">
 						<div class="flex items-start space-x-3 mb-6">
@@ -5156,7 +5189,7 @@ onMount(async () => {
 						</div>
 					</div>
 				</div>
-			{:else if !isCustomScenario || customScenarioGenerated}
+			{:else if !isCustomScenario || customScenarioGenerated || !ENABLE_CUSTOM_SCENARIO}
 			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
 					<!-- 
@@ -5186,7 +5219,7 @@ onMount(async () => {
 			{/if}
 
 				<!-- AI Response Bubble (hidden for custom scenario before generation) -->
-				{#if !isCustomScenario || customScenarioGenerated}
+				{#if !isCustomScenario || customScenarioGenerated || !ENABLE_CUSTOM_SCENARIO}
 					<!-- Side-by-Side Comparison View -->
 					{#if showComparisonView && versions.length > 0 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
@@ -5376,6 +5409,39 @@ onMount(async () => {
 					{/if}
 				{/if}
 
+			{#if (promptHighlightedHTML || responseHighlightedHTML) && highlightedTexts1.length > 0}
+				<div class="mt-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 space-y-3">
+					<div class="flex items-center space-x-2">
+						<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						<p class="text-sm font-semibold text-gray-900 dark:text-white">Your highlights</p>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div class="p-3 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+							<p class="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Prompt</p>
+							{#if promptHighlightedHTML}
+								<div class="prose prose-sm dark:prose-invert max-w-none">
+									{@html promptHighlightedHTML}
+								</div>
+							{:else}
+								<p class="text-xs text-blue-800 dark:text-blue-200">No prompt highlights.</p>
+							{/if}
+						</div>
+						<div class="p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800">
+							<p class="text-xs font-semibold text-yellow-900 dark:text-yellow-100 mb-2">Response</p>
+							{#if responseHighlightedHTML}
+								<div class="prose prose-sm dark:prose-invert max-w-none">
+									{@html responseHighlightedHTML}
+								</div>
+							{:else}
+								<p class="text-xs text-yellow-800 dark:text-yellow-200">No response highlights.</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
+
 		<!-- Unified Initial Decision Pane -->
 		<!-- SIMPLIFIED FLOW: Only Steps 1 and 2 are shown (Step 3 is disabled) -->
 		{#if showInitialDecisionPane && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 2) && (!isCustomScenario || customScenarioGenerated)}
@@ -5422,6 +5488,15 @@ onMount(async () => {
 									}"></div>
 								{/if}
 							{/each}
+						</div>
+
+						<div class="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+							<p class="text-sm font-semibold text-blue-900 dark:text-blue-100">How to complete this task</p>
+							<ol class="mt-2 text-xs text-blue-800 dark:text-blue-200 list-decimal list-inside space-y-1">
+								<li>Highlight any part of the prompt or AI response that concerns you.</li>
+								<li>Click Continue, then briefly explain why (at least 10 characters).</li>
+								<li>If this is an attention check, include the words “attention check” in your explanation.</li>
+							</ol>
 						</div>
 
 						<!-- Step 1: Highlighting or Skip -->
