@@ -16,6 +16,11 @@
 	let hasScrolled: boolean = false;
 	// State for ready modal
 	let showReadyModal: boolean = false;
+	// Scroll handler shared between listeners and template
+	const handleScrollHideIndicator = () => {
+		hasScrolled = true;
+		showScrollIndicator = false;
+	};
 
 	// Assignment time tracking
 	let trackingEnabled: boolean = false;
@@ -60,26 +65,21 @@
 			}
 		}, 8000); // Show after 8 seconds
 
-		const handleScroll = () => {
-			hasScrolled = true;
-			showScrollIndicator = false;
-		};
-
 		// Find the scrollable container
 		const scrollContainer = document.querySelector('.overflow-y-auto');
 		
 		// Attach to both window and container
 		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', handleScroll);
+			scrollContainer.addEventListener('scroll', handleScrollHideIndicator);
 		}
-		window.addEventListener('scroll', handleScroll);
+		window.addEventListener('scroll', handleScrollHideIndicator);
 		
 		return () => {
 			clearTimeout(timer);
 			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', handleScroll);
+				scrollContainer.removeEventListener('scroll', handleScrollHideIndicator);
 			}
-			window.removeEventListener('scroll', handleScroll);
+			window.removeEventListener('scroll', handleScrollHideIndicator);
 			window.removeEventListener('storage', handleStorageChange);
 			window.removeEventListener('workflow-updated', handleStorageChange);
 		};
@@ -172,7 +172,7 @@
 		</div>
 	</nav>
 
-	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" on:scroll={handleScrollHideIndicator}>
 		<div class="max-w-4xl mx-auto px-4 py-8">
 			<!-- Header -->
 			<div class="text-center mb-12">
