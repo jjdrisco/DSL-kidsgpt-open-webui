@@ -30,6 +30,8 @@ let isOnlyChild: string = '';
 let childHasAIUse: string = '';
 let childAIUseContexts: string[] = [];
 let parentLLMMonitoringLevel: string = '';
+// Duplicate attention-check version of monitoring/discussion question (UI-only; not persisted)
+let parentLLMMonitoringLevelConfirm: string = '';
 
 // "Other" text fields for additional information
 let childGenderOther: string = '';
@@ -55,6 +57,10 @@ let parentLLMMonitoringOther: string = '';
 	let hasScrolled: boolean = false;
 	// Main page container for scrolling
 	let mainPageContainer: HTMLElement;
+	function handleMainScroll() {
+		hasScrolled = true;
+		showScrollIndicator = false;
+	}
 
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
@@ -219,6 +225,8 @@ let parentLLMMonitoringOther: string = '';
 	} else {
 		parentLLMMonitoringLevel = '';
 	}
+	// Keep the duplicate question in sync (best-effort)
+	parentLLMMonitoringLevelConfirm = parentLLMMonitoringLevel;
 	
 	// Load "Other" text fields
 	childAIUseContextsOther = (sel as any)?.child_ai_use_contexts_other || '';
@@ -377,6 +385,7 @@ let parentLLMMonitoringOther: string = '';
 	childHasAIUse = '';
 	childAIUseContexts = [];
 	parentLLMMonitoringLevel = '';
+	parentLLMMonitoringLevelConfirm = '';
 	childGenderOther = '';
 	childAIUseContextsOther = '';
 	parentLLMMonitoringOther = '';
@@ -442,7 +451,8 @@ let parentLLMMonitoringOther: string = '';
 				childProfiles = [];
 			}
 			
-		// Check for currently selected child from user settings (single source of truth)
+		// Single-child flow: if at least one profile exists, use the current child if set, else the first.
+		// (If multiple profiles exist from older sessions, we intentionally do not expose switching in the UI.)
 		if (childProfiles.length > 0) {
 			const currentChildId = childProfileSync.getCurrentChildId();
 			if (currentChildId) {
@@ -453,13 +463,12 @@ let parentLLMMonitoringOther: string = '';
 					childSelectedForQuestions = index;
 				} else {
 					// Current child ID doesn't exist in profiles, no selection
-					selectedChildIndex = 0; // Show first profile for viewing
-					childSelectedForQuestions = -1; // But no child selected for questions
+					selectedChildIndex = 0;
+					childSelectedForQuestions = 0;
 				}
 			} else {
-				// No current child selected in backend
-				selectedChildIndex = 0; // Show first profile for viewing
-				childSelectedForQuestions = -1; // No child selected for questions
+				selectedChildIndex = 0;
+				childSelectedForQuestions = 0;
 			}
 			hydrateFormFromSelectedChild();
 			showForm = false; // Don't show form initially, wait for Edit click
@@ -479,6 +488,12 @@ let parentLLMMonitoringOther: string = '';
 
 	async function saveChildProfile() {
 		try {
+			// Enforce single-child flow: disallow creating a second profile
+			if (childProfiles.length > 0 && selectedChildIndex === -1) {
+				toast.error('This study only supports one child profile. Please edit your existing profile instead.');
+				return;
+			}
+
 			// Validate required fields
 			if (!childName.trim()) {
 				toast.error('Please enter a name for the child');
@@ -510,11 +525,20 @@ let parentLLMMonitoringOther: string = '';
 				return;
 			}
 			if (!parentLLMMonitoringLevel) {
-				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
+				toast.error("Please indicate how you've monitored or discussed this child's AI chatbot use");
 				return;
 			}
 			if (parentLLMMonitoringLevel === 'other' && !parentLLMMonitoringOther.trim()) {
-				toast.error('Please specify how you have monitored or adjusted your child\'s AI use');
+				toast.error("Please specify how you have monitored or discussed your child's AI chatbot use");
+				return;
+			}
+			// Duplicate question attention-check: require an answer and require it matches
+			if (!parentLLMMonitoringLevelConfirm) {
+				toast.error('Please answer the monitoring/discussion question again (attention check).');
+				return;
+			}
+			if (parentLLMMonitoringLevelConfirm !== parentLLMMonitoringLevel) {
+				toast.error('Attention check: your answers did not match. Please review and answer consistently.');
 				return;
 			}
 
@@ -764,27 +788,9 @@ let parentLLMMonitoringOther: string = '';
 				showScrollIndicator = true;
 			}
 		}, 8000); // Show after 8 seconds
-
-		const handleScroll = () => {
-			hasScrolled = true;
-			showScrollIndicator = false;
-		};
-
-		// Find the scrollable container
-		const scrollContainer = document.querySelector('.overflow-y-auto');
-		
-		// Attach to both window and container
-		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', handleScroll);
-		}
-		window.addEventListener('scroll', handleScroll);
 		
 		return () => {
 			clearTimeout(timer);
-			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', handleScroll);
-			}
-			window.removeEventListener('scroll', handleScroll);
 		};
 	});
 </script>
@@ -863,57 +869,31 @@ let parentLLMMonitoringOther: string = '';
 		</div>
 	</nav>
 
-	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" bind:this={mainPageContainer}>
+	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" bind:this={mainPageContainer} on:scroll={handleMainScroll}>
 		<div class="max-w-4xl mx-auto px-4 py-8">
 		<!-- Header -->
 		<div class="mb-8"></div>
 
-		<!-- Child Selection -->
+		<!-- Study focus note (single child) -->
+		<div class="mb-8">
+			<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+				<h2 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Choose one child (ages 9–18)</h2>
+				<p class="text-blue-800 dark:text-blue-200 text-sm">
+					For this study, please focus on <strong>one</strong> child in the <strong>9–18</strong> age range. You’ll create and use a single child profile throughout the tasks.
+				</p>
+			</div>
+		</div>
+
 		{#if childProfiles && childProfiles.length > 0}
-			<div class="mb-8">
-				<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Profile</h2>
-					<div class="grid gap-3" style={`grid-template-columns: ${getChildGridTemplate()}`}>
-						{#each childProfiles as c, i}
-							<div class="relative group flex flex-col">
-								<button 
-									type="button"
-									class={`w-full px-6 py-4 rounded-full transition-all duration-200 ${i===selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
-									on:click={() => selectChild(i)}>
-									<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
-									{#if childSelectedForQuestions === i}
-										<div class="absolute -top-1 -left-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center z-10">
-											<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-											</svg>
-										</div>
-									{/if}
-								</button>
-								
-								<!-- Add "Select for questions" button below each profile -->
-								{#if childSelectedForQuestions !== i}
-								<!-- per-card select button removed; selection now via page-level action -->
-							{/if}
-								
-								<!-- Delete button -->
-								<button 
-									type="button"
-									class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-20"
-									on:click|stopPropagation={() => deleteChild(i)}
-									title="Delete child">
-									×
-								</button>
-							</div>
-						{/each}
-						<button 
-							type="button" 
-							class="px-6 py-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-lg ring-1 ring-gray-300/30 dark:ring-gray-600/30 hover:bg-gray-300 dark:hover:bg-gray-600 hover:ring-gray-400/50 dark:hover:ring-gray-500/50 hover:scale-105 transition-all duration-200" 
-							on:click={addNewProfile}>
-							<span class="font-medium">+ Add Profile</span>
-						</button>
+			{#if childProfiles.length > 1}
+				<div class="mb-6">
+					<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+						<p class="text-sm text-yellow-900 dark:text-yellow-100">
+							We found multiple child profiles from earlier sessions. This study uses a single profile, so we’ll use your currently selected profile.
+						</p>
 					</div>
 				</div>
-			</div>
+			{/if}
 		{:else}
 			<!-- Empty State - No child profiles -->
 			<div class="mb-8">
@@ -923,15 +903,15 @@ let parentLLMMonitoringOther: string = '';
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
 						</svg>
 					</div>
-					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Child Profiles Yet</h2>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Create a Child Profile</h2>
 					<p class="text-gray-600 dark:text-gray-300 mb-6">
-						Create your first child profile to get started with personalized AI learning.
+						Create one profile for the child you’ll focus on (ages 9–18).
 					</p>
 					<button 
 						type="button" 
 						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
 						on:click={addNewProfile}>
-						+ Add Your First Child Profile
+						Create Profile
 					</button>
 				</div>
 			</div>
@@ -1214,16 +1194,16 @@ let parentLLMMonitoringOther: string = '';
 					</div>
 				{/if}
 
-				<!-- Monitoring level -->
+				<!-- Monitoring/discussion level -->
 				<div class="mb-2">
 					<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-						Have you monitored or adjusted your child’s use of Large Language Models like ChatGPT? <span class="text-red-500">*</span>
+						Have you monitored or discussed your child’s use of AI chatbots like ChatGPT? <span class="text-red-500">*</span>
 					</div>
 					<div class="space-y-2">
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="active_rules" class="mr-3" />Yes — I actively monitor and set rules/limits</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="occasional_guidance" class="mr-3" />Yes — occasional reminders or guidance</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="plan_to" class="mr-3" />Not yet, but I plan to</label>
-						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="no_monitoring" class="mr-3" />No — I have not monitored or adjusted</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="no_monitoring" class="mr-3" />No — I have not monitored or discussed</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="other" class="mr-3" />Other</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="prefer_not_to_say" class="mr-3" />Prefer not to say</label>
 					</div>
@@ -1231,11 +1211,29 @@ let parentLLMMonitoringOther: string = '';
 						<input
 							type="text"
 							bind:value={parentLLMMonitoringOther}
-							placeholder="Please specify how you have monitored or adjusted your child's AI use"
+							placeholder="Please specify how you have monitored or discussed your child's AI chatbot use"
 							class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 							required
 						/>
 					{/if}
+				</div>
+
+				<!-- Duplicate attention-check question -->
+				<div class="mt-6 mb-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+					<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Attention check: please answer this question again. <span class="text-red-500">*</span>
+					</div>
+					<div class="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+						Have you monitored or discussed your child’s use of AI chatbots like ChatGPT?
+					</div>
+					<div class="space-y-2">
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevelConfirm} value="active_rules" class="mr-3" />Yes — I actively monitor and set rules/limits</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevelConfirm} value="occasional_guidance" class="mr-3" />Yes — occasional reminders or guidance</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevelConfirm} value="plan_to" class="mr-3" />Not yet, but I plan to</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevelConfirm} value="no_monitoring" class="mr-3" />No — I have not monitored or discussed</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevelConfirm} value="other" class="mr-3" />Other</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevelConfirm} value="prefer_not_to_say" class="mr-3" />Prefer not to say</label>
+					</div>
 				</div>
 			</div>
 				</div>
