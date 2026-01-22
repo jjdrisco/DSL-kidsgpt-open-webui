@@ -42,7 +42,7 @@ describe('Workflow API Endpoints', () => {
 			} else if (response.status === 429) {
 				// Rate limited, wait longer and try once more
 				cy.wait(3000);
-				return return cy.request({
+				return cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signin`,
 					body: {
@@ -60,7 +60,7 @@ describe('Workflow API Endpoints', () => {
 				});
 			} else if (response.status === 401 || response.status === 404) {
 				// User doesn't exist, try to create via signup
-				return return cy.request({
+				return cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signup`,
 					body: {
