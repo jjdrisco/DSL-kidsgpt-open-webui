@@ -17,7 +17,7 @@ const baseUrl = Cypress.config().baseUrl || 'http://localhost:5173';
 const API_BASE_URL = `${baseUrl}/api/v1`;
 
 describe('Workflow API Endpoints', () => {
-	before(() => {
+	beforeEach(() => {
 		if (!EMAIL || !PASSWORD) {
 			cy.log('INTERVIEWEE_EMAIL/PASSWORD or TEST_EMAIL/TEST_PASSWORD not set; skipping');
 			return;
@@ -34,7 +34,6 @@ describe('Workflow API Endpoints', () => {
 		}).then((response) => {
 			if (response.status === 200 && response.body.token) {
 				cy.wrap(response.body.token).as('authToken');
-				cy.log('Authentication successful via signin');
 			} else {
 				// User doesn't exist, try to create via signup
 				cy.request({
@@ -49,7 +48,6 @@ describe('Workflow API Endpoints', () => {
 				}).then((signupResponse) => {
 					if (signupResponse.status === 200 && signupResponse.body.token) {
 						cy.wrap(signupResponse.body.token).as('authToken');
-						cy.log('User created and authenticated via signup');
 					} else {
 						// Try signin again after signup
 						cy.request({
@@ -63,10 +61,8 @@ describe('Workflow API Endpoints', () => {
 						}).then((retryResponse) => {
 							if (retryResponse.status === 200 && retryResponse.body.token) {
 								cy.wrap(retryResponse.body.token).as('authToken');
-								cy.log('Authentication successful after signup');
 							} else {
 								cy.wrap('').as('authToken');
-								cy.log(`Authentication failed: ${retryResponse.status} - ${JSON.stringify(retryResponse.body)}`);
 							}
 						});
 					}
