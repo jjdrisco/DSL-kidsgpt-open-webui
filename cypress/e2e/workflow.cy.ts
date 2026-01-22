@@ -26,9 +26,9 @@ describe('Workflow API Endpoints', () => {
 			return;
 		}
 		// Authenticate before each test and store token
-		// Wait a bit to avoid rate limiting
-		cy.wait(500);
-		cy.request({
+		// Wait longer to avoid rate limiting (backend has rate limits)
+		cy.wait(3000);
+		return cy.request({
 			method: 'POST',
 			url: `${API_BASE_URL}/auths/signin`,
 			body: {
