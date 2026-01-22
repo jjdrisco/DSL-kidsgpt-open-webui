@@ -13,7 +13,8 @@ const EMAIL = Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || '
 const PASSWORD = Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000';
 // Get baseUrl - CYPRESS_baseUrl env var overrides cypress.config.ts baseUrl
 // API calls go through frontend proxy at /api/v1
-const baseUrl = Cypress.config().baseUrl || 'http://localhost:5173';
+// Use frontend URL for API calls (they go through Vite proxy)
+const baseUrl = Cypress.env('baseUrl') || Cypress.config().baseUrl || 'http://localhost:5173';
 const API_BASE_URL = `${baseUrl}/api/v1`;
 
 describe('Workflow API Endpoints', () => {
@@ -22,7 +23,9 @@ describe('Workflow API Endpoints', () => {
 			cy.log('INTERVIEWEE_EMAIL/PASSWORD or TEST_EMAIL/TEST_PASSWORD not set; skipping');
 			return;
 		}
-		// Authenticate once before all tests and store token as alias
+		// Authenticate before each test and store token as alias
+		// Wait a bit to avoid rate limiting
+		cy.wait(500);
 		cy.request({
 			method: 'POST',
 			url: `${API_BASE_URL}/auths/signin`,
@@ -34,7 +37,26 @@ describe('Workflow API Endpoints', () => {
 		}).then((response) => {
 			if (response.status === 200 && response.body.token) {
 				cy.wrap(response.body.token).as('authToken');
-			} else {
+			} else if (response.status === 429) {
+				// Rate limited, wait longer and try once more
+				cy.wait(3000);
+				cy.request({
+					method: 'POST',
+					url: `${API_BASE_URL}/auths/signin`,
+					body: {
+						email: EMAIL,
+						password: PASSWORD
+					},
+					failOnStatusCode: false
+				}).then((retryResponse) => {
+					if (retryResponse.status === 200 && retryResponse.body.token) {
+						cy.wrap(retryResponse.body.token).as('authToken');
+					} else {
+						cy.wrap('').as('authToken');
+						cy.log(`Authentication failed after retry: ${retryResponse.status}`);
+					}
+				});
+			} else if (response.status === 401 || response.status === 404) {
 				// User doesn't exist, try to create via signup
 				cy.request({
 					method: 'POST',
@@ -50,6 +72,7 @@ describe('Workflow API Endpoints', () => {
 						cy.wrap(signupResponse.body.token).as('authToken');
 					} else {
 						// Try signin again after signup
+						cy.wait(1000);
 						cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/auths/signin`,
@@ -63,10 +86,14 @@ describe('Workflow API Endpoints', () => {
 								cy.wrap(retryResponse.body.token).as('authToken');
 							} else {
 								cy.wrap('').as('authToken');
+								cy.log(`Authentication failed: ${retryResponse.status}`);
 							}
 						});
 					}
 				});
+			} else {
+				cy.wrap('').as('authToken');
+				cy.log(`Authentication failed: ${response.status}`);
 			}
 		});
 	});
