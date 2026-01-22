@@ -11,8 +11,10 @@
  */
 const EMAIL = Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || 'jjdrisco@ucsd.edu';
 const PASSWORD = Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000';
-const BASE_URL = Cypress.config('baseUrl') || 'http://localhost:5173';
-const API_BASE_URL = `${BASE_URL}/api/v1`;
+// Get baseUrl - CYPRESS_baseUrl env var overrides cypress.config.ts baseUrl
+// API calls go through frontend proxy at /api/v1
+const baseUrl = Cypress.config().baseUrl || 'http://localhost:5173';
+const API_BASE_URL = `${baseUrl}/api/v1`;
 
 describe('Workflow API Endpoints', () => {
 	let authToken: string;
@@ -332,9 +334,9 @@ describe('Workflow API Endpoints', () => {
 				},
 				failOnStatusCode: false
 			}).then((childResponse) => {
-				if (childResponse.status === 200 && childResponse.body.length > 0) {
+				if (childResponse.status === 200 && Array.isArray(childResponse.body) && childResponse.body.length > 0) {
 					const childId = childResponse.body[0].id;
-					return cy.request({
+					cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/workflow/moderation/finalize`,
 						headers: {
@@ -344,16 +346,29 @@ describe('Workflow API Endpoints', () => {
 						body: {
 							child_id: childId
 						}
+					}).then((response) => {
+						expect(response.status).to.eq(200);
+						expect(response.body).to.have.property('updated');
+						expect(response.body.updated).to.be.a('number');
 					});
 				} else {
 					// Skip if no child profiles
 					cy.log('No child profiles found, skipping child_id filter test');
-					return cy.wrap({ status: 200, body: { updated: 0 } });
+					// Make a request anyway to test the endpoint
+					cy.request({
+						method: 'POST',
+						url: `${API_BASE_URL}/workflow/moderation/finalize`,
+						headers: {
+							Authorization: `Bearer ${authToken}`,
+							'Content-Type': 'application/json'
+						},
+						body: {}
+					}).then((response) => {
+						expect(response.status).to.eq(200);
+						expect(response.body).to.have.property('updated');
+						expect(response.body.updated).to.be.a('number');
+					});
 				}
-			}).then((response) => {
-				expect(response.status).to.eq(200);
-				expect(response.body).to.have.property('updated');
-				expect(response.body.updated).to.be.a('number');
 			});
 		});
 
