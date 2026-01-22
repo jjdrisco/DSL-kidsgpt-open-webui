@@ -108,6 +108,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			// Wait for authToken to be set (from beforeEach)
 			cy.wait(100);
+   cy.then(() => {
 			cy.request({
 				method: 'GET',
 				url: `${API_BASE_URL}/workflow/state`,
@@ -135,6 +136,7 @@ describe('Workflow API Endpoints', () => {
 						'/'
 					]);
 				});
+   });
 		});
 
 		it('should return workflow state for new user (no child profile)', function () {
@@ -144,6 +146,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -158,6 +161,7 @@ describe('Workflow API Endpoints', () => {
 						expect(response.body.next_route).to.eq('/kids/profile');
 					}
 				});
+    });
 		});
 	});
 
@@ -169,6 +173,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -188,6 +193,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body.child_attempt).to.be.a('number');
 					expect(response.body.exit_attempt).to.be.a('number');
 				});
+    });
 		});
 	});
 
@@ -199,6 +205,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/session-info`,
@@ -215,6 +222,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body).to.have.property('is_prolific_user');
 					expect(response.body.is_prolific_user).to.be.a('boolean');
 				});
+    });
 		});
 	});
 
@@ -226,6 +234,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/completed-scenarios`,
@@ -247,6 +256,7 @@ describe('Workflow API Endpoints', () => {
 						expect(idx).to.be.at.most(11);
 					});
 				});
+    });
 		});
 	});
 
@@ -258,6 +268,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/study-status`,
@@ -280,6 +291,7 @@ describe('Workflow API Endpoints', () => {
 						expect(response.body.completed_at).to.be.a('number');
 					}
 				});
+    });
 		});
 	});
 
@@ -292,6 +304,7 @@ describe('Workflow API Endpoints', () => {
 			// Get current attempt before reset
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -319,6 +332,7 @@ describe('Workflow API Endpoints', () => {
 						expect(resetResponse.body.new_attempt).to.be.greaterThan(attemptBefore);
 					});
 				});
+    });
 		});
 	});
 
@@ -331,6 +345,7 @@ describe('Workflow API Endpoints', () => {
 			// Get current moderation attempt before reset
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -360,6 +375,7 @@ describe('Workflow API Endpoints', () => {
 						expect(resetResponse.body.completed_scenario_indices).to.be.an('array');
 					});
 				});
+    });
 		});
 	});
 
@@ -371,6 +387,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -385,6 +402,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body.updated).to.be.a('number');
 					expect(response.body.updated).to.be.at.least(0);
 				});
+    });
 		});
 
 		it('should finalize moderation with child_id filter', function () {
@@ -395,6 +413,7 @@ describe('Workflow API Endpoints', () => {
 			// First get child profiles to use a valid child_id
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/child-profiles`,
@@ -440,6 +459,7 @@ describe('Workflow API Endpoints', () => {
 						});
 					}
 				});
+    });
 		});
 
 		it('should finalize moderation with session_number filter', function () {
@@ -449,6 +469,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -464,6 +485,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body).to.have.property('updated');
 					expect(response.body.updated).to.be.a('number');
 				});
+    });
 		});
 	});
 
@@ -476,6 +498,7 @@ describe('Workflow API Endpoints', () => {
 			// Test workflow state progression
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -504,6 +527,7 @@ describe('Workflow API Endpoints', () => {
 						expect(state.next_route).to.eq('/completion');
 					}
 				});
+    });
 		});
 
 		it('should maintain consistent state across multiple requests', function () {
@@ -514,6 +538,7 @@ describe('Workflow API Endpoints', () => {
 			// Make multiple requests and verify consistency
 			
     cy.wait(100);
+    cy.then(() => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -540,6 +565,7 @@ describe('Workflow API Endpoints', () => {
 						);
 					});
 				});
+    });
 		});
 	});
 
