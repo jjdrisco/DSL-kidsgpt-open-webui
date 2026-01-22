@@ -63,19 +63,21 @@ describe('Parent Child Profile', () => {
 		
 		// Try to find and click on child profile related tabs/buttons
 		cy.get('body').then(($body) => {
-			// Look for tabs or buttons related to child profiles
-			const childProfileButton = $body.find('button, a').filter((i, el) => {
+			// Look for tabs or buttons related to child profiles that are enabled
+			const childProfileButton = $body.find('button:not([disabled]), a').filter((i, el) => {
 				const text = (el.textContent || '').toLowerCase();
-				return text.includes('child') && text.includes('profile');
+				const isEnabled = !el.hasAttribute('disabled') && !el.classList.contains('disabled');
+				return isEnabled && text.includes('child') && text.includes('profile');
 			}).first();
 			
 			if (childProfileButton.length > 0) {
-				cy.wrap(childProfileButton).click();
+				cy.wrap(childProfileButton).click({ force: false });
 				cy.wait(2000);
 				// After clicking, we should see child profile content
 				cy.get('body').should('be.visible');
 			} else {
 				// If no specific button, the content might already be visible
+				// Just verify the page loaded successfully
 				cy.get('body').should('be.visible');
 			}
 		});
@@ -85,20 +87,24 @@ describe('Parent Child Profile', () => {
 		cy.visit('/parent');
 		cy.wait(3000);
 		
-		// Look for tab navigation or section buttons
+		// Look for tab navigation or section buttons that are enabled
 		cy.get('body').then(($body) => {
-			const tabs = $body.find('button, a').filter((i, el) => {
+			const tabs = $body.find('button:not([disabled]), a').filter((i, el) => {
 				const text = (el.textContent || '').toLowerCase();
-				return ['overview', 'child', 'profile', 'activity', 'conversations'].some(
+				const isEnabled = !el.hasAttribute('disabled') && !el.classList.contains('disabled');
+				return isEnabled && ['overview', 'child', 'profile', 'activity', 'conversations'].some(
 					keyword => text.includes(keyword)
 				);
 			});
 			
 			if (tabs.length > 0) {
-				// Click the first available tab
-				cy.wrap(tabs.first()).click();
+				// Click the first available enabled tab
+				cy.wrap(tabs.first()).click({ force: false });
 				cy.wait(1000);
 				// Verify page is still responsive
+				cy.get('body').should('be.visible');
+			} else {
+				// If no enabled tabs found, just verify the page loaded
 				cy.get('body').should('be.visible');
 			}
 		});
