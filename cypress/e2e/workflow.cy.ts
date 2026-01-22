@@ -25,7 +25,7 @@ describe('Workflow API Endpoints', () => {
 			cy.log('INTERVIEWEE_EMAIL/PASSWORD or TEST_EMAIL/TEST_PASSWORD not set; skipping');
 			return;
 		}
-		// Authenticate before each test and store token as alias
+		// Authenticate before each test and store token
 		// Wait a bit to avoid rate limiting
 		cy.wait(500);
 		cy.request({
@@ -42,7 +42,7 @@ describe('Workflow API Endpoints', () => {
 			} else if (response.status === 429) {
 				// Rate limited, wait longer and try once more
 				cy.wait(3000);
-				cy.request({
+				return cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signin`,
 					body: {
@@ -60,7 +60,7 @@ describe('Workflow API Endpoints', () => {
 				});
 			} else if (response.status === 401 || response.status === 404) {
 				// User doesn't exist, try to create via signup
-				cy.request({
+				return cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signup`,
 					body: {
@@ -75,7 +75,7 @@ describe('Workflow API Endpoints', () => {
 					} else {
 						// Try signin again after signup
 						cy.wait(1000);
-						cy.request({
+						return cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/auths/signin`,
 							body: {
@@ -106,15 +106,16 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-				cy.request({
-					method: 'GET',
-					url: `${API_BASE_URL}/workflow/state`,
-					headers: {
-						Authorization: `Bearer ${authToken}`,
-						'Content-Type': 'application/json'
-					}
-				}).then((response) => {
+			// Wait for authToken to be set (from beforeEach)
+			cy.wait(100);
+			cy.request({
+				method: 'GET',
+				url: `${API_BASE_URL}/workflow/state`,
+				headers: {
+					Authorization: `Bearer ${authToken}`,
+					'Content-Type': 'application/json'
+				}
+			}).then((response) => {
 					expect(response.status).to.eq(200);
 					expect(response.body).to.have.property('next_route');
 					expect(response.body).to.have.property('substep');
@@ -142,6 +143,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -166,6 +168,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -195,6 +198,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/session-info`,
@@ -221,6 +225,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/completed-scenarios`,
@@ -252,6 +257,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/study-status`,
@@ -285,6 +291,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			// Get current attempt before reset
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -295,6 +302,7 @@ describe('Workflow API Endpoints', () => {
 				}).then((response) => {
 					const attemptBefore = response.body.current_attempt;
 					// Now reset workflow
+     cy.wait(100);
 					cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/workflow/reset`,
@@ -322,6 +330,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			// Get current moderation attempt before reset
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -332,6 +341,7 @@ describe('Workflow API Endpoints', () => {
 				}).then((response) => {
 					const moderationAttemptBefore = response.body.moderation_attempt;
 					// Now reset moderation workflow
+     cy.wait(100);
 					cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/workflow/reset-moderation`,
@@ -360,6 +370,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -383,6 +394,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			// First get child profiles to use a valid child_id
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/child-profiles`,
@@ -394,6 +406,7 @@ describe('Workflow API Endpoints', () => {
 				}).then((childResponse) => {
 					if (childResponse.status === 200 && Array.isArray(childResponse.body) && childResponse.body.length > 0) {
 						const childId = childResponse.body[0].id;
+      cy.wait(100);
 						cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -411,6 +424,7 @@ describe('Workflow API Endpoints', () => {
 						});
 					} else {
 						// Skip if no child profiles - make a request anyway to test the endpoint
+      cy.wait(100);
 						cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -434,6 +448,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			
+    cy.wait(100);
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -460,6 +475,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			// Test workflow state progression
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -497,6 +513,7 @@ describe('Workflow API Endpoints', () => {
 			}
 			// Make multiple requests and verify consistency
 			
+    cy.wait(100);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -505,6 +522,7 @@ describe('Workflow API Endpoints', () => {
 						'Content-Type': 'application/json'
 					}
 				}).then((response1) => {
+     cy.wait(100);
 					cy.request({
 						method: 'GET',
 						url: `${API_BASE_URL}/workflow/state`,
