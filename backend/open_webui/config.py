@@ -65,7 +65,7 @@ def run_migrations():
 
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
-        log.exception(f"Error running migrations: {e}")
+        log.warning("Alembic migrations failed (continuing anyway): %s", e)
 
 
 if ENABLE_DB_MIGRATIONS:

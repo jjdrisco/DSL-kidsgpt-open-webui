@@ -74,5 +74,8 @@ Cypress.Commands.add('registerAdmin', () => registerAdmin());
 Cypress.Commands.add('loginAdmin', () => loginAdmin());
 
 before(() => {
-	cy.registerAdmin();
+	// Skip registerAdmin when only running child-profile specs (avoids 500 from signup if backend state differs)
+	if (!Cypress.env('RUN_CHILD_PROFILE_TESTS')) {
+		cy.registerAdmin();
+	}
 });
