@@ -24,28 +24,54 @@ describe('Workflow API Endpoints', () => {
 			cy.log('INTERVIEWEE_EMAIL/PASSWORD or TEST_EMAIL/TEST_PASSWORD not set; skipping');
 			return;
 		}
-		// Login and get token
-		cy.visit('/auth', {
-			onBeforeLoad(win) {
-				win.localStorage.removeItem('token');
-			}
-		});
-		cy.get('input#email, input[autocomplete="email"]', { timeout: 15000 })
-			.first()
-			.clear()
-			.type(EMAIL);
-		cy.get('input[type="password"]').first().clear().type(PASSWORD);
-		cy.get('button').contains(/sign in/i).click();
-		cy.url({ timeout: 15000 }).should('satisfy', (u: string) =>
-			['/kids/profile', '/', '/moderation-scenario', '/assignment-instructions', '/parent'].some((p) =>
-				u.includes(p)
-			)
-		);
-		// Get token from localStorage
-		cy.window().then((win) => {
-			const token = win.localStorage.getItem('token');
-			if (token) {
-				authToken = token;
+		// Authenticate via API to get token
+		cy.request({
+			method: 'POST',
+			url: `${API_BASE_URL}/auths/signin`,
+			body: {
+				email: EMAIL,
+				password: PASSWORD
+			},
+			failOnStatusCode: false
+		}).then((response) => {
+			if (response.status === 200 && response.body.token) {
+				authToken = response.body.token;
+				cy.log('Authentication successful via signin');
+			} else {
+				// User doesn't exist, try to create via signup
+				cy.request({
+					method: 'POST',
+					url: `${API_BASE_URL}/auths/signup`,
+					body: {
+						email: EMAIL,
+						password: PASSWORD,
+						name: 'Test User'
+					},
+					failOnStatusCode: false
+				}).then((signupResponse) => {
+					if (signupResponse.status === 200 && signupResponse.body.token) {
+						authToken = signupResponse.body.token;
+						cy.log('User created and authenticated via signup');
+					} else {
+						// Try signin again after signup
+						cy.request({
+							method: 'POST',
+							url: `${API_BASE_URL}/auths/signin`,
+							body: {
+								email: EMAIL,
+								password: PASSWORD
+							},
+							failOnStatusCode: false
+						}).then((retryResponse) => {
+							if (retryResponse.status === 200 && retryResponse.body.token) {
+								authToken = retryResponse.body.token;
+								cy.log('Authentication successful after signup');
+							} else {
+								cy.log(`Authentication failed: ${retryResponse.status} - ${JSON.stringify(retryResponse.body)}`);
+							}
+						});
+					}
+				});
 			}
 		});
 	});
