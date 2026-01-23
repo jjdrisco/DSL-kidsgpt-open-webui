@@ -143,12 +143,15 @@ async def get_session_user(
         "session_number": user.session_number,
         "consent_given": user.consent_given,
     }
-    
+
     # Debug logging for consent flow
     import logging
+
     log = logging.getLogger(__name__)
-    log.debug(f"[CONSENT DEBUG] get_session_user returning: prolific_pid={user.prolific_pid}, consent_given={user.consent_given}")
-    
+    log.debug(
+        f"[CONSENT DEBUG] get_session_user returning: prolific_pid={user.prolific_pid}, consent_given={user.consent_given}"
+    )
+
     return response_data
 
 
@@ -815,8 +818,14 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
 
         # Check if admin_email contains template placeholders (not a valid email)
         # This prevents using template strings like "prolific_{{%PROLIFIC_PID%}}@prolific.study"
-        if admin_email and ('{{%' in admin_email or '%}}' in admin_email or '%PROLIFIC_PID%' in admin_email):
-            log.warning(f"Admin email contains template placeholders, treating as invalid: {admin_email}")
+        if admin_email and (
+            "{{%" in admin_email
+            or "%}}" in admin_email
+            or "%PROLIFIC_PID%" in admin_email
+        ):
+            log.warning(
+                f"Admin email contains template placeholders, treating as invalid: {admin_email}"
+            )
             admin_email = None
 
         # Try to find admin by email if valid email provided
@@ -826,7 +835,7 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
                 admin_name = admin.name
                 # Use the found admin's email (in case case differences)
                 admin_email = admin.email
-        
+
         # Fallback to first user if no valid admin_email or user not found
         if not admin_email or not admin_name:
             admin = Users.get_first_user()

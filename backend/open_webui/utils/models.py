@@ -136,60 +136,71 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
             api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
                 str(idx),
-                request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
+                request.app.state.config.OPENAI_API_CONFIGS.get(
+                    url, {}
+                ),  # Legacy support
             )
-            
+
             enable = api_config.get("enable", True)
             model_ids = api_config.get("model_ids", [])
-            
+
             if enable:
                 prefix_id = api_config.get("prefix_id", None)
-                
+
                 if model_ids:
                     # Use configured model IDs
                     for model_id in model_ids:
                         model_name = model_id
                         if prefix_id:
                             model_name = f"{prefix_id}.{model_id}"
-                        
-                        direct_models.append({
-                            "id": model_name,
-                            "name": model_id,
-                            "object": "model",
-                            "created": int(time.time()),
-                            "owned_by": "openai",
-                            "openai": {"id": model_id},
-                            "urlIdx": idx,
-                            "connection_type": api_config.get("connection_type", "external"),
-                            "tags": api_config.get("tags", []),
-                        })
+
+                        direct_models.append(
+                            {
+                                "id": model_name,
+                                "name": model_id,
+                                "object": "model",
+                                "created": int(time.time()),
+                                "owned_by": "openai",
+                                "openai": {"id": model_id},
+                                "urlIdx": idx,
+                                "connection_type": api_config.get(
+                                    "connection_type", "external"
+                                ),
+                                "tags": api_config.get("tags", []),
+                            }
+                        )
                 else:
                     # Fetch models dynamically
                     try:
                         from open_webui.routers.openai import send_get_request
+
                         key = request.app.state.config.OPENAI_API_KEYS[idx]
                         response = await send_get_request(f"{url}/models", key, user)
-                        
+
                         if response and "data" in response:
                             for model in response["data"]:
                                 model_name = model["id"]
                                 if prefix_id:
                                     model_name = f"{prefix_id}.{model['id']}"
-                                
-                                direct_models.append({
-                                    "id": model_name,
-                                    "name": model.get("name", model["id"]),
-                                    "object": "model",
-                                    "created": int(time.time()),
-                                    "owned_by": "openai",
-                                    "openai": {"id": model["id"]},
-                                    "urlIdx": idx,
-                                    "connection_type": api_config.get("connection_type", "external"),
-                                    "tags": api_config.get("tags", []),
-                                })
+
+                                direct_models.append(
+                                    {
+                                        "id": model_name,
+                                        "name": model.get("name", model["id"]),
+                                        "object": "model",
+                                        "created": int(time.time()),
+                                        "owned_by": "openai",
+                                        "openai": {"id": model["id"]},
+                                        "urlIdx": idx,
+                                        "connection_type": api_config.get(
+                                            "connection_type", "external"
+                                        ),
+                                        "tags": api_config.get("tags", []),
+                                    }
+                                )
                     except Exception as e:
                         log.warning(f"Failed to fetch direct models from {url}: {e}")
-        
+
         models = models + direct_models
 
     global_action_ids = [

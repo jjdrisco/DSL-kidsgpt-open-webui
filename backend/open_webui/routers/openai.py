@@ -812,7 +812,7 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
-    
+
     # Remove internal Open WebUI fields that OpenAI doesn't recognize
     payload.pop("urlIdx", None)
     payload.pop("connection_type", None)
@@ -822,13 +822,17 @@ async def generate_chat_completion(
     log.info(f"Full form_data: {form_data}")
     model_info = Models.get_model_by_id(model_id)
     if model_info:
-        log.info(f"Custom model found: {model_id}, base_model_id: {model_info.base_model_id if hasattr(model_info, 'base_model_id') else 'None'}")
+        log.info(
+            f"Custom model found: {model_id}, base_model_id: {model_info.base_model_id if hasattr(model_info, 'base_model_id') else 'None'}"
+        )
     else:
         log.info(f"No custom model found for: {model_id}")
         # Let's see what models are available
         try:
             all_models = Models.get_all_models()
-            custom_models = [m for m in all_models if hasattr(m, 'user_id') and m.user_id]
+            custom_models = [
+                m for m in all_models if hasattr(m, "user_id") and m.user_id
+            ]
             log.info(f"Available custom models: {[m.id for m in custom_models]}")
         except Exception as e:
             log.info(f"Could not get available models: {e}")
@@ -845,14 +849,22 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            
+
             # Only apply model system prompt if there's no existing system message
             # This allows playground system instructions to take precedence
-            if system and not (payload.get("messages") and payload["messages"] and payload["messages"][0].get("role") == "system"):
+            if system and not (
+                payload.get("messages")
+                and payload["messages"]
+                and payload["messages"][0].get("role") == "system"
+            ):
                 log.info(f"Applying custom model system prompt: {system[:100]}...")
-                payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+                payload = apply_model_system_prompt_to_body(
+                    system, payload, metadata, user
+                )
             elif system:
-                log.info(f"Custom model has system prompt but not applying (existing system message): {system[:100]}...")
+                log.info(
+                    f"Custom model has system prompt but not applying (existing system message): {system[:100]}..."
+                )
             else:
                 log.info("No custom model system prompt found")
 
@@ -878,7 +890,7 @@ async def generate_chat_completion(
     await get_all_models(request, user=user)
     # Always resolve to the base model ID if present
     resolved_model_id = model_id
-    if model_info and hasattr(model_info, 'base_model_id') and model_info.base_model_id:
+    if model_info and hasattr(model_info, "base_model_id") and model_info.base_model_id:
         resolved_model_id = model_info.base_model_id
     # Try to get urlIdx from form_data or model dict
     urlIdx = None
@@ -985,8 +997,10 @@ async def generate_chat_completion(
             if msg.get("role") == "system":
                 log.info(f"System message {i}: {msg.get('content', '')[:100]}...")
             else:
-                log.info(f"Message {i} ({msg.get('role', 'unknown')}): {msg.get('content', '')[:50]}...")
-    
+                log.info(
+                    f"Message {i} ({msg.get('role', 'unknown')}): {msg.get('content', '')[:50]}..."
+                )
+
     payload = json.dumps(payload)
 
     r = None
@@ -995,7 +1009,9 @@ async def generate_chat_completion(
     response = None
 
     try:
-        log.info(f"Using OpenAI URL: {url}, API Key: {key[:5]}... for model: {payload[:100]}...")
+        log.info(
+            f"Using OpenAI URL: {url}, API Key: {key[:5]}... for model: {payload[:100]}..."
+        )
         log.info(f"Request payload: {payload}")
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)

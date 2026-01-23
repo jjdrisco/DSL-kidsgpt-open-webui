@@ -84,12 +84,14 @@ async def generate_direct_chat_completion(
         return await generate_direct_chat_completion_http(
             request, form_data, user, models
         )
-    
+
     # For direct connections (OpenAI models), prefer HTTP communication to avoid socket issues
     model_id = form_data["model"]
     model = models[model_id]
     if model.get("owned_by") == "openai":
-        log.info("OpenAI model detected, using direct HTTP communication to avoid socket issues")
+        log.info(
+            "OpenAI model detected, using direct HTTP communication to avoid socket issues"
+        )
         return await generate_direct_chat_completion_http(
             request, form_data, user, models
         )
@@ -197,7 +199,9 @@ async def generate_direct_chat_completion_http(
     log.info("generate_direct_chat_completion_http")
     log.info(f"DEBUG: Received model_id: {form_data.get('model', 'NOT_FOUND')}")
     log.info(f"DEBUG: Full form_data keys: {list(form_data.keys())}")
-    log.info(f"DEBUG: User message content: {form_data.get('messages', [{}])[0].get('content', 'NO_CONTENT')[:100]}...")
+    log.info(
+        f"DEBUG: User message content: {form_data.get('messages', [{}])[0].get('content', 'NO_CONTENT')[:100]}..."
+    )
 
     model_id = form_data["model"]
     model = models[model_id]
@@ -273,16 +277,28 @@ async def generate_chat_completion(
     log.info(f"DEBUG: generate_chat_completion models parameter type: {type(models)}")
     if models:
         if isinstance(models, dict):
-            log.info(f"DEBUG: generate_chat_completion models parameter (dict): {list(models.keys())}")
+            log.info(
+                f"DEBUG: generate_chat_completion models parameter (dict): {list(models.keys())}"
+            )
         else:
-            log.info(f"DEBUG: generate_chat_completion models parameter (list): {[m['id'] if isinstance(m, dict) else str(m) for m in models]}")
+            log.info(
+                f"DEBUG: generate_chat_completion models parameter (list): {[m['id'] if isinstance(m, dict) else str(m) for m in models]}"
+            )
     else:
         log.info(f"DEBUG: generate_chat_completion models parameter: None")
-    
-    log.info(f"DEBUG: generate_chat_completion request.state.direct: {getattr(request.state, 'direct', False)}")
-    log.info(f"DEBUG: generate_chat_completion hasattr(request.state, 'model'): {hasattr(request.state, 'model')}")
-    
-    if getattr(request.state, "direct", False) and hasattr(request.state, "model") and models is None:
+
+    log.info(
+        f"DEBUG: generate_chat_completion request.state.direct: {getattr(request.state, 'direct', False)}"
+    )
+    log.info(
+        f"DEBUG: generate_chat_completion hasattr(request.state, 'model'): {hasattr(request.state, 'model')}"
+    )
+
+    if (
+        getattr(request.state, "direct", False)
+        and hasattr(request.state, "model")
+        and models is None
+    ):
         # Only override models if no models parameter was passed (preserve custom models)
         models = {
             request.state.model["id"]: request.state.model,

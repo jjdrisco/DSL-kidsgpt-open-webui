@@ -58,17 +58,17 @@ class JSONField(types.TypeDecorator):
 def is_alembic_detected(database_url: str) -> bool:
     """
     Check if Alembic migrations have been applied by detecting the alembic_version table.
-    
+
     Returns True if Alembic is detected, False otherwise.
     If detection fails, returns False (safe fallback to run Peewee migrations).
     """
     try:
         import peewee as pw
-        
+
         # Replace postgresql:// with postgres:// for Peewee compatibility
         peewee_url = database_url.replace("postgresql://", "postgres://")
         db = register_connection(peewee_url)
-        
+
         try:
             if isinstance(db, pw.SqliteDatabase):
                 # For SQLite, check sqlite_master for alembic_version table
@@ -85,7 +85,7 @@ def is_alembic_detected(database_url: str) -> bool:
                 )
                 result = cursor.fetchone()
                 alembic_detected = result is not None
-            
+
             return alembic_detected
         finally:
             if not db.is_closed():

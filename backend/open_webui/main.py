@@ -556,7 +556,9 @@ async def lifespan(app: FastAPI):
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
-    log.info("Skipping install of external dependencies of functions and tools (disabled)")
+    log.info(
+        "Skipping install of external dependencies of functions and tools (disabled)"
+    )
     # Explicitly disabled to prevent hanging during startup
     # install_tool_and_function_dependencies()
 
@@ -1288,11 +1290,14 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(moderation.router, prefix="/api/v1/moderation", tags=["moderation"])
-app.include_router(moderation_scenarios_router.router, prefix="/api/v1", tags=["moderation_scenarios"])
+app.include_router(
+    moderation_scenarios_router.router, prefix="/api/v1", tags=["moderation_scenarios"]
+)
 app.include_router(assignment_time.router, prefix="/api/v1", tags=["assignment_time"])
 
 # Import and include selections router
 from open_webui.routers import selections
+
 app.include_router(selections.router, prefix="/api/v1", tags=["selections"])
 
 # Include child profiles router
@@ -1304,10 +1309,12 @@ app.include_router(attention_checks.router, prefix="/api/v1", tags=["attention_c
 
 # Include workflow router
 from open_webui.routers import workflow
+
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
 
 # Include prolific router
 from open_webui.routers import prolific
+
 app.include_router(prolific.router, prefix="/api/v1/prolific", tags=["prolific"])
 
 # SCIM 2.0 API for identity management
@@ -1439,15 +1446,17 @@ async def chat_completion(
     try:
         if not model_item.get("direct", False):
             model_id = form_data.get("model", None)
-            
+
             # Debug: Log the model lookup process
             log.info(f"DEBUG: Looking for model_id: {model_id}")
-            log.info(f"DEBUG: Available models in MODELS: {list(request.app.state.MODELS.keys())}")
-            
+            log.info(
+                f"DEBUG: Available models in MODELS: {list(request.app.state.MODELS.keys())}"
+            )
+
             # First check if this is a custom model in the database
             model_info = Models.get_model_by_id(model_id)
             log.info(f"DEBUG: Model info from database: {model_info}")
-            
+
             if model_info:
                 # This is a custom model, check if it has a base_model_id
                 if model_info.base_model_id:
@@ -1456,13 +1465,16 @@ async def chat_completion(
                     log.info(f"DEBUG: Custom model has base_model_id: {base_model_id}")
                     if base_model_id not in request.app.state.MODELS:
                         raise Exception(f"Base model '{base_model_id}' not found")
-                    
+
                     base_model = request.app.state.MODELS[base_model_id]
                     # Copy all fields from base model, ensure urlIdx and connection_type are present
                     model = dict(base_model)
                     if "urlIdx" not in model and "urlIdx" in base_model:
                         model["urlIdx"] = base_model["urlIdx"]
-                    if "connection_type" not in model and "connection_type" in base_model:
+                    if (
+                        "connection_type" not in model
+                        and "connection_type" in base_model
+                    ):
                         model["connection_type"] = base_model["connection_type"]
                     # Also set in form_data for downstream use
                     form_data["urlIdx"] = model.get("urlIdx")
@@ -1470,12 +1482,17 @@ async def chat_completion(
                     # DON'T change the model ID here - let downstream functions handle custom model logic
                     # form_data["model"] = base_model_id  # <-- REMOVED THIS LINE
                     # If the base model is a direct/OpenAI model, set direct connection state
-                    if model.get("connection_type") == "external" or model.get("owned_by") == "openai":
+                    if (
+                        model.get("connection_type") == "external"
+                        or model.get("owned_by") == "openai"
+                    ):
                         request.state.direct = True
                         request.state.model = model
                 else:
                     # Custom model without base_model_id, check if it's in MODELS
-                    log.info(f"DEBUG: Custom model without base_model_id, checking MODELS")
+                    log.info(
+                        f"DEBUG: Custom model without base_model_id, checking MODELS"
+                    )
                     if model_id not in request.app.state.MODELS:
                         raise Exception("Model not found")
                     model = request.app.state.MODELS[model_id]
@@ -1576,7 +1593,9 @@ async def chat_completion(
         )
 
     try:
-        response = await chat_completion_handler(request, form_data, user, models=models_with_custom)
+        response = await chat_completion_handler(
+            request, form_data, user, models=models_with_custom
+        )
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
@@ -1814,7 +1833,8 @@ async def get_app_config(request: Request):
             {
                 "default_models": (
                     ("gpt-5-nano," + app.state.config.DEFAULT_MODELS)
-                    if isinstance(app.state.config.DEFAULT_MODELS, str) and app.state.config.DEFAULT_MODELS.strip()
+                    if isinstance(app.state.config.DEFAULT_MODELS, str)
+                    and app.state.config.DEFAULT_MODELS.strip()
                     else app.state.config.DEFAULT_MODELS
                 ),
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,

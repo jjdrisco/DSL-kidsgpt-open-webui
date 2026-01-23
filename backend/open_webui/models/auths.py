@@ -131,7 +131,7 @@ class AuthsTable:
         try:
             # Import here to avoid loading fastapi and other dependencies during migrations
             from open_webui.utils.auth import verify_password
-            
+
             with get_db() as db:
                 auth = db.query(Auth).filter_by(id=user.id, active=True).first()
                 if auth:

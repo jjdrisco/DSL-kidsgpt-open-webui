@@ -25,7 +25,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "oauth_session" not in existing_tables:
         # Create oauth_session table
         op.create_table(
@@ -49,7 +49,9 @@ def upgrade() -> None:
         )
     else:
         # Table exists, check if indexes exist
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("oauth_session")]
+        existing_indexes = [
+            idx["name"] for idx in inspector.get_indexes("oauth_session")
+        ]
         indexes_to_create = [
             ("idx_oauth_session_user_id", ["user_id"]),
             ("idx_oauth_session_expires_at", ["expires_at"]),
@@ -65,10 +67,12 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "oauth_session" in existing_tables:
         # Drop indexes first
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("oauth_session")]
+        existing_indexes = [
+            idx["name"] for idx in inspector.get_indexes("oauth_session")
+        ]
         indexes_to_drop = [
             "idx_oauth_session_user_provider",
             "idx_oauth_session_expires_at",

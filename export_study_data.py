@@ -28,6 +28,7 @@ def get_database_url() -> str | None:
 def ensure_psycopg2() -> bool:
     try:
         import psycopg2  # noqa: F401
+
         return True
     except Exception:
         print("Installing psycopg2-binary ...")
@@ -38,6 +39,7 @@ def ensure_psycopg2() -> bool:
                 capture_output=True,
             )
             import psycopg2  # noqa: F401
+
             return True
         except Exception as e:
             print(f"Failed to install psycopg2-binary: {e}", file=sys.stderr)
@@ -73,7 +75,9 @@ def export_query_to_csv(conn, query: str, output_path: str) -> int:
                     break
                 writer.writerows(rows)
                 total_rows += len(rows)
-                print(f"Processed {total_rows} rows for {os.path.basename(output_path)} ...")
+                print(
+                    f"Processed {total_rows} rows for {os.path.basename(output_path)} ..."
+                )
     return total_rows
 
 
@@ -82,7 +86,9 @@ def timestamp() -> str:
 
 
 def main():
-    print("Conda env: please run `conda activate open-webui` before executing this script.")
+    print(
+        "Conda env: please run `conda activate open-webui` before executing this script."
+    )
 
     # Sanity checks: Heroku CLI and auth
     try:
@@ -240,12 +246,16 @@ def main():
         print(f"Exit quiz response rows: {exit_rows}")
 
         print(f"Exporting assignment time -> {assignment_time_csv}")
-        assignment_time_rows = export_query_to_csv(conn, assignment_time_query, str(assignment_time_csv))
+        assignment_time_rows = export_query_to_csv(
+            conn, assignment_time_query, str(assignment_time_csv)
+        )
         print(f"Assignment time rows: {assignment_time_rows}")
 
         print("Done.")
         print(f"Output directory: {export_dir}")
-        print(f"Outputs:\n- {child_csv}\n- {mod_csv}\n- {exit_csv}\n- {assignment_time_csv}")
+        print(
+            f"Outputs:\n- {child_csv}\n- {mod_csv}\n- {exit_csv}\n- {assignment_time_csv}"
+        )
     except Exception as e:
         print(f"Export failed: {e}", file=sys.stderr)
         sys.exit(1)
@@ -258,9 +268,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-

@@ -85,9 +85,7 @@ class SelectionSyncService {
 	/**
 	 * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
 	 */
-	async getChatSelections(
-		chatId: string
-	): Promise<
+	async getChatSelections(chatId: string): Promise<
 		{
 			chatId: string;
 			messageId: string;
@@ -323,9 +321,7 @@ class SelectionSyncService {
 		}
 	}
 
-	private getFromLocalStorage(
-		chatId: string
-	): {
+	private getFromLocalStorage(chatId: string): {
 		chatId: string;
 		messageId: string;
 		role: 'user' | 'assistant';
