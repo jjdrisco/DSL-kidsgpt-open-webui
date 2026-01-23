@@ -29,7 +29,6 @@ from peewee_migrate import Migrator
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
-
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
