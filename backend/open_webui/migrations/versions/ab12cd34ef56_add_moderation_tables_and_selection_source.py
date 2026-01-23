@@ -10,7 +10,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
 
-
 revision = "ab12cd34ef56"
 down_revision = "018012973d35"
 branch_labels = None
