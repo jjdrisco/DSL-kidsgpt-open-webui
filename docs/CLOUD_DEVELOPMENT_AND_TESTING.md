@@ -6,11 +6,11 @@ Complete reference for running the project and child-profile Cypress tests in a 
 
 ## 1. System requirements
 
-| Component | Requirement |
-|-----------|-------------|
-| **Node.js** | `>=18.13.0` and `<=22.x.x` (`package.json` engines) |
-| **npm** | `>=6.0.0` |
-| **Python** | `3.11` (`.python-version`) |
+| Component   | Requirement                                                                |
+| ----------- | -------------------------------------------------------------------------- |
+| **Node.js** | `>=18.13.0` and `<=22.x.x` (`package.json` engines)                        |
+| **npm**     | `>=6.0.0`                                                                  |
+| **Python**  | `3.11` (`.python-version`)                                                 |
 | **Network** | Outbound HTTPS for npm, pip, Pyodide fetch, and Cypress binary (first run) |
 
 ---
@@ -48,33 +48,33 @@ pip install mimeparse langchain-classic
 
 ### 3.1 Backend
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///{DATA_DIR}/webui.db` | Use an absolute path in cloud, e.g. `sqlite:///$(pwd)/backend/data/webui.db`. |
-| `DATA_DIR` | `backend/data` | Base dir; `DATABASE_URL` defaults to `{DATA_DIR}/webui.db`. |
-| `PORT` | `8080` | Must match `BACKEND_PORT` for the Vite proxy. |
-| `CORS_ALLOW_ORIGIN` | `*` | Semicolon-separated. For dev: `http://localhost:5173;http://localhost:5174;http://localhost:8080`. |
-| `ENABLE_WEBSOCKET_SUPPORT` | `true` | Set `false` to avoid WebSocket deps if not needed. |
-| `WEBUI_SECRET_KEY` | from `.webui_secret_key` or generated | Required; `backend/start.sh` can generate it. |
-| `ENABLE_SIGNUP` | `true` (config) | Must allow signup for the first user, or create the test user another way. |
+| Variable                   | Default                               | Description                                                                                        |
+| -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | `sqlite:///{DATA_DIR}/webui.db`       | Use an absolute path in cloud, e.g. `sqlite:///$(pwd)/backend/data/webui.db`.                      |
+| `DATA_DIR`                 | `backend/data`                        | Base dir; `DATABASE_URL` defaults to `{DATA_DIR}/webui.db`.                                        |
+| `PORT`                     | `8080`                                | Must match `BACKEND_PORT` for the Vite proxy.                                                      |
+| `CORS_ALLOW_ORIGIN`        | `*`                                   | Semicolon-separated. For dev: `http://localhost:5173;http://localhost:5174;http://localhost:8080`. |
+| `ENABLE_WEBSOCKET_SUPPORT` | `true`                                | Set `false` to avoid WebSocket deps if not needed.                                                 |
+| `WEBUI_SECRET_KEY`         | from `.webui_secret_key` or generated | Required; `backend/start.sh` can generate it.                                                      |
+| `ENABLE_SIGNUP`            | `true` (config)                       | Must allow signup for the first user, or create the test user another way.                         |
 
 ### 3.2 Frontend (Vite)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BACKEND_PORT` | `8080` | Backend port for `/api`, `/ollama`, `/openai`, `/ws` proxy. |
-| `BACKEND_HOST` | `localhost` | Backend host. |
+| Variable       | Default     | Description                                                 |
+| -------------- | ----------- | ----------------------------------------------------------- |
+| `BACKEND_PORT` | `8080`      | Backend port for `/api`, `/ollama`, `/openai`, `/ws` proxy. |
+| `BACKEND_HOST` | `localhost` | Backend host.                                               |
 
 ### 3.3 Cypress (child-profile specs)
 
-| Variable | Purpose |
-|----------|---------|
-| `RUN_CHILD_PROFILE_TESTS` or `CYPRESS_RUN_CHILD_PROFILE_TESTS` | Set to `1` so the global `before()` skips `registerAdmin`. Required for these specs. |
-| `CYPRESS_baseUrl` | Frontend URL, e.g. `http://localhost:5173` or `http://localhost:5174`. Must match Vite. |
-| `INTERVIEWEE_EMAIL`, `INTERVIEWEE_PASSWORD` | Login for `kids-profile.cy.ts`. |
-| `PARENT_EMAIL`, `PARENT_PASSWORD` | Login for `parent-child-profile.cy.ts`. |
-| `TEST_EMAIL`, `TEST_PASSWORD` | Override for both. |
-| **Defaults** | If unset: `jjdrisco@ucsd.edu` / `0000`. |
+| Variable                                                       | Purpose                                                                                 |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `RUN_CHILD_PROFILE_TESTS` or `CYPRESS_RUN_CHILD_PROFILE_TESTS` | Set to `1` so the global `before()` skips `registerAdmin`. Required for these specs.    |
+| `CYPRESS_baseUrl`                                              | Frontend URL, e.g. `http://localhost:5173` or `http://localhost:5174`. Must match Vite. |
+| `INTERVIEWEE_EMAIL`, `INTERVIEWEE_PASSWORD`                    | Login for `kids-profile.cy.ts`.                                                         |
+| `PARENT_EMAIL`, `PARENT_PASSWORD`                              | Login for `parent-child-profile.cy.ts`.                                                 |
+| `TEST_EMAIL`, `TEST_PASSWORD`                                  | Override for both.                                                                      |
+| **Defaults**                                                   | If unset: `jjdrisco@ucsd.edu` / `0000`.                                                 |
 
 `cypress.config.ts` forwards `RUN_CHILD_PROFILE_TESTS` and the email/password vars from `process.env` when `CYPRESS_*` is not set.
 
@@ -220,15 +220,15 @@ RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 \
 
 ## 9. Troubleshooting
 
-| Symptom | Cause | Action |
-|---------|-------|--------|
-| `Expected to find element: input#email, input[autocomplete="email"]` | Frontend not at `CYPRESS_baseUrl` or backend down | Run `npm run dev`, match `CYPRESS_baseUrl` to Vite port, ensure backend is up. |
-| `expected 500 to be one of [ 200, 400 ]` in `before` (signup) | `registerAdmin` ran | Use `RUN_CHILD_PROFILE_TESTS=1`. |
-| `Cannot read properties of null (reading 'default_locale')` | Layout when `getBackendConfig()` fails | Fixed with `backendConfig?.default_locale` in `+layout.svelte`. |
-| Cypress cannot connect to `baseUrl` | Wrong `CYPRESS_baseUrl` or frontend on another port | Set `CYPRESS_baseUrl` to Vite's URL; consider `--port 5173`. |
-| Alembic "Multiple head revisions" or missing revision | Migration history in this worktree | App may still start; use new DB or fix revision graph if needed. |
-| `ModuleNotFoundError` (e.g. `mimeparse`, `langchain_classic`) | Missing pip deps | `pip install mimeparse langchain-classic` (or the given package). |
-| Pyodide fetch fails | Network/proxy | Set `https_proxy`/`http_proxy` if needed; allow outbound HTTPS. |
+| Symptom                                                              | Cause                                               | Action                                                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `Expected to find element: input#email, input[autocomplete="email"]` | Frontend not at `CYPRESS_baseUrl` or backend down   | Run `npm run dev`, match `CYPRESS_baseUrl` to Vite port, ensure backend is up. |
+| `expected 500 to be one of [ 200, 400 ]` in `before` (signup)        | `registerAdmin` ran                                 | Use `RUN_CHILD_PROFILE_TESTS=1`.                                               |
+| `Cannot read properties of null (reading 'default_locale')`          | Layout when `getBackendConfig()` fails              | Fixed with `backendConfig?.default_locale` in `+layout.svelte`.                |
+| Cypress cannot connect to `baseUrl`                                  | Wrong `CYPRESS_baseUrl` or frontend on another port | Set `CYPRESS_baseUrl` to Vite's URL; consider `--port 5173`.                   |
+| Alembic "Multiple head revisions" or missing revision                | Migration history in this worktree                  | App may still start; use new DB or fix revision graph if needed.               |
+| `ModuleNotFoundError` (e.g. `mimeparse`, `langchain_classic`)        | Missing pip deps                                    | `pip install mimeparse langchain-classic` (or the given package).              |
+| Pyodide fetch fails                                                  | Network/proxy                                       | Set `https_proxy`/`http_proxy` if needed; allow outbound HTTPS.                |
 
 See also: `cypress/README_CHILD_PROFILE_TESTS.md`.
 
@@ -236,11 +236,11 @@ See also: `cypress/README_CHILD_PROFILE_TESTS.md`.
 
 ## 10. References
 
-| Topic | Location |
-|-------|----------|
-| Child-profile Cypress | `cypress/e2e/kids-profile.cy.ts`, `cypress/e2e/parent-child-profile.cy.ts` |
-| Cypress support / `RUN_CHILD_PROFILE_TESTS` | `cypress/support/e2e.ts`, `cypress.config.ts` |
-| Cypress child-profile readme | `cypress/README_CHILD_PROFILE_TESTS.md` |
-| Database / `DATABASE_URL` | `backend/README_DATABASE.md`, `backend/open_webui/env.py` |
-| Vite proxy | `vite.config.ts` (`BACKEND_HOST`, `BACKEND_PORT`) |
-| Backend scripts | `backend/dev.sh`, `backend/start.sh` |
+| Topic                                       | Location                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| Child-profile Cypress                       | `cypress/e2e/kids-profile.cy.ts`, `cypress/e2e/parent-child-profile.cy.ts` |
+| Cypress support / `RUN_CHILD_PROFILE_TESTS` | `cypress/support/e2e.ts`, `cypress.config.ts`                              |
+| Cypress child-profile readme                | `cypress/README_CHILD_PROFILE_TESTS.md`                                    |
+| Database / `DATABASE_URL`                   | `backend/README_DATABASE.md`, `backend/open_webui/env.py`                  |
+| Vite proxy                                  | `vite.config.ts` (`BACKEND_HOST`, `BACKEND_PORT`)                          |
+| Backend scripts                             | `backend/dev.sh`, `backend/start.sh`                                       |

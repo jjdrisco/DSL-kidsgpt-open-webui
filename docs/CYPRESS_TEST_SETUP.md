@@ -19,13 +19,13 @@ Complete guide for setting up and running Cypress end-to-end tests for the Open 
 
 ## 1. System Requirements
 
-| Component | Requirement | Notes |
-|-----------|-------------|-------|
-| **Node.js** | `>=18.13.0` and `<=22.x.x` | Check with `node --version`. If using Node 22.x, may need `--force` flag for npm install. |
-| **npm** | `>=6.0.0` | Check with `npm --version` |
-| **Python** | `3.11` (preferred) or `3.12` | Check with `python3 --version`. `.python-version` specifies 3.11. |
-| **Network** | Outbound HTTPS | Required for npm, pip, Pyodide fetch, and Cypress binary download (first run) |
-| **Display** | Xvfb (for headless) | Required for running Cypress in headless mode on Linux |
+| Component   | Requirement                  | Notes                                                                                     |
+| ----------- | ---------------------------- | ----------------------------------------------------------------------------------------- |
+| **Node.js** | `>=18.13.0` and `<=22.x.x`   | Check with `node --version`. If using Node 22.x, may need `--force` flag for npm install. |
+| **npm**     | `>=6.0.0`                    | Check with `npm --version`                                                                |
+| **Python**  | `3.11` (preferred) or `3.12` | Check with `python3 --version`. `.python-version` specifies 3.11.                         |
+| **Network** | Outbound HTTPS               | Required for npm, pip, Pyodide fetch, and Cypress binary download (first run)             |
+| **Display** | Xvfb (for headless)          | Required for running Cypress in headless mode on Linux                                    |
 
 ### Linux Dependencies (for headless Cypress)
 
@@ -59,6 +59,7 @@ npm install --legacy-peer-deps --force
 ```
 
 **First Run Notes:**
+
 - `npm run dev` and `build` automatically run `pyodide:fetch` (downloads Pyodide into `static/pyodide/`)
 - First run can take a few minutes and requires network access
 - Pyodide download happens automatically on first dev/build
@@ -119,13 +120,13 @@ export PORT=8080
 
 **Variable Descriptions:**
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///{DATA_DIR}/webui.db` | Use absolute path in cloud environments |
-| `CORS_ALLOW_ORIGIN` | `*` | Semicolon-separated list of allowed origins |
-| `ENABLE_WEBSOCKET_SUPPORT` | `true` | Set `false` to avoid WebSocket dependencies |
-| `PORT` | `8080` | Backend port (must match `BACKEND_PORT` for Vite proxy) |
-| `ENABLE_SIGNUP` | `true` (config) | Must allow signup for first user or create test user via API |
+| Variable                   | Default                         | Description                                                  |
+| -------------------------- | ------------------------------- | ------------------------------------------------------------ |
+| `DATABASE_URL`             | `sqlite:///{DATA_DIR}/webui.db` | Use absolute path in cloud environments                      |
+| `CORS_ALLOW_ORIGIN`        | `*`                             | Semicolon-separated list of allowed origins                  |
+| `ENABLE_WEBSOCKET_SUPPORT` | `true`                          | Set `false` to avoid WebSocket dependencies                  |
+| `PORT`                     | `8080`                          | Backend port (must match `BACKEND_PORT` for Vite proxy)      |
+| `ENABLE_SIGNUP`            | `true` (config)                 | Must allow signup for first user or create test user via API |
 
 ### 3.2 Frontend Environment Variables
 
@@ -154,6 +155,7 @@ export TEST_PASSWORD=0000
 ```
 
 **Default Credentials:**
+
 - Email: `jjdrisco@ucsd.edu`
 - Password: `0000`
 
@@ -200,13 +202,14 @@ curl -X POST "http://localhost:8080/api/v1/auths/signup" \
 ```
 
 **Expected Response:**
+
 ```json
 {
-  "id": "...",
-  "email": "jjdrisco@ucsd.edu",
-  "name": "Test User",
-  "role": "admin",
-  "token": "..."
+	"id": "...",
+	"email": "jjdrisco@ucsd.edu",
+	"name": "Test User",
+	"role": "admin",
+	"token": "..."
 }
 ```
 
@@ -254,6 +257,7 @@ npx cypress run --spec "cypress/e2e/settings.cy.ts"
 ### 5.2 Child-Profile Tests
 
 **Prerequisites:**
+
 - Backend running on `localhost:8080`
 - Frontend running (note the port, e.g., `5173`)
 - Test user account exists (`jjdrisco@ucsd.edu` / `0000`)
@@ -323,21 +327,22 @@ npx cypress open
 
 ### 6.1 Standard Test Files
 
-| File | Description | Requires `RUN_CHILD_PROFILE_TESTS`? |
-|------|-------------|--------------------------------------|
-| `registration.cy.ts` | Tests user registration and login | No |
-| `chat.cy.ts` | Tests chat functionality | No |
-| `settings.cy.ts` | Tests settings pages | No |
-| `documents.cy.ts` | Tests document management | No |
+| File                 | Description                       | Requires `RUN_CHILD_PROFILE_TESTS`? |
+| -------------------- | --------------------------------- | ----------------------------------- |
+| `registration.cy.ts` | Tests user registration and login | No                                  |
+| `chat.cy.ts`         | Tests chat functionality          | No                                  |
+| `settings.cy.ts`     | Tests settings pages              | No                                  |
+| `documents.cy.ts`    | Tests document management         | No                                  |
 
 ### 6.2 Child-Profile Test Files
 
-| File | Description | Credentials |
-|------|-------------|-------------|
-| `kids-profile.cy.ts` | Tests `/kids/profile` route for creating/editing child profiles | `INTERVIEWEE_EMAIL`/`INTERVIEWEE_PASSWORD` or `TEST_EMAIL`/`TEST_PASSWORD` |
-| `parent-child-profile.cy.ts` | Tests `/parent` route for parent view of child profiles | `PARENT_EMAIL`/`PARENT_PASSWORD` or `TEST_EMAIL`/`TEST_PASSWORD` |
+| File                         | Description                                                     | Credentials                                                                |
+| ---------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `kids-profile.cy.ts`         | Tests `/kids/profile` route for creating/editing child profiles | `INTERVIEWEE_EMAIL`/`INTERVIEWEE_PASSWORD` or `TEST_EMAIL`/`TEST_PASSWORD` |
+| `parent-child-profile.cy.ts` | Tests `/parent` route for parent view of child profiles         | `PARENT_EMAIL`/`PARENT_PASSWORD` or `TEST_EMAIL`/`TEST_PASSWORD`           |
 
 **Important:** Child-profile tests require:
+
 - `RUN_CHILD_PROFILE_TESTS=1` to skip `registerAdmin()` in the global `before()` hook
 - Existing test user account (they don't create users)
 - Frontend accessible at `CYPRESS_baseUrl`
@@ -351,6 +356,7 @@ npx cypress open
 #### Issue: `npm install` fails with peer dependency conflicts
 
 **Solution:**
+
 ```bash
 npm install --legacy-peer-deps --force
 ```
@@ -358,6 +364,7 @@ npm install --legacy-peer-deps --force
 #### Issue: `npm install` fails with engine compatibility error
 
 **Error:**
+
 ```
 npm error engine Unsupported engine
 npm error engine Not compatible with your version of node/npm: open-webui@0.6.32
@@ -366,14 +373,17 @@ npm error notsup Actual:   {"npm":"10.9.4","node":"v22.21.1"}
 ```
 
 **Solution:**
+
 ```bash
 npm install --legacy-peer-deps --force
 ```
+
 The project works with Node 22.x despite the package.json requirement.
 
 #### Issue: `python3 -m venv` fails - "ensurepip is not available"
 
 **Solution:**
+
 ```bash
 # On Debian/Ubuntu:
 sudo apt-get install python3.12-venv  # or python3.11-venv
@@ -382,6 +392,7 @@ sudo apt-get install python3.12-venv  # or python3.11-venv
 #### Issue: Backend fails to start - "unable to open database file"
 
 **Solution:**
+
 ```bash
 # Create the data directory
 mkdir -p backend/data
@@ -390,11 +401,13 @@ mkdir -p backend/data
 #### Issue: Cypress fails - "Missing X server or $DISPLAY"
 
 **Error:**
+
 ```
 ERROR:ozone_platform_x11.cc(240)] Missing X server or $DISPLAY
 ```
 
 **Solution:**
+
 ```bash
 # Install Xvfb and required libraries
 sudo apt-get install -y libgtk-3-0 libgbm1 libxss1 libasound2t64 xvfb
@@ -414,6 +427,7 @@ xvfb-run -a npx cypress run --spec "cypress/e2e/..."
 **Cause:** `registerAdmin()` ran when it shouldn't have.
 
 **Solution:**
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1
 ```
@@ -423,6 +437,7 @@ export RUN_CHILD_PROFILE_TESTS=1
 **Cause:** Wrong `CYPRESS_baseUrl` or frontend on different port.
 
 **Solution:**
+
 1. Check what port Vite is actually using:
    ```bash
    # Look at npm run dev output
@@ -436,6 +451,7 @@ export RUN_CHILD_PROFILE_TESTS=1
 #### Issue: ModuleNotFoundError (e.g. `mimeparse`, `langchain_classic`)
 
 **Solution:**
+
 ```bash
 cd backend
 source .venv/bin/activate
@@ -519,6 +535,7 @@ echo "Setup complete!"
 ### 8.2 Quick Start Commands
 
 **Start Backend:**
+
 ```bash
 cd backend && \
 export DATABASE_URL="sqlite:///$(pwd)/data/webui.db" && \
@@ -529,6 +546,7 @@ uvicorn open_webui.main:app --port 8080 --host 127.0.0.1 --forwarded-allow-ips '
 ```
 
 **Create Test User:**
+
 ```bash
 sleep 5 && \
 curl -X POST "http://localhost:8080/api/v1/auths/signup" \
@@ -537,11 +555,13 @@ curl -X POST "http://localhost:8080/api/v1/auths/signup" \
 ```
 
 **Start Frontend:**
+
 ```bash
 npm run dev -- --port 5173 --host &
 ```
 
 **Run Child-Profile Tests:**
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1 && \
 export CYPRESS_baseUrl=http://localhost:5173 && \

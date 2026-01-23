@@ -17,6 +17,7 @@ The child-profile tests verify the functionality of the child profile management
 Tests the `/kids/profile` route for creating and managing child profiles from the child/interviewee perspective.
 
 **Test Coverage:**
+
 - Navigation to kids profile page
 - Empty state display when no profiles exist
 - Creating a new child profile with all required fields
@@ -25,6 +26,7 @@ Tests the `/kids/profile` route for creating and managing child profiles from th
 - Form validation for required fields
 
 **Credentials:**
+
 - Uses `INTERVIEWEE_EMAIL` / `INTERVIEWEE_PASSWORD` or `TEST_EMAIL` / `TEST_PASSWORD`
 - Default: `jjdrisco@ucsd.edu` / `0000`
 
@@ -33,12 +35,14 @@ Tests the `/kids/profile` route for creating and managing child profiles from th
 Tests the `/parent` route for viewing and managing child profiles from the parent perspective.
 
 **Test Coverage:**
+
 - Navigation to parent page
 - Displaying child profile management interface
 - Viewing child profiles
 - Navigation between parent page sections
 
 **Credentials:**
+
 - Uses `PARENT_EMAIL` / `PARENT_PASSWORD` or `TEST_EMAIL` / `TEST_PASSWORD`
 - Default: `jjdrisco@ucsd.edu` / `0000`
 
@@ -47,12 +51,14 @@ Tests the `/parent` route for viewing and managing child profiles from the paren
 ### 1. Environment Variables
 
 **Required:**
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1  # Must be set to skip registerAdmin()
 export CYPRESS_baseUrl=http://localhost:5173  # Frontend URL (adjust port as needed)
 ```
 
 **Optional (for custom credentials):**
+
 ```bash
 export INTERVIEWEE_EMAIL=your-email@example.com
 export INTERVIEWEE_PASSWORD=your-password
@@ -65,10 +71,12 @@ export TEST_PASSWORD=your-password
 ### 2. Running Services
 
 **Backend:**
+
 - Must be running on `localhost:8080` (or set `BACKEND_PORT`)
 - Test user account must exist (see below)
 
 **Frontend:**
+
 - Must be running on the port specified in `CYPRESS_baseUrl`
 - Usually `http://localhost:5173` (or 5174, etc.)
 
@@ -102,6 +110,7 @@ npx cypress run --spec "cypress/e2e/kids-profile.cy.ts,cypress/e2e/parent-child-
 ### Run Individual Tests
 
 **Kids Profile:**
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1
 export CYPRESS_baseUrl=http://localhost:5173
@@ -109,6 +118,7 @@ xvfb-run -a npx cypress run --spec "cypress/e2e/kids-profile.cy.ts"
 ```
 
 **Parent-Child Profile:**
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1
 export CYPRESS_baseUrl=http://localhost:5173
@@ -130,6 +140,7 @@ Setting `RUN_CHILD_PROFILE_TESTS=1` tells `cypress/support/e2e.ts` to skip the `
 ### Before Each Test
 
 Each test:
+
 1. Clears cookies and localStorage
 2. Logs in with the test account credentials
 3. Navigates to the appropriate route
@@ -147,6 +158,7 @@ Each test:
 **Cause:** `registerAdmin()` ran when it shouldn't have.
 
 **Solution:**
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1
 ```
@@ -162,6 +174,7 @@ export RUN_CHILD_PROFILE_TESTS=1
 **Cause:** Wrong `CYPRESS_baseUrl` or frontend on different port.
 
 **Solution:**
+
 1. Check what port Vite is using (look at `npm run dev` output)
 2. Set `CYPRESS_baseUrl` to match:
    ```bash
@@ -182,6 +195,7 @@ export RUN_CHILD_PROFILE_TESTS=1
 ## Test Results
 
 Current test status:
+
 - `kids-profile.cy.ts`: 6 tests passing
 - `parent-child-profile.cy.ts`: 4 tests passing
 - **Total: 10/10 tests passing**

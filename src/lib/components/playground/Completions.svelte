@@ -8,13 +8,11 @@
 	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-
 
 	let text = '';
 

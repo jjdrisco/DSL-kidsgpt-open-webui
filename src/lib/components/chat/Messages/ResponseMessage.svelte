@@ -15,8 +15,18 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-import { get } from 'svelte/store';
-import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled, savedSelections, latestAssistantMessageId } from '$lib/stores';
+	import { get } from 'svelte/store';
+	import {
+		config,
+		models,
+		settings,
+		temporaryChatEnabled,
+		TTSWorker,
+		user,
+		selectionModeEnabled,
+		savedSelections,
+		latestAssistantMessageId
+	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -763,16 +773,18 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-                                    <ContentRenderer
+									<ContentRenderer
 										id={`${chatId}-${message.id}`}
 										messageId={message.id}
 										{history}
 										{selectedModels}
 										content={message.content}
 										sources={message.sources}
-                                        floatingButtons={false && !$selectionModeEnabled && message?.done &&
-                                            !readOnly &&
-                                            ($settings?.showFloatingActionButtons ?? true)}
+										floatingButtons={false &&
+											!$selectionModeEnabled &&
+											message?.done &&
+											!readOnly &&
+											($settings?.showFloatingActionButtons ?? true)}
 										save={!readOnly}
 										preview={!readOnly}
 										{editCodeBlock}
@@ -928,9 +940,9 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 								</div>
 							{/if}
 
-                                {#if message.done}
-                                    {#if !readOnly}
-                                        {#if ($user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true) && false}
+							{#if message.done}
+								{#if !readOnly}
+									{#if ($user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true) && false}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Edit')}
@@ -1425,9 +1437,11 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 													// Force the latest assistant message to be the target for selection
 													latestAssistantMessageId.set(message.id);
 													// Dispatch event to change input panel state
-													window.dispatchEvent(new CustomEvent('set-input-panel-state', {
-														detail: { state: 'selection' }
-													}));
+													window.dispatchEvent(
+														new CustomEvent('set-input-panel-state', {
+															detail: { state: 'selection' }
+														})
+													);
 												}}
 											>
 												<svg
@@ -1521,7 +1535,9 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 
 					<!-- Selection instructions and Done button -->
 					{#if $selectionModeEnabled && isLastMessage && message.done}
-						<div class="border-2 border-blue-300 dark:border-blue-600 rounded-lg my-2 bg-blue-50/30 dark:bg-blue-900/10">
+						<div
+							class="border-2 border-blue-300 dark:border-blue-600 rounded-lg my-2 bg-blue-50/30 dark:bg-blue-900/10"
+						>
 							<div class="p-4">
 								<div class="flex justify-between items-center">
 									<div class="text-sm text-gray-600 dark:text-gray-400">
@@ -1536,9 +1552,11 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 											console.log('Current selections:', selections);
 											selectionModeEnabled.set(false);
 											// Switch back to message input
-											window.dispatchEvent(new CustomEvent('selection-done', {
-												detail: { selections }
-											}));
+											window.dispatchEvent(
+												new CustomEvent('selection-done', {
+													detail: { selections }
+												})
+											);
 											console.log('Selection-done event dispatched');
 										}}
 									>
@@ -1561,7 +1579,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 						/>
 					{/if}
 
-                    {#if false && !$selectionModeEnabled && (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+					{#if false && !$selectionModeEnabled && (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}

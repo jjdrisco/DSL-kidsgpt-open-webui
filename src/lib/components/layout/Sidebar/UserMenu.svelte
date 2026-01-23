@@ -1,6 +1,6 @@
 <script lang="ts">
-import { DropdownMenu } from 'bits-ui';
-import { toast } from 'svelte-sonner';
+	import { DropdownMenu } from 'bits-ui';
+	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { flyAndScale } from '$lib/utils/transitions';
@@ -9,8 +9,8 @@ import { toast } from 'svelte-sonner';
 
 	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
-import { resetUserWorkflow } from '$lib/apis/workflow';
-import { childProfileSync } from '$lib/services/childProfileSync';
+	import { resetUserWorkflow } from '$lib/apis/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
 
@@ -38,7 +38,7 @@ import { childProfileSync } from '$lib/services/childProfileSync';
 
 	let usage = null;
 	let showResetConfirmation = false;
-	
+
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
 			console.error('Error fetching usage info:', error);
@@ -51,74 +51,74 @@ import { childProfileSync } from '$lib/services/childProfileSync';
 		}
 	};
 
-const handleResetWorkflow = async () => {
+	const handleResetWorkflow = async () => {
 		try {
 			await resetUserWorkflow(localStorage.token);
-			
-        // Clear all workflow-related localStorage
-        localStorage.removeItem('assignmentStep');
-        localStorage.removeItem('assignmentCompleted');
-        localStorage.removeItem('instructionsCompleted');
-        localStorage.removeItem('moderationScenariosAccessed');
-        localStorage.removeItem('unlock_kids');
-        localStorage.removeItem('unlock_moderation');
-        localStorage.removeItem('unlock_exit');
-        localStorage.removeItem('unlock_completion');
 
-        // Explicitly set starting step so sidebar can immediately reflect reset
-        localStorage.setItem('assignmentStep', '1');
-			
-		// Clear all child-specific moderation state
-		// Since we don't know all child IDs, iterate through localStorage keys
-		// and remove any that match child-specific patterns
-		const keysToRemove: string[] = [];
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i);
-			if (key) {
-				// Match child-specific moderation keys
-				if (
-					key.startsWith('moderationScenarioStates_') ||
-					key.startsWith('moderationScenarioTimers_') ||
-					key.startsWith('moderationCurrentScenario_') ||
-					key.startsWith('moderationSessionNumber_') ||
-					key.startsWith('scenarioPkg_') ||
-					key.startsWith('scenarios_') ||
-					key.startsWith('moderationWarmupCompleted_')
-				) {
-					keysToRemove.push(key);
+			// Clear all workflow-related localStorage
+			localStorage.removeItem('assignmentStep');
+			localStorage.removeItem('assignmentCompleted');
+			localStorage.removeItem('instructionsCompleted');
+			localStorage.removeItem('moderationScenariosAccessed');
+			localStorage.removeItem('unlock_kids');
+			localStorage.removeItem('unlock_moderation');
+			localStorage.removeItem('unlock_exit');
+			localStorage.removeItem('unlock_completion');
+
+			// Explicitly set starting step so sidebar can immediately reflect reset
+			localStorage.setItem('assignmentStep', '1');
+
+			// Clear all child-specific moderation state
+			// Since we don't know all child IDs, iterate through localStorage keys
+			// and remove any that match child-specific patterns
+			const keysToRemove: string[] = [];
+			for (let i = 0; i < localStorage.length; i++) {
+				const key = localStorage.key(i);
+				if (key) {
+					// Match child-specific moderation keys
+					if (
+						key.startsWith('moderationScenarioStates_') ||
+						key.startsWith('moderationScenarioTimers_') ||
+						key.startsWith('moderationCurrentScenario_') ||
+						key.startsWith('moderationSessionNumber_') ||
+						key.startsWith('scenarioPkg_') ||
+						key.startsWith('scenarios_') ||
+						key.startsWith('moderationWarmupCompleted_')
+					) {
+						keysToRemove.push(key);
+					}
+				}
 			}
+			keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+			// Clear cached child profiles and deselect current child in user settings
+			try {
+				childProfileSync.clearCache();
+				await childProfileSync.setCurrentChildId(null);
+
+				// Dispatch event to notify Sidebar to reload child profiles
+				// This ensures the Sidebar immediately reflects that no children are current
+				window.dispatchEvent(new Event('child-profiles-updated'));
+			} catch (e) {
+				console.warn('Non-fatal: could not clear selected child in settings:', e);
 			}
-		}
-		keysToRemove.forEach(key => localStorage.removeItem(key));
 
-        // Clear cached child profiles and deselect current child in user settings
-        try {
-            childProfileSync.clearCache();
-            await childProfileSync.setCurrentChildId(null);
-            
-            // Dispatch event to notify Sidebar to reload child profiles
-            // This ensures the Sidebar immediately reflects that no children are current
-            window.dispatchEvent(new Event('child-profiles-updated'));
-        } catch (e) {
-            console.warn('Non-fatal: could not clear selected child in settings:', e);
-        }
-			
-        // Notify and broadcast workflow change so layout guards re-evaluate
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('workflow-updated'));
-        toast.success('Study restarted. Starting fresh.');
+			// Notify and broadcast workflow change so layout guards re-evaluate
+			window.dispatchEvent(new Event('storage'));
+			window.dispatchEvent(new Event('workflow-updated'));
+			toast.success('Study restarted. Starting fresh.');
 
-        // Redirect to intro/welcome page (await and hard-redirect fallback)
-        try {
-            await goto('/');
-        } catch (_) {
-            window.location.href = '/';
-        }
+			// Redirect to intro/welcome page (await and hard-redirect fallback)
+			try {
+				await goto('/');
+			} catch (_) {
+				window.location.href = '/';
+			}
 			show = false;
 			showResetConfirmation = false;
 		} catch (error) {
 			console.error('Failed to reset workflow:', error);
-        toast.error('Failed to restart. Please try again.');
+			toast.error('Failed to restart. Please try again.');
 		}
 	};
 
@@ -387,20 +387,24 @@ const handleResetWorkflow = async () => {
 
 <!-- Reset Confirmation Modal -->
 {#if showResetConfirmation}
-	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showResetConfirmation = false}>
+	<div
+		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+		on:click={() => (showResetConfirmation = false)}
+	>
 		<div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4" on:click|stopPropagation>
 			<h3 class="text-lg font-semibold mb-4">Restart Study</h3>
 			<p class="text-gray-600 dark:text-gray-300 mb-6">
-				Are you sure you want to restart the entire study? This will clear all your progress including child profile, moderation scenarios, and exit survey.
+				Are you sure you want to restart the entire study? This will clear all your progress
+				including child profile, moderation scenarios, and exit survey.
 			</p>
 			<div class="flex gap-3 justify-end">
-				<button 
+				<button
 					class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-					on:click={() => showResetConfirmation = false}
+					on:click={() => (showResetConfirmation = false)}
 				>
 					Cancel
 				</button>
-				<button 
+				<button
 					class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition"
 					on:click={handleResetWorkflow}
 				>

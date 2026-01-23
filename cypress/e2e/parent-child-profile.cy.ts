@@ -38,12 +38,12 @@ describe('Parent Child Profile', () => {
 	it('should display child profile management interface', () => {
 		cy.visit('/parent');
 		cy.wait(3000);
-		
+
 		// The parent page should show some form of child profile management
 		// This could be in tabs, a list, or a form
 		cy.get('body').then(($body) => {
 			// Check for common parent page elements
-			const hasChildProfileContent = 
+			const hasChildProfileContent =
 				$body.text().includes('Child') ||
 				$body.text().includes('Profile') ||
 				$body.text().includes('Overview') ||
@@ -51,7 +51,7 @@ describe('Parent Child Profile', () => {
 					const text = el.textContent || '';
 					return /child|profile|overview/i.test(text);
 				}).length > 0;
-			
+
 			// At minimum, the page should load
 			cy.get('body').should('be.visible');
 		});
@@ -60,16 +60,19 @@ describe('Parent Child Profile', () => {
 	it('should be able to view child profiles', () => {
 		cy.visit('/parent');
 		cy.wait(3000);
-		
+
 		// Try to find and click on child profile related tabs/buttons
 		cy.get('body').then(($body) => {
 			// Look for tabs or buttons related to child profiles that are enabled
-			const childProfileButton = $body.find('button:not([disabled]), a').filter((i, el) => {
-				const text = (el.textContent || '').toLowerCase();
-				const isEnabled = !el.hasAttribute('disabled') && !el.classList.contains('disabled');
-				return isEnabled && text.includes('child') && text.includes('profile');
-			}).first();
-			
+			const childProfileButton = $body
+				.find('button:not([disabled]), a')
+				.filter((i, el) => {
+					const text = (el.textContent || '').toLowerCase();
+					const isEnabled = !el.hasAttribute('disabled') && !el.classList.contains('disabled');
+					return isEnabled && text.includes('child') && text.includes('profile');
+				})
+				.first();
+
 			if (childProfileButton.length > 0) {
 				cy.wrap(childProfileButton).click({ force: false });
 				cy.wait(2000);
@@ -86,17 +89,20 @@ describe('Parent Child Profile', () => {
 	it('should handle navigation between parent page sections', () => {
 		cy.visit('/parent');
 		cy.wait(3000);
-		
+
 		// Look for tab navigation or section buttons that are enabled
 		cy.get('body').then(($body) => {
 			const tabs = $body.find('button:not([disabled]), a').filter((i, el) => {
 				const text = (el.textContent || '').toLowerCase();
 				const isEnabled = !el.hasAttribute('disabled') && !el.classList.contains('disabled');
-				return isEnabled && ['overview', 'child', 'profile', 'activity', 'conversations'].some(
-					keyword => text.includes(keyword)
+				return (
+					isEnabled &&
+					['overview', 'child', 'profile', 'activity', 'conversations'].some((keyword) =>
+						text.includes(keyword)
+					)
 				);
 			});
-			
+
 			if (tabs.length > 0) {
 				// Click the first available enabled tab
 				cy.wrap(tabs.first()).click({ force: false });

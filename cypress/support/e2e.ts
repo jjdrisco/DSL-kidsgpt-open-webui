@@ -18,16 +18,28 @@ const login = (email: string, password: string) => {
 			// Visit auth page
 			cy.visit('/auth');
 			// Wait for form to be ready
-			cy.get('input[autocomplete="email"], input#email, input[type="email"]', { timeout: 15000 }).should('exist');
+			cy.get('input[autocomplete="email"], input#email, input[type="email"]', {
+				timeout: 15000
+			}).should('exist');
 			// Fill out the form
-			cy.get('input[autocomplete="email"], input#email, input[type="email"]').first().clear().type(email);
+			cy.get('input[autocomplete="email"], input#email, input[type="email"]')
+				.first()
+				.clear()
+				.type(email);
 			cy.get('input[type="password"]').first().clear().type(password);
 			// Submit the form
 			cy.get('button[type="submit"]').click();
 			// Wait until the user is redirected - could be home page, kids/profile, or other pages
 			cy.location('pathname', { timeout: 15000 }).should((path) => {
 				// Accept various redirect paths
-				expect(['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion', '/', '/assignment-instructions']).to.include(path);
+				expect([
+					'/kids/profile',
+					'/moderation-scenario',
+					'/exit-survey',
+					'/completion',
+					'/',
+					'/assignment-instructions'
+				]).to.include(path);
 			});
 			// If redirected to home page, check for chat-search
 			cy.get('body').then(($body) => {
@@ -89,11 +101,12 @@ Cypress.Commands.add('loginAdmin', () => loginAdmin());
 before(() => {
 	// Skip registerAdmin if RUN_CHILD_PROFILE_TESTS is set
 	// These tests use existing accounts and don't need the admin user
-	const runChildProfileTests = Cypress.env('RUN_CHILD_PROFILE_TESTS') === '1' || 
-	                              Cypress.env('RUN_CHILD_PROFILE_TESTS') === 1 ||
-	                              Cypress.env('CYPRESS_RUN_CHILD_PROFILE_TESTS') === '1' ||
-	                              Cypress.env('CYPRESS_RUN_CHILD_PROFILE_TESTS') === 1;
-	
+	const runChildProfileTests =
+		Cypress.env('RUN_CHILD_PROFILE_TESTS') === '1' ||
+		Cypress.env('RUN_CHILD_PROFILE_TESTS') === 1 ||
+		Cypress.env('CYPRESS_RUN_CHILD_PROFILE_TESTS') === '1' ||
+		Cypress.env('CYPRESS_RUN_CHILD_PROFILE_TESTS') === 1;
+
 	if (!runChildProfileTests) {
 		cy.registerAdmin();
 	}
