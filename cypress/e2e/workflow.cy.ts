@@ -1,40 +1,88 @@
+/// <reference path="../support/e2e.ts" />
+
+/**
+ * Workflow API tests: /workflow/*
+ * Tests all workflow endpoints for managing user progress through the study workflow.
+ * Uses INTERVIEWEE_EMAIL/INTERVIEWEE_PASSWORD or TEST_EMAIL/TEST_PASSWORD from env;
+ * defaults to jjdrisco@ucsd.edu / 0000 if unset.
+ * Prereqs: frontend (npm run dev) and backend running; RUN_CHILD_PROFILE_TESTS=1;
+ * CYPRESS_baseUrl must match the dev server port (e.g. http://localhost:5173 or 5174).
+ * Run: RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 npx cypress run --spec cypress/e2e/workflow.cy.ts
+ */
+const EMAIL = Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || 'jjdrisco@ucsd.edu';
+const PASSWORD = Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000';
+// Get baseUrl - CYPRESS_baseUrl env var overrides cypress.config.ts baseUrl
+// API calls go through frontend proxy at /api/v1
+const baseUrl = Cypress.config().baseUrl || 'http://localhost:5173';
+const API_BASE_URL = `${baseUrl}/api/v1`;
+
 describe('Workflow API Endpoints', () => {
-// Helper to get auth token (with retry for rate limiting)
-function authenticate() {
-	return cy.wait(3000).then(() => {
-		return cy.request({
-			method: 'POST',
-			url: `${API_BASE_URL}/auths/signin`,
-			body: {
-				email: EMAIL,
-				password: PASSWORD
-			},
-			failOnStatusCode: false
-		}).then((response) => {
-			if (response.status === 200 && response.body.token) {
-				return cy.wrap(response.body.token);
-			} else if (response.status === 429) {
-				// Rate limited, wait and retry
-				return cy.wait(5000).then(() => {
+	// Helper to get auth token (with retry for rate limiting)
+	function authenticate() {
+		return cy.wait(3000).then(() => {
+			return cy.request({
+				method: 'POST',
+				url: `${API_BASE_URL}/auths/signin`,
+				body: {
+					email: EMAIL,
+					password: PASSWORD
+				},
+				failOnStatusCode: false
+			}).then((response) => {
+				if (response.status === 200 && response.body.token) {
+					return cy.wrap(response.body.token);
+				} else if (response.status === 429) {
+					// Rate limited, wait and retry
+					return cy.wait(5000).then(() => {
+						return cy.request({
+							method: 'POST',
+							url: `${API_BASE_URL}/auths/signin`,
+							body: { email: EMAIL, password: PASSWORD },
+							failOnStatusCode: false
+						}).then((retry) => {
+							if (retry.status === 200 && retry.body.token) {
+								return cy.wrap(retry.body.token);
+							}
+							return cy.wrap('');
+						});
+					});
+				} else if (response.status === 401 || response.status === 404) {
+					// User doesn't exist, try signup
 					return cy.request({
 						method: 'POST',
-						url: `${API_BASE_URL}/auths/signin`,
-						body: { email: EMAIL, password: PASSWORD },
+						url: `${API_BASE_URL}/auths/signup`,
+						body: {
+							email: EMAIL,
+							password: PASSWORD,
+							name: 'Test User'
+						},
 						failOnStatusCode: false
-					}).then((retry) => {
-						if (retry.status === 200 && retry.body.token) {
-							return cy.wrap(retry.body.token);
+					}).then((signupResponse) => {
+						if (signupResponse.status === 200 && signupResponse.body.token) {
+							return cy.wrap(signupResponse.body.token);
 						}
-						return cy.wrap('');
+						// Try signin after signup
+						return cy.wait(2000).then(() => {
+							return cy.request({
+								method: 'POST',
+								url: `${API_BASE_URL}/auths/signin`,
+								body: { email: EMAIL, password: PASSWORD },
+								failOnStatusCode: false
+							}).then((retry) => {
+								if (retry.status === 200 && retry.body.token) {
+									return cy.wrap(retry.body.token);
+								}
+								return cy.wrap('');
+							});
+						});
 					});
-				});
-			}
-			return cy.wrap('');
+				}
+				return cy.wrap('');
+			});
 		});
-	});
-}
+	}
 
-describe('GET /workflow/state', () => {
+	describe('GET /workflow/state', () => {
 		it('should return workflow state with next route and progress', function () {
 			if (!EMAIL || !PASSWORD) {
 				this.skip();
