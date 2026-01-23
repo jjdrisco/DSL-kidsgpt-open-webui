@@ -29,10 +29,13 @@ describe('Workflow API Endpoints', () => {
 				},
 				failOnStatusCode: false
 			}).then((response) => {
-				if (response.status === 200 && response.body.token) {
-					return cy.wrap(response.body.token);
+				if (response.status === 200 && response.body && response.body.token) {
+					const token = response.body.token;
+					cy.log(`Auth successful, token length: ${token.length}`);
+					return cy.wrap(token);
 				} else if (response.status === 429) {
 					// Rate limited, wait and retry
+					cy.log('Rate limited, waiting and retrying...');
 					return cy.wait(5000).then(() => {
 						return cy.request({
 							method: 'POST',
@@ -40,14 +43,18 @@ describe('Workflow API Endpoints', () => {
 							body: { email: EMAIL, password: PASSWORD },
 							failOnStatusCode: false
 						}).then((retry) => {
-							if (retry.status === 200 && retry.body.token) {
-								return cy.wrap(retry.body.token);
+							if (retry.status === 200 && retry.body && retry.body.token) {
+								const token = retry.body.token;
+								cy.log(`Auth successful after retry, token length: ${token.length}`);
+								return cy.wrap(token);
 							}
+							cy.log(`Auth failed after retry: ${retry.status}`);
 							return cy.wrap('');
 						});
 					});
 				} else if (response.status === 401 || response.status === 404) {
 					// User doesn't exist, try signup
+					cy.log('User not found, trying signup...');
 					return cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/auths/signup`,
@@ -58,10 +65,13 @@ describe('Workflow API Endpoints', () => {
 						},
 						failOnStatusCode: false
 					}).then((signupResponse) => {
-						if (signupResponse.status === 200 && signupResponse.body.token) {
-							return cy.wrap(signupResponse.body.token);
+						if (signupResponse.status === 200 && signupResponse.body && signupResponse.body.token) {
+							const token = signupResponse.body.token;
+							cy.log(`Signup successful, token length: ${token.length}`);
+							return cy.wrap(token);
 						}
 						// Try signin after signup
+						cy.log('Trying signin after signup...');
 						return cy.wait(2000).then(() => {
 							return cy.request({
 								method: 'POST',
@@ -69,14 +79,18 @@ describe('Workflow API Endpoints', () => {
 								body: { email: EMAIL, password: PASSWORD },
 								failOnStatusCode: false
 							}).then((retry) => {
-								if (retry.status === 200 && retry.body.token) {
-									return cy.wrap(retry.body.token);
+								if (retry.status === 200 && retry.body && retry.body.token) {
+									const token = retry.body.token;
+									cy.log(`Auth successful after signup, token length: ${token.length}`);
+									return cy.wrap(token);
 								}
+								cy.log(`Auth failed after signup: ${retry.status}`);
 								return cy.wrap('');
 							});
 						});
 					});
 				}
+				cy.log(`Auth failed: ${response.status}`);
 				return cy.wrap('');
 			});
 		});
