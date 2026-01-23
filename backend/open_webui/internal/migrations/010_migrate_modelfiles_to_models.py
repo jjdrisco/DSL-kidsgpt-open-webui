@@ -28,7 +28,6 @@ from contextlib import suppress
 
 import peewee as pw
 from peewee_migrate import Migrator
-import json
 
 from open_webui.utils.misc import parse_ollama_modelfile
 
