@@ -13,22 +13,19 @@ const EMAIL = Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || '
 const PASSWORD = Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000';
 // Get baseUrl - CYPRESS_baseUrl env var overrides cypress.config.ts baseUrl
 // API calls go through frontend proxy at /api/v1
-// Use frontend URL for API calls (they go through Vite proxy)
-const baseUrl = Cypress.env('baseUrl') || Cypress.config().baseUrl || 'http://localhost:5173';
+const baseUrl = Cypress.config().baseUrl || 'http://localhost:5173';
 const API_BASE_URL = `${baseUrl}/api/v1`;
 
 describe('Workflow API Endpoints', () => {
-	let authToken: string = '';
-
-	beforeEach(() => {
+	before(() => {
 		if (!EMAIL || !PASSWORD) {
 			cy.log('INTERVIEWEE_EMAIL/PASSWORD or TEST_EMAIL/TEST_PASSWORD not set; skipping');
 			return;
 		}
-		// Authenticate before each test and store token
-		// Wait longer to avoid rate limiting (backend has rate limits)
-		cy.wait(3000);
-		return cy.request({
+		// Authenticate once before all tests and store token as alias
+		// Wait to avoid rate limiting
+		cy.wait(2000);
+		cy.request({
 			method: 'POST',
 			url: `${API_BASE_URL}/auths/signin`,
 			body: {
@@ -38,11 +35,12 @@ describe('Workflow API Endpoints', () => {
 			failOnStatusCode: false
 		}).then((response) => {
 			if (response.status === 200 && response.body.token) {
-				authToken = response.body.token;
+				cy.wrap(response.body.token).as('authToken');
+				cy.log('Authentication successful via signin');
 			} else if (response.status === 429) {
 				// Rate limited, wait longer and try once more
-				cy.wait(3000);
-				return cy.request({
+				cy.wait(5000);
+				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signin`,
 					body: {
@@ -52,15 +50,16 @@ describe('Workflow API Endpoints', () => {
 					failOnStatusCode: false
 				}).then((retryResponse) => {
 					if (retryResponse.status === 200 && retryResponse.body.token) {
-						authToken = retryResponse.body.token;
+						cy.wrap(retryResponse.body.token).as('authToken');
+						cy.log('Authentication successful after retry');
 					} else {
-						authToken = '';
+						cy.wrap('').as('authToken');
 						cy.log(`Authentication failed after retry: ${retryResponse.status}`);
 					}
 				});
 			} else if (response.status === 401 || response.status === 404) {
 				// User doesn't exist, try to create via signup
-				return cy.request({
+				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signup`,
 					body: {
@@ -71,11 +70,12 @@ describe('Workflow API Endpoints', () => {
 					failOnStatusCode: false
 				}).then((signupResponse) => {
 					if (signupResponse.status === 200 && signupResponse.body.token) {
-						authToken = signupResponse.body.token;
+						cy.wrap(signupResponse.body.token).as('authToken');
+						cy.log('User created and authenticated via signup');
 					} else {
 						// Try signin again after signup
-						cy.wait(1000);
-						return cy.request({
+						cy.wait(2000);
+						cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/auths/signin`,
 							body: {
@@ -85,16 +85,17 @@ describe('Workflow API Endpoints', () => {
 							failOnStatusCode: false
 						}).then((retryResponse) => {
 							if (retryResponse.status === 200 && retryResponse.body.token) {
-								authToken = retryResponse.body.token;
+								cy.wrap(retryResponse.body.token).as('authToken');
+								cy.log('Authentication successful after signup');
 							} else {
-								authToken = '';
+								cy.wrap('').as('authToken');
 								cy.log(`Authentication failed: ${retryResponse.status}`);
 							}
 						});
 					}
 				});
 			} else {
-				authToken = '';
+				cy.wrap('').as('authToken');
 				cy.log(`Authentication failed: ${response.status}`);
 			}
 		});
@@ -106,17 +107,15 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			// Wait for authToken to be set (from beforeEach)
-			cy.wait(100);
-   cy.then(() => {
-			cy.request({
-				method: 'GET',
-				url: `${API_BASE_URL}/workflow/state`,
-				headers: {
-					Authorization: `Bearer ${authToken}`,
-					'Content-Type': 'application/json'
-				}
-			}).then((response) => {
+			cy.get('@authToken').then((token) => {
+				cy.request({
+					method: 'GET',
+					url: `${API_BASE_URL}/workflow/state`,
+					headers: {
+						Authorization: `Bearer ${token}`,
+						'Content-Type': 'application/json'
+					}
+				}).then((response) => {
 					expect(response.status).to.eq(200);
 					expect(response.body).to.have.property('next_route');
 					expect(response.body).to.have.property('substep');
@@ -136,7 +135,7 @@ describe('Workflow API Endpoints', () => {
 						'/'
 					]);
 				});
-   });
+			});
 		});
 
 		it('should return workflow state for new user (no child profile)', function () {
@@ -144,14 +143,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
@@ -161,7 +158,7 @@ describe('Workflow API Endpoints', () => {
 						expect(response.body.next_route).to.eq('/kids/profile');
 					}
 				});
-    });
+			});
 		});
 	});
 
@@ -171,14 +168,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
@@ -193,7 +188,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body.child_attempt).to.be.a('number');
 					expect(response.body.exit_attempt).to.be.a('number');
 				});
-    });
+			});
 		});
 	});
 
@@ -203,14 +198,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/session-info`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
@@ -222,7 +215,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body).to.have.property('is_prolific_user');
 					expect(response.body.is_prolific_user).to.be.a('boolean');
 				});
-    });
+			});
 		});
 	});
 
@@ -232,14 +225,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/completed-scenarios`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
@@ -256,7 +247,7 @@ describe('Workflow API Endpoints', () => {
 						expect(idx).to.be.at.most(11);
 					});
 				});
-    });
+			});
 		});
 	});
 
@@ -266,14 +257,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/study-status`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
@@ -291,7 +280,7 @@ describe('Workflow API Endpoints', () => {
 						expect(response.body.completed_at).to.be.a('number');
 					}
 				});
-    });
+			});
 		});
 	});
 
@@ -302,25 +291,22 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current attempt before reset
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
 					const attemptBefore = response.body.current_attempt;
 					// Now reset workflow
-     cy.wait(100);
 					cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/workflow/reset`,
 						headers: {
-							Authorization: `Bearer ${authToken}`,
+							Authorization: `Bearer ${token}`,
 							'Content-Type': 'application/json'
 						}
 					}).then((resetResponse) => {
@@ -332,7 +318,7 @@ describe('Workflow API Endpoints', () => {
 						expect(resetResponse.body.new_attempt).to.be.greaterThan(attemptBefore);
 					});
 				});
-    });
+			});
 		});
 	});
 
@@ -343,25 +329,22 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current moderation attempt before reset
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
 					const moderationAttemptBefore = response.body.moderation_attempt;
 					// Now reset moderation workflow
-     cy.wait(100);
 					cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/workflow/reset-moderation`,
 						headers: {
-							Authorization: `Bearer ${authToken}`,
+							Authorization: `Bearer ${token}`,
 							'Content-Type': 'application/json'
 						}
 					}).then((resetResponse) => {
@@ -375,7 +358,7 @@ describe('Workflow API Endpoints', () => {
 						expect(resetResponse.body.completed_scenario_indices).to.be.an('array');
 					});
 				});
-    });
+			});
 		});
 	});
 
@@ -385,14 +368,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					},
 					body: {}
@@ -402,7 +383,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body.updated).to.be.a('number');
 					expect(response.body.updated).to.be.at.least(0);
 				});
-    });
+			});
 		});
 
 		it('should finalize moderation with child_id filter', function () {
@@ -411,26 +392,23 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// First get child profiles to use a valid child_id
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/child-profiles`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					},
 					failOnStatusCode: false
 				}).then((childResponse) => {
 					if (childResponse.status === 200 && Array.isArray(childResponse.body) && childResponse.body.length > 0) {
 						const childId = childResponse.body[0].id;
-      cy.wait(100);
 						cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/workflow/moderation/finalize`,
 							headers: {
-								Authorization: `Bearer ${authToken}`,
+								Authorization: `Bearer ${token}`,
 								'Content-Type': 'application/json'
 							},
 							body: {
@@ -443,12 +421,11 @@ describe('Workflow API Endpoints', () => {
 						});
 					} else {
 						// Skip if no child profiles - make a request anyway to test the endpoint
-      cy.wait(100);
 						cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/workflow/moderation/finalize`,
 							headers: {
-								Authorization: `Bearer ${authToken}`,
+								Authorization: `Bearer ${token}`,
 								'Content-Type': 'application/json'
 							},
 							body: {}
@@ -459,7 +436,7 @@ describe('Workflow API Endpoints', () => {
 						});
 					}
 				});
-    });
+			});
 		});
 
 		it('should finalize moderation with session_number filter', function () {
@@ -467,14 +444,12 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					},
 					body: {
@@ -485,7 +460,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body).to.have.property('updated');
 					expect(response.body.updated).to.be.a('number');
 				});
-    });
+			});
 		});
 	});
 
@@ -496,14 +471,12 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Test workflow state progression
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
@@ -527,7 +500,7 @@ describe('Workflow API Endpoints', () => {
 						expect(state.next_route).to.eq('/completion');
 					}
 				});
-    });
+			});
 		});
 
 		it('should maintain consistent state across multiple requests', function () {
@@ -536,23 +509,20 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Make multiple requests and verify consistency
-			
-    cy.wait(100);
-    cy.then(() => {
+			cy.get('@authToken').then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
 					headers: {
-						Authorization: `Bearer ${authToken}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response1) => {
-     cy.wait(100);
 					cy.request({
 						method: 'GET',
 						url: `${API_BASE_URL}/workflow/state`,
 						headers: {
-							Authorization: `Bearer ${authToken}`,
+							Authorization: `Bearer ${token}`,
 							'Content-Type': 'application/json'
 						}
 					}).then((response2) => {
@@ -565,7 +535,7 @@ describe('Workflow API Endpoints', () => {
 						);
 					});
 				});
-    });
+			});
 		});
 	});
 
