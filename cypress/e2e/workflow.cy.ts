@@ -1,31 +1,7 @@
-/// <reference path="../support/e2e.ts" />
-
-/**
- * Workflow API tests: /workflow/*
- * Tests all workflow endpoints for managing user progress through the study workflow.
- * Uses INTERVIEWEE_EMAIL/INTERVIEWEE_PASSWORD or TEST_EMAIL/TEST_PASSWORD from env;
- * defaults to jjdrisco@ucsd.edu / 0000 if unset.
- * Prereqs: frontend (npm run dev) and backend running; RUN_CHILD_PROFILE_TESTS=1;
- * CYPRESS_baseUrl must match the dev server port (e.g. http://localhost:5173 or 5174).
- * Run: RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 npx cypress run --spec cypress/e2e/workflow.cy.ts
- */
-const EMAIL = Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || 'jjdrisco@ucsd.edu';
-const PASSWORD = Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000';
-// Get baseUrl - CYPRESS_baseUrl env var overrides cypress.config.ts baseUrl
-// API calls go through frontend proxy at /api/v1
-const baseUrl = Cypress.config().baseUrl || 'http://localhost:5173';
-const API_BASE_URL = `${baseUrl}/api/v1`;
-
 describe('Workflow API Endpoints', () => {
-	before(() => {
-		if (!EMAIL || !PASSWORD) {
-			cy.log('INTERVIEWEE_EMAIL/PASSWORD or TEST_EMAIL/TEST_PASSWORD not set; skipping');
-			return;
-		}
-		// Authenticate once before all tests and store token as alias
-		// Wait to avoid rate limiting
-		cy.wait(2000);
-		// Chain all authentication steps properly
+// Helper to get auth token (with retry for rate limiting)
+function authenticate() {
+	return cy.wait(3000).then(() => {
 		return cy.request({
 			method: 'POST',
 			url: `${API_BASE_URL}/auths/signin`,
@@ -36,74 +12,35 @@ describe('Workflow API Endpoints', () => {
 			failOnStatusCode: false
 		}).then((response) => {
 			if (response.status === 200 && response.body.token) {
-				return cy.wrap(response.body.token).as('authToken');
+				return cy.wrap(response.body.token);
 			} else if (response.status === 429) {
-				// Rate limited, wait longer and try once more
+				// Rate limited, wait and retry
 				return cy.wait(5000).then(() => {
 					return cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/auths/signin`,
-						body: {
-							email: EMAIL,
-							password: PASSWORD
-						},
+						body: { email: EMAIL, password: PASSWORD },
 						failOnStatusCode: false
-					}).then((retryResponse) => {
-						if (retryResponse.status === 200 && retryResponse.body.token) {
-							return cy.wrap(retryResponse.body.token).as('authToken');
-						} else {
-							return cy.wrap('').as('authToken');
+					}).then((retry) => {
+						if (retry.status === 200 && retry.body.token) {
+							return cy.wrap(retry.body.token);
 						}
+						return cy.wrap('');
 					});
 				});
-			} else if (response.status === 401 || response.status === 404) {
-				// User doesn't exist, try to create via signup
-				return cy.request({
-					method: 'POST',
-					url: `${API_BASE_URL}/auths/signup`,
-					body: {
-						email: EMAIL,
-						password: PASSWORD,
-						name: 'Test User'
-					},
-					failOnStatusCode: false
-				}).then((signupResponse) => {
-					if (signupResponse.status === 200 && signupResponse.body.token) {
-						return cy.wrap(signupResponse.body.token).as('authToken');
-					} else {
-						// Try signin again after signup
-						return cy.wait(2000).then(() => {
-							return cy.request({
-								method: 'POST',
-								url: `${API_BASE_URL}/auths/signin`,
-								body: {
-									email: EMAIL,
-									password: PASSWORD
-								},
-								failOnStatusCode: false
-							}).then((retryResponse) => {
-								if (retryResponse.status === 200 && retryResponse.body.token) {
-									return cy.wrap(retryResponse.body.token).as('authToken');
-								} else {
-									return cy.wrap('').as('authToken');
-								}
-							});
-						});
-					}
-				});
-			} else {
-				return cy.wrap('').as('authToken');
 			}
+			return cy.wrap('');
 		});
 	});
+}
 
-	describe('GET /workflow/state', () => {
+describe('GET /workflow/state', () => {
 		it('should return workflow state with next route and progress', function () {
 			if (!EMAIL || !PASSWORD) {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -139,7 +76,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -164,7 +101,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -194,7 +131,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/session-info`,
@@ -221,7 +158,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/completed-scenarios`,
@@ -253,7 +190,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/study-status`,
@@ -287,7 +224,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current attempt before reset
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -325,7 +262,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current moderation attempt before reset
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/current-attempt`,
@@ -364,7 +301,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -388,7 +325,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// First get child profiles to use a valid child_id
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/child-profiles`,
@@ -440,7 +377,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/workflow/moderation/finalize`,
@@ -467,7 +404,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Test workflow state progression
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
@@ -505,7 +442,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Make multiple requests and verify consistency
-			cy.get('@authToken').then((token) => {
+			authenticate().then((token) => {
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
