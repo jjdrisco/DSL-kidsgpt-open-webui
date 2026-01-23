@@ -25,7 +25,8 @@ describe('Workflow API Endpoints', () => {
 		// Authenticate once before all tests and store token as alias
 		// Wait to avoid rate limiting
 		cy.wait(2000);
-		cy.request({
+		// Chain all authentication steps properly
+		return cy.request({
 			method: 'POST',
 			url: `${API_BASE_URL}/auths/signin`,
 			body: {
@@ -35,31 +36,29 @@ describe('Workflow API Endpoints', () => {
 			failOnStatusCode: false
 		}).then((response) => {
 			if (response.status === 200 && response.body.token) {
-				cy.wrap(response.body.token).as('authToken');
-				cy.log('Authentication successful via signin');
+				return cy.wrap(response.body.token).as('authToken');
 			} else if (response.status === 429) {
 				// Rate limited, wait longer and try once more
-				cy.wait(5000);
-				cy.request({
-					method: 'POST',
-					url: `${API_BASE_URL}/auths/signin`,
-					body: {
-						email: EMAIL,
-						password: PASSWORD
-					},
-					failOnStatusCode: false
-				}).then((retryResponse) => {
-					if (retryResponse.status === 200 && retryResponse.body.token) {
-						cy.wrap(retryResponse.body.token).as('authToken');
-						cy.log('Authentication successful after retry');
-					} else {
-						cy.wrap('').as('authToken');
-						cy.log(`Authentication failed after retry: ${retryResponse.status}`);
-					}
+				return cy.wait(5000).then(() => {
+					return cy.request({
+						method: 'POST',
+						url: `${API_BASE_URL}/auths/signin`,
+						body: {
+							email: EMAIL,
+							password: PASSWORD
+						},
+						failOnStatusCode: false
+					}).then((retryResponse) => {
+						if (retryResponse.status === 200 && retryResponse.body.token) {
+							return cy.wrap(retryResponse.body.token).as('authToken');
+						} else {
+							return cy.wrap('').as('authToken');
+						}
+					});
 				});
 			} else if (response.status === 401 || response.status === 404) {
 				// User doesn't exist, try to create via signup
-				cy.request({
+				return cy.request({
 					method: 'POST',
 					url: `${API_BASE_URL}/auths/signup`,
 					body: {
@@ -70,33 +69,30 @@ describe('Workflow API Endpoints', () => {
 					failOnStatusCode: false
 				}).then((signupResponse) => {
 					if (signupResponse.status === 200 && signupResponse.body.token) {
-						cy.wrap(signupResponse.body.token).as('authToken');
-						cy.log('User created and authenticated via signup');
+						return cy.wrap(signupResponse.body.token).as('authToken');
 					} else {
 						// Try signin again after signup
-						cy.wait(2000);
-						cy.request({
-							method: 'POST',
-							url: `${API_BASE_URL}/auths/signin`,
-							body: {
-								email: EMAIL,
-								password: PASSWORD
-							},
-							failOnStatusCode: false
-						}).then((retryResponse) => {
-							if (retryResponse.status === 200 && retryResponse.body.token) {
-								cy.wrap(retryResponse.body.token).as('authToken');
-								cy.log('Authentication successful after signup');
-							} else {
-								cy.wrap('').as('authToken');
-								cy.log(`Authentication failed: ${retryResponse.status}`);
-							}
+						return cy.wait(2000).then(() => {
+							return cy.request({
+								method: 'POST',
+								url: `${API_BASE_URL}/auths/signin`,
+								body: {
+									email: EMAIL,
+									password: PASSWORD
+								},
+								failOnStatusCode: false
+							}).then((retryResponse) => {
+								if (retryResponse.status === 200 && retryResponse.body.token) {
+									return cy.wrap(retryResponse.body.token).as('authToken');
+								} else {
+									return cy.wrap('').as('authToken');
+								}
+							});
 						});
 					}
 				});
 			} else {
-				cy.wrap('').as('authToken');
-				cy.log(`Authentication failed: ${response.status}`);
+				return cy.wrap('').as('authToken');
 			}
 		});
 	});
