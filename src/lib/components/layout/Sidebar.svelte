@@ -97,11 +97,11 @@
 		// The settings store (populated from /users/user/settings) is the source of truth.
 		// Reference $settings store to make this reactive to settings changes
 		const _ = $settings?.selectedChildId;
-		
+
 		if (childProfiles && childProfiles.length > 0) {
 			const currentChildId = childProfileSync.getCurrentChildId();
 			if (currentChildId) {
-				const index = childProfiles.findIndex(child => child.id === currentChildId);
+				const index = childProfiles.findIndex((child) => child.id === currentChildId);
 				if (index !== -1) {
 					selectedChildIndex = index;
 					currentChild = childProfiles[index];
@@ -124,93 +124,93 @@
 		}
 	}
 
-    // Assignment workflow state
-    let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
-    let showAssignmentSetup: boolean = false;
-    let assignmentCompleted: boolean = false;
-    let moderationScenariosAccessed: boolean = false; // Track if user has accessed moderation scenarios
-    let instructionsCompleted: boolean = false;
-    let unlock_kids: boolean = false;
-    let unlock_moderation: boolean = false;
-    let unlock_exit: boolean = false;
-    let unlock_completion: boolean = false;
+	// Assignment workflow state
+	let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
+	let showAssignmentSetup: boolean = false;
+	let assignmentCompleted: boolean = false;
+	let moderationScenariosAccessed: boolean = false; // Track if user has accessed moderation scenarios
+	let instructionsCompleted: boolean = false;
+	let unlock_kids: boolean = false;
+	let unlock_moderation: boolean = false;
+	let unlock_exit: boolean = false;
+	let unlock_completion: boolean = false;
 
-    // Make assignment state reactive to localStorage changes
-    $: if (typeof window !== 'undefined') {
-        const storedStep = localStorage.getItem('assignmentStep');
-        if (storedStep) {
-            assignmentStep = parseInt(storedStep);
-        }
-        const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
-        moderationScenariosAccessed = moderationAccessed === 'true';
-        assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-        instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-        unlock_kids = localStorage.getItem('unlock_kids') === 'true';
-        unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
-        unlock_exit = localStorage.getItem('unlock_exit') === 'true';
-        unlock_completion = localStorage.getItem('unlock_completion') === 'true';
-    }
+	// Make assignment state reactive to localStorage changes
+	$: if (typeof window !== 'undefined') {
+		const storedStep = localStorage.getItem('assignmentStep');
+		if (storedStep) {
+			assignmentStep = parseInt(storedStep);
+		}
+		const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
+		moderationScenariosAccessed = moderationAccessed === 'true';
+		assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+		instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+		unlock_kids = localStorage.getItem('unlock_kids') === 'true';
+		unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
+		unlock_exit = localStorage.getItem('unlock_exit') === 'true';
+		unlock_completion = localStorage.getItem('unlock_completion') === 'true';
+	}
 
-    // Listen for state changes
-    onMount(() => {
-        // Initialize from localStorage
-        const storedStep = localStorage.getItem('assignmentStep');
-        if (storedStep) {
-            assignmentStep = parseInt(storedStep);
-        }
-        moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
-        assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-        instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+	// Listen for state changes
+	onMount(() => {
+		// Initialize from localStorage
+		const storedStep = localStorage.getItem('assignmentStep');
+		if (storedStep) {
+			assignmentStep = parseInt(storedStep);
+		}
+		moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
+		assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+		instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
 
-        const handleStorageChange = (e) => {
-            if (e.key === 'assignmentStep' && e.newValue) {
-                assignmentStep = parseInt(e.newValue);
-            }
-            if (e.key === 'moderationScenariosAccessed' && e.newValue) {
-                moderationScenariosAccessed = e.newValue === 'true';
-            }
-            if (e.key === 'assignmentCompleted' && e.newValue) {
-                assignmentCompleted = e.newValue === 'true';
-            }
-            if (e.key === 'instructionsCompleted' && e.newValue) {
-                instructionsCompleted = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_kids' && e.newValue) {
-                unlock_kids = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_moderation' && e.newValue) {
-                unlock_moderation = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_exit' && e.newValue) {
-                unlock_exit = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_completion' && e.newValue) {
-                unlock_completion = e.newValue === 'true';
-            }
-        };
-		
-        window.addEventListener('storage', handleStorageChange);
+		const handleStorageChange = (e) => {
+			if (e.key === 'assignmentStep' && e.newValue) {
+				assignmentStep = parseInt(e.newValue);
+			}
+			if (e.key === 'moderationScenariosAccessed' && e.newValue) {
+				moderationScenariosAccessed = e.newValue === 'true';
+			}
+			if (e.key === 'assignmentCompleted' && e.newValue) {
+				assignmentCompleted = e.newValue === 'true';
+			}
+			if (e.key === 'instructionsCompleted' && e.newValue) {
+				instructionsCompleted = e.newValue === 'true';
+			}
+			if (e.key === 'unlock_kids' && e.newValue) {
+				unlock_kids = e.newValue === 'true';
+			}
+			if (e.key === 'unlock_moderation' && e.newValue) {
+				unlock_moderation = e.newValue === 'true';
+			}
+			if (e.key === 'unlock_exit' && e.newValue) {
+				unlock_exit = e.newValue === 'true';
+			}
+			if (e.key === 'unlock_completion' && e.newValue) {
+				unlock_completion = e.newValue === 'true';
+			}
+		};
 
-        // Intra-tab updates via custom event
-        const handleWorkflowUpdated = () => {
-            const storedStepNow = localStorage.getItem('assignmentStep');
-            if (storedStepNow) {
-                assignmentStep = parseInt(storedStepNow);
-            }
-            moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
-            assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-            instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-            unlock_kids = localStorage.getItem('unlock_kids') === 'true';
-            unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
-            unlock_exit = localStorage.getItem('unlock_exit') === 'true';
-            unlock_completion = localStorage.getItem('unlock_completion') === 'true';
-        };
-        window.addEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
-		
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
-        };
+		window.addEventListener('storage', handleStorageChange);
+
+		// Intra-tab updates via custom event
+		const handleWorkflowUpdated = () => {
+			const storedStepNow = localStorage.getItem('assignmentStep');
+			if (storedStepNow) {
+				assignmentStep = parseInt(storedStepNow);
+			}
+			moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
+			assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+			instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+			unlock_kids = localStorage.getItem('unlock_kids') === 'true';
+			unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
+			unlock_exit = localStorage.getItem('unlock_exit') === 'true';
+			unlock_completion = localStorage.getItem('unlock_completion') === 'true';
+		};
+		window.addEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
+
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
+		};
 	});
 
 	// 加载当前选择的personal
@@ -218,7 +218,7 @@
 		const selectedId = localStorage.getItem('selectedPersonalId');
 		if (selectedId) {
 			const personals = JSON.parse(localStorage.getItem('personals') || '[]');
-			currentPersonal = personals.find(p => p.id === selectedId) || null;
+			currentPersonal = personals.find((p) => p.id === selectedId) || null;
 		}
 	};
 
@@ -239,15 +239,15 @@
 			console.log('Loaded child profiles:', childProfiles);
 			const currentChildId = childProfileSync.getCurrentChildId();
 			console.log('Current child ID:', currentChildId);
-				
-				if (currentChildId && childProfiles.length > 0) {
-					const index = childProfiles.findIndex(child => child.id === currentChildId);
-					if (index !== -1) {
+
+			if (currentChildId && childProfiles.length > 0) {
+				const index = childProfiles.findIndex((child) => child.id === currentChildId);
+				if (index !== -1) {
 					// Stored child ID exists in current profiles list, select it
-						selectedChildIndex = index;
-						currentChild = childProfiles[index];
-						console.log('Selected child:', currentChild);
-					} else {
+					selectedChildIndex = index;
+					currentChild = childProfiles[index];
+					console.log('Selected child:', currentChild);
+				} else {
 					// Stored child ID doesn't exist in current profiles (child is no longer current)
 					// Clear the stored selection and don't select any child
 					console.log('Stored child ID not found in current profiles, clearing selection');
@@ -256,21 +256,21 @@
 					} catch (e) {
 						console.warn('Failed to clear selected child ID:', e);
 					}
-						selectedChildIndex = 0;
+					selectedChildIndex = 0;
 					currentChild = null;
 					console.log('No child selected (stored child is no longer current)');
-					}
-				} else if (childProfiles.length > 0) {
-					// No current child selected, use the first one
-					selectedChildIndex = 0;
-					currentChild = childProfiles[0];
-					console.log('No current child, using first:', currentChild);
+				}
+			} else if (childProfiles.length > 0) {
+				// No current child selected, use the first one
+				selectedChildIndex = 0;
+				currentChild = childProfiles[0];
+				console.log('No current child, using first:', currentChild);
 			} else {
 				// No current children available
 				selectedChildIndex = 0;
 				currentChild = null;
 				console.log('No current children available');
-				}
+			}
 		} catch (error) {
 			console.error('Failed to load child profiles:', error);
 			childProfiles = [];
@@ -278,10 +278,9 @@
 		}
 	};
 
-
 	// Track the current role to avoid infinite loops
 	let lastKnownRole: string | null = '';
-	
+
 	// Reactive statement to reload child profiles when role changes
 	$: if (typeof window !== 'undefined') {
 		const currentRole = localStorage.getItem('selectedRole');
@@ -304,7 +303,7 @@
 		// Check if user has completed child profile setup
 		const hasChildProfile = localStorage.getItem('assignmentStep') !== null;
 		const currentStep = localStorage.getItem('assignmentStep');
-		
+
 		if (!hasChildProfile || !currentStep) {
 			showAssignmentSetup = true;
 			assignmentStep = 1;
@@ -335,7 +334,7 @@
 				return;
 			}
 		}
-		
+
 		// For other steps, check current step from both localStorage and reactive state
 		const currentStep = Math.max(
 			parseInt(localStorage.getItem('assignmentStep') || '1'),
@@ -349,11 +348,16 @@
 
 	function getStepRoute(step: number): string {
 		switch (step) {
-			case 1: return '/kids/profile';
-			case 2: return '/moderation-scenario';
-			case 3: return '/exit-survey';
-			case 4: return '/completion';
-			default: return '/kids/profile';
+			case 1:
+				return '/kids/profile';
+			case 2:
+				return '/moderation-scenario';
+			case 3:
+				return '/exit-survey';
+			case 4:
+				return '/completion';
+			default:
+				return '/kids/profile';
 		}
 	}
 
@@ -682,13 +686,13 @@
 
 		loadCurrentPersonal();
 		await loadChildProfiles();
-		
+
 		// Listen for child profile changes
 		const handleChildProfileChange = () => {
 			loadChildProfiles();
 		};
 		window.addEventListener('child-profiles-updated', handleChildProfileChange);
-		
+
 		// Store the handler for cleanup
 		window._childProfileChangeHandler = handleChildProfileChange;
 	});
@@ -701,7 +705,7 @@
 		window.removeEventListener('touchend', onTouchEnd);
 
 		window.removeEventListener('focus', onFocus);
-		
+
 		// Clean up child profile change listener
 		if (window._childProfileChangeHandler) {
 			window.removeEventListener('child-profiles-updated', window._childProfileChangeHandler);
@@ -742,10 +746,7 @@
 	}}
 />
 
-<PersonalStore 
-	bind:open={showPersonalStore} 
-	on:personalSelected={handlePersonalSelected}
-/>
+<PersonalStore bind:open={showPersonalStore} on:personalSelected={handlePersonalSelected} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
@@ -769,56 +770,74 @@
 	}}
 />
 
-
 <!-- Assignment Overview Popup -->
 {#if showAssignmentSetup}
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-	<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
-		<div class="text-center mb-6">
-			<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-				Welcome to the AI Moderation Assignment
-			</h2>
-			<p class="text-gray-600 dark:text-gray-300 mb-6">
-				You'll be completing a 3-step assignment to help us understand how AI moderation works with children's conversations.
-			</p>
-		</div>
+	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+		<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
+			<div class="text-center mb-6">
+				<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+					Welcome to the AI Moderation Assignment
+				</h2>
+				<p class="text-gray-600 dark:text-gray-300 mb-6">
+					You'll be completing a 3-step assignment to help us understand how AI moderation works
+					with children's conversations.
+				</p>
+			</div>
 
-		<div class="space-y-4 mb-8">
-			<div class="flex items-center space-x-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-				<div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">1</div>
-				<div>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Child Profile Setup</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-300">Create and select a child profile for the assignment</p>
+			<div class="space-y-4 mb-8">
+				<div class="flex items-center space-x-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+					<div
+						class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold"
+					>
+						1
+					</div>
+					<div>
+						<h3 class="font-semibold text-gray-900 dark:text-white">Child Profile Setup</h3>
+						<p class="text-sm text-gray-600 dark:text-gray-300">
+							Create and select a child profile for the assignment
+						</p>
+					</div>
 				</div>
-			</div>
-			
-			<div class="flex items-center space-x-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-				<div class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">2</div>
-				<div>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Moderation Scenarios</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-300">Review and moderate AI responses to children's questions</p>
-				</div>
-			</div>
-			
-			<div class="flex items-center space-x-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-				<div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">3</div>
-				<div>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Exit Survey</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-300">Provide feedback on your moderation experience</p>
-				</div>
-			</div>
-		</div>
 
-		<div class="text-center">
-			<button
-				on:click={startAssignment}
-				class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-			>
-				Start Assignment - Step 1
-			</button>
+				<div class="flex items-center space-x-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+					<div
+						class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold"
+					>
+						2
+					</div>
+					<div>
+						<h3 class="font-semibold text-gray-900 dark:text-white">Moderation Scenarios</h3>
+						<p class="text-sm text-gray-600 dark:text-gray-300">
+							Review and moderate AI responses to children's questions
+						</p>
+					</div>
+				</div>
+
+				<div class="flex items-center space-x-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+					<div
+						class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold"
+					>
+						3
+					</div>
+					<div>
+						<h3 class="font-semibold text-gray-900 dark:text-white">Exit Survey</h3>
+						<p class="text-sm text-gray-600 dark:text-gray-300">
+							Provide feedback on your moderation experience
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="text-center">
+				<button
+					on:click={startAssignment}
+					class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+				>
+					Start Assignment - Step 1
+				</button>
+			</div>
 		</div>
 	</div>
-</div>
 {/if}
 
 <div
@@ -838,27 +857,40 @@
 			: 'invisible'}"
 	>
 		<!-- Top element with hamburger menu, title, and fill space -->
-	<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-		<button
-			class="cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-			on:click={() => {
-				showSidebar.set(!$showSidebar);
-			}}
-		>
-			<div class="m-auto self-center">
-				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path>
-				</svg>
-			</div>
-		</button>
-		<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center">
-			Assignment Steps
-		</h3>
-		<div class="flex-1 min-h-0"></div>
-	</div>
+		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+			<button
+				class="cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				on:click={() => {
+					showSidebar.set(!$showSidebar);
+				}}
+			>
+				<div class="m-auto self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="size-5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+						></path>
+					</svg>
+				</div>
+			</button>
+			<h3
+				class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center"
+			>
+				Assignment Steps
+			</h3>
+			<div class="flex-1 min-h-0"></div>
+		</div>
 
-			<!-- Hidden New Chat button -->
-			<!--
+		<!-- Hidden New Chat button -->
+		<!--
 			<a
 				id="sidebar-new-chat-button"
 				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
@@ -894,7 +926,6 @@
 				</div>
 			</a>
 			-->
-
 
 		<!-- Hidden pinned models section -->
 		<!--
@@ -1186,9 +1217,8 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-			<!-- Assignment Navigation - moved to bottom -->
-			{#if true}
-
+				<!-- Assignment Navigation - moved to bottom -->
+				{#if true}
 					<!-- Grey divider above instructions -->
 					<div class="px-4 py-2">
 						<div class="border-b border-gray-200 dark:border-gray-700"></div>
@@ -1209,9 +1239,16 @@
 							}}
 						>
 							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center bg-gray-500 text-white">
+								<div
+									class="w-6 h-6 rounded-full flex items-center justify-center bg-gray-500 text-white"
+								>
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+										></path>
 									</svg>
 								</div>
 							</div>
@@ -1228,7 +1265,15 @@
 
 					<!-- Step 1: Child Profile -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')) && (unlock_kids || (typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true')) ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
+						<div
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(instructionsCompleted ||
+								(typeof window !== 'undefined' &&
+									localStorage.getItem('instructionsCompleted') === 'true')) &&
+							(unlock_kids ||
+								(typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true'))
+								? 'hover:bg-gray-100 dark:hover:bg-gray-900'
+								: 'opacity-50 cursor-not-allowed'}"
+						>
 							<button
 								class="flex items-center space-x-3 flex-1"
 								on:click={() => {
@@ -1238,13 +1283,31 @@
 									}
 									goToStep(1);
 								}}
-								disabled={!(instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')) || !(unlock_kids || (typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true'))}
+								disabled={!(
+									instructionsCompleted ||
+									(typeof window !== 'undefined' &&
+										localStorage.getItem('instructionsCompleted') === 'true')
+								) ||
+									!(
+										unlock_kids ||
+										(typeof window !== 'undefined' &&
+											localStorage.getItem('unlock_kids') === 'true')
+									)}
 							>
 								<div class="self-center">
-									<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+									<div
+										class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >=
+										1
+											? 'bg-blue-500 text-white'
+											: 'bg-gray-300 dark:bg-gray-600 text-gray-500'}"
+									>
 										{#if assignmentStep > 1}
 											<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
 											</svg>
 										{:else}
 											<span class="text-xs font-bold">1</span>
@@ -1255,7 +1318,7 @@
 									<div class="font-medium text-sm font-primary">Child Profile</div>
 								</div>
 							</button>
-							
+
 							<!-- Hidden Edit button -->
 							<!--
 							<div class="flex space-x-1 ml-auto">
@@ -1282,7 +1345,9 @@
 					<!-- Step 2: Review Scenarios -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {unlock_moderation ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {unlock_moderation
+								? 'hover:bg-gray-100 dark:hover:bg-gray-900'
+								: 'opacity-50 cursor-not-allowed'}"
 							on:click={() => {
 								if (unlock_moderation) {
 									localStorage.setItem('moderationScenariosAccessed', 'true');
@@ -1292,10 +1357,18 @@
 							disabled={!unlock_moderation}
 						>
 							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+								<div
+									class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2
+										? 'bg-purple-500 text-white'
+										: 'bg-gray-300 dark:bg-gray-600 text-gray-500'}"
+								>
 									{#if assignmentStep > 2}
 										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+											<path
+												fill-rule="evenodd"
+												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+												clip-rule="evenodd"
+											></path>
 										</svg>
 									{:else}
 										<span class="text-xs font-bold">2</span>
@@ -1311,7 +1384,10 @@
 					<!-- Step 3: Exit Survey -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(assignmentStep >= 3 || unlock_exit) ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >=
+								3 || unlock_exit
+								? 'hover:bg-gray-100 dark:hover:bg-gray-900'
+								: 'opacity-50 cursor-not-allowed'}"
 							on:click={() => {
 								if (assignmentStep >= 3 || unlock_exit) {
 									goto('/exit-survey');
@@ -1320,10 +1396,19 @@
 							disabled={!(assignmentStep >= 3 || unlock_exit)}
 						>
 							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center {(assignmentStep >= 3 || unlock_exit) ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+								<div
+									class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >=
+										3 || unlock_exit
+										? 'bg-green-500 text-white'
+										: 'bg-gray-300 dark:bg-gray-600 text-gray-500'}"
+								>
 									{#if assignmentCompleted || unlock_completion}
 										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+											<path
+												fill-rule="evenodd"
+												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+												clip-rule="evenodd"
+											></path>
 										</svg>
 									{:else}
 										<span class="text-xs font-bold">3</span>
@@ -1335,8 +1420,7 @@
 							</div>
 						</button>
 					</div>
-
-			{/if}
+				{/if}
 			</div>
 		</div>
 
@@ -1345,35 +1429,34 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-			
-			<!-- Child Profile Preview -->
-			{#if currentChild}
-				<div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-					<div class="flex items-center space-x-3">
-						<div class="flex-shrink-0">
-							<div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-								<span class="text-white font-semibold text-sm">
-									{currentChild.name?.charAt(0) || '👶'}
-								</span>
+				<!-- Child Profile Preview -->
+				{#if currentChild}
+					<div
+						class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+					>
+						<div class="flex items-center space-x-3">
+							<div class="flex-shrink-0">
+								<div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+									<span class="text-white font-semibold text-sm">
+										{currentChild.name?.charAt(0) || '👶'}
+									</span>
+								</div>
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+									{currentChild.name}
+								</p>
+								<p class="text-xs text-blue-700 dark:text-blue-300">
+									Age: {currentChild.child_age || 'N/A'} • {currentChild.child_gender || 'N/A'}
+								</p>
 							</div>
 						</div>
-						<div class="flex-1 min-w-0">
-							<p class="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
-								{currentChild.name}
-							</p>
-							<p class="text-xs text-blue-700 dark:text-blue-300">
-								Age: {currentChild.child_age || 'N/A'} • {currentChild.child_gender || 'N/A'}
-							</p>
-						</div>
+						<div class="mt-2 text-xs text-blue-600 dark:text-blue-400">Survey participant</div>
 					</div>
-					<div class="mt-2 text-xs text-blue-600 dark:text-blue-400">
-						Survey participant
-					</div>
-				</div>
-			{/if}
-			
-			{#if $user !== undefined && $user !== null}
-				<UserMenu
+				{/if}
+
+				{#if $user !== undefined && $user !== null}
+					<UserMenu
 						role={$user?.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {

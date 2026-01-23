@@ -197,6 +197,8 @@ We offer various installation alternatives, including non-Docker native installa
 
 Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/advanced-topics/development) for instructions on setting up a local development environment.
 
+For cloud development environments (Cursor Cloud, GitHub Codespaces, Gitpod, etc.) and Cypress E2E testing, see [Cloud Development and Testing](docs/CLOUD_DEVELOPMENT_AND_TESTING.md).
+
 ### Troubleshooting
 
 Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).

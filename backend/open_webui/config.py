@@ -71,11 +71,11 @@ def run_migrations():
 def ensure_selection_table():
     """
     Check if the selection table exists and create it if it doesn't.
-    
+
     This is a fallback mechanism to ensure the selection table is always available
     for the text selection analytics feature, even if the Alembic migration
     doesn't run properly or the table gets deleted.
-    
+
     The selection table stores user-selected text from chat messages for
     content analysis and moderation purposes.
     """
@@ -83,13 +83,13 @@ def ensure_selection_table():
     try:
         from open_webui.internal.db import get_db
         from sqlalchemy import text, inspect
-        
+
         with get_db() as db:
             # Check if the selection table exists
             inspector = inspect(db.bind)
-            if 'selection' not in inspector.get_table_names():
+            if "selection" not in inspector.get_table_names():
                 log.info("Selection table not found, creating it...")
-                
+
                 # Create the selection table
                 create_table_sql = """
                 CREATE TABLE selection (
@@ -105,29 +105,29 @@ def ensure_selection_table():
                     updated_at INTEGER
                 );
                 """
-                
+
                 # Create indexes
                 create_indexes_sql = [
                     "CREATE INDEX IF NOT EXISTS idx_selection_user_id ON selection (user_id);",
                     "CREATE INDEX IF NOT EXISTS idx_selection_chat_id ON selection (chat_id);",
                     "CREATE INDEX IF NOT EXISTS idx_selection_message_id ON selection (message_id);",
-                    "CREATE INDEX IF NOT EXISTS idx_selection_created_at ON selection (created_at);"
+                    "CREATE INDEX IF NOT EXISTS idx_selection_created_at ON selection (created_at);",
                 ]
-                
+
                 # Execute table creation
                 db.execute(text(create_table_sql))
                 log.info("✅ Selection table created successfully!")
-                
+
                 # Execute index creation
                 for index_sql in create_indexes_sql:
                     db.execute(text(index_sql))
                 log.info("✅ Selection table indexes created successfully!")
-                
+
                 db.commit()
                 log.info("✅ Selection table setup completed!")
             else:
                 log.info("✅ Selection table already exists")
-                
+
     except Exception as e:
         log.exception(f"Error ensuring selection table exists: {e}")
 

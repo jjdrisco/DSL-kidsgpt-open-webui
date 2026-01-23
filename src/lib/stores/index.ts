@@ -12,7 +12,7 @@ export const config: Writable<Config | undefined> = writable(undefined);
 /**
  * User store: Auth/identity data only (id, token, role, permissions)
  * Populated from /auths/ endpoint
- * 
+ *
  * IMPORTANT: Does NOT include UI settings data (use `settings` store for that)
  * Do NOT read/write UI preferences like selectedChildId from user.settings
  */
@@ -75,7 +75,7 @@ export const banners: Writable<Banner[]> = writable([]);
 /**
  * Settings store: UI preferences (theme, selectedChildId, etc.)
  * Populated from /users/user/settings endpoint
- * 
+ *
  * This is the SINGLE SOURCE OF TRUTH for selectedChildId and other UI preferences.
  * Use childProfileSync.getCurrentChildId() and setCurrentChildId() methods to
  * read/write selectedChildId - they handle the correct store routing.
@@ -108,7 +108,13 @@ export const playingNotificationSound = writable(false);
 // Selection/Recording Mode (UI-only)
 export const selectionModeEnabled = writable(false);
 export const savedSelections: Writable<
-	{ chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string }[]
+	{
+		chatId: string;
+		messageId: string;
+		role: 'user' | 'assistant';
+		text: string;
+		childId?: string;
+	}[]
 > = writable([]);
 export const selectionForceInput = writable(false);
 
@@ -117,94 +123,106 @@ export const latestAssistantMessageId: Writable<string | null> = writable(null);
 export const latestUserMessageId: Writable<string | null> = writable(null);
 
 // TEXT SELECTION FEATURE: Persist selections to localStorage per chat
-// 
+//
 // RACE CONDITION FIX: Handles complex timing between chatId availability and localStorage restoration
 // - Problem: chatId not available during initial load, save subscription clears localStorage prematurely
 // - Solution: Two-phase restoration with isInitializing flag to prevent premature saves
 // - Flow: Initial load → Save subscription (protected) → ChatId subscription (restoration)
 //
 if (typeof window !== 'undefined') {
-  let isInitializing = true;
-  
-  // PHASE 1: Initial load - attempt to restore selections if chatId is available
-  try {
-    const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
-    const currentChatId = get(chatId);
-    
-    if (currentChatId && persisted[currentChatId]) {
-      // Restore immediately if we have both chatId and data
-      savedSelections.set(persisted[currentChatId]);
-    } else if (!currentChatId && Object.keys(persisted).length > 0) {
-      // Wait for chatId to become available (handled in Phase 2)
-    }
-  } catch (error) {
-    // Continue without selections on error
-  }
-  
-  // Mark initialization as complete - this allows save subscription to start working
-  isInitializing = false;
+	let isInitializing = true;
 
-  // PROTECTED SAVE: Only save selections after initialization and with valid chatId
-  savedSelections.subscribe((items) => {
-    if (isInitializing) return; // Prevent race condition during startup
-    
-    try {
-      const currentChatId = get(chatId);
-      if (!currentChatId) return; // Don't save without valid chatId
-      
-      // Group selections by chatId for proper storage structure
-      const byChat = items.reduce((acc, item) => {
-        (acc[item.chatId] = acc[item.chatId] || []).push(item);
-        return acc;
-      }, {} as Record<string, { chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string }[]>);
-      localStorage.setItem('saved-selections', JSON.stringify(byChat));
-    } catch (error) {
-      // Continue silently on save error
-    }
-  });
+	// PHASE 1: Initial load - attempt to restore selections if chatId is available
+	try {
+		const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+		const currentChatId = get(chatId);
 
-  // PHASE 2: ChatId subscription - handle restoration and chat switching
-  let previousChatId: string | null = null;
-  chatId.subscribe(async (id) => {
-    if (isInitializing) return; // Don't handle during initialization
-    
-    try {
-      const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
-      console.log('chatId changed from', previousChatId, 'to', id, 'persisted data:', persisted);
-      
-      if (id && persisted[id]) {
-        // Restore selections for this chat and sync to backend
-        console.log('Restoring selections for chat:', id, persisted[id]);
-        savedSelections.set(persisted[id]);
-        
-        try {
-          const { selectionSyncService } = await import('$lib/services/selectionSync');
-          await selectionSyncService.syncToBackend();
-          console.log('Synced existing selections to backend after chatId became available');
-        } catch (error) {
-          console.warn('Failed to sync existing selections to backend:', error);
-        }
-      } else if (previousChatId === null && id && Object.keys(persisted).length > 0) {
-        // Initial load case: chatId now available, sync existing data to backend
-        console.log('First chatId set with persisted data - checking for matches');
-        
-        try {
-          const { selectionSyncService } = await import('$lib/services/selectionSync');
-          await selectionSyncService.syncToBackend();
-          console.log('Synced existing selections to backend after initial chatId load');
-        } catch (error) {
-          console.warn('Failed to sync existing selections to backend:', error);
-        }
-      } else if (previousChatId !== null && id !== previousChatId) {
-        // Chat switching: let Chat.svelte handle selection restoration
-        console.log('Switching chats - Chat.svelte will handle selection restoration for:', id);
-        // Don't clear selections here - let Chat.svelte handle restoration
-      }
-      previousChatId = id;
-    } catch (error) {
-      console.error('Error handling chatId change:', error);
-    }
-  });
+		if (currentChatId && persisted[currentChatId]) {
+			// Restore immediately if we have both chatId and data
+			savedSelections.set(persisted[currentChatId]);
+		} else if (!currentChatId && Object.keys(persisted).length > 0) {
+			// Wait for chatId to become available (handled in Phase 2)
+		}
+	} catch (error) {
+		// Continue without selections on error
+	}
+
+	// Mark initialization as complete - this allows save subscription to start working
+	isInitializing = false;
+
+	// PROTECTED SAVE: Only save selections after initialization and with valid chatId
+	savedSelections.subscribe((items) => {
+		if (isInitializing) return; // Prevent race condition during startup
+
+		try {
+			const currentChatId = get(chatId);
+			if (!currentChatId) return; // Don't save without valid chatId
+
+			// Group selections by chatId for proper storage structure
+			const byChat = items.reduce(
+				(acc, item) => {
+					(acc[item.chatId] = acc[item.chatId] || []).push(item);
+					return acc;
+				},
+				{} as Record<
+					string,
+					{
+						chatId: string;
+						messageId: string;
+						role: 'user' | 'assistant';
+						text: string;
+						childId?: string;
+					}[]
+				>
+			);
+			localStorage.setItem('saved-selections', JSON.stringify(byChat));
+		} catch (error) {
+			// Continue silently on save error
+		}
+	});
+
+	// PHASE 2: ChatId subscription - handle restoration and chat switching
+	let previousChatId: string | null = null;
+	chatId.subscribe(async (id) => {
+		if (isInitializing) return; // Don't handle during initialization
+
+		try {
+			const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+			console.log('chatId changed from', previousChatId, 'to', id, 'persisted data:', persisted);
+
+			if (id && persisted[id]) {
+				// Restore selections for this chat and sync to backend
+				console.log('Restoring selections for chat:', id, persisted[id]);
+				savedSelections.set(persisted[id]);
+
+				try {
+					const { selectionSyncService } = await import('$lib/services/selectionSync');
+					await selectionSyncService.syncToBackend();
+					console.log('Synced existing selections to backend after chatId became available');
+				} catch (error) {
+					console.warn('Failed to sync existing selections to backend:', error);
+				}
+			} else if (previousChatId === null && id && Object.keys(persisted).length > 0) {
+				// Initial load case: chatId now available, sync existing data to backend
+				console.log('First chatId set with persisted data - checking for matches');
+
+				try {
+					const { selectionSyncService } = await import('$lib/services/selectionSync');
+					await selectionSyncService.syncToBackend();
+					console.log('Synced existing selections to backend after initial chatId load');
+				} catch (error) {
+					console.warn('Failed to sync existing selections to backend:', error);
+				}
+			} else if (previousChatId !== null && id !== previousChatId) {
+				// Chat switching: let Chat.svelte handle selection restoration
+				console.log('Switching chats - Chat.svelte will handle selection restoration for:', id);
+				// Don't clear selections here - let Chat.svelte handle restoration
+			}
+			previousChatId = id;
+		} catch (error) {
+			console.error('Error handling chatId change:', error);
+		}
+	});
 }
 
 export type Model = OpenAIModel | OllamaModel;

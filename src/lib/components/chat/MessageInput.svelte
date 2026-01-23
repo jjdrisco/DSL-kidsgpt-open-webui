@@ -1040,7 +1040,9 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex flex-col gap-1.5 {disabled ? 'opacity-50 pointer-events-none' : ''}"
+							class="w-full flex flex-col gap-1.5 {disabled
+								? 'opacity-50 pointer-events-none'
+								: ''}"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								if (!disabled) {

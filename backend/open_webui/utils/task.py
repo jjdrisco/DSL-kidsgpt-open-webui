@@ -11,7 +11,6 @@ from open_webui.utils.misc import get_last_user_message, get_messages_content
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import DEFAULT_RAG_TEMPLATE
 
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -19,10 +18,14 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 def get_task_model_id(
     default_model_id: str, task_model: str, task_model_external: str, models
 ) -> str:
-    log.info(f"DEBUG: get_task_model_id called with default_model_id: {default_model_id}")
+    log.info(
+        f"DEBUG: get_task_model_id called with default_model_id: {default_model_id}"
+    )
     log.info(f"DEBUG: get_task_model_id available models: {list(models.keys())}")
-    log.info(f"DEBUG: get_task_model_id default_model_id in models: {default_model_id in models}")
-    
+    log.info(
+        f"DEBUG: get_task_model_id default_model_id in models: {default_model_id in models}"
+    )
+
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model

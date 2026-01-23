@@ -62,7 +62,7 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
-	
+
 	// Reactive statement to get effective theme
 	$: effectiveTheme = getEffectiveTheme();
 </script>
@@ -226,13 +226,17 @@
 					{/if}
 
 					<!-- Theme Toggle Button -->
-					<Tooltip content={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+					<Tooltip
+						content={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+					>
 						<button
 							class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
 							on:click={() => {
 								toggleTheme();
 							}}
-							aria-label={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+							aria-label={effectiveTheme === 'dark'
+								? 'Switch to Light Mode'
+								: 'Switch to Dark Mode'}
 						>
 							<div class="m-auto self-center">
 								{#if effectiveTheme === 'dark'}
