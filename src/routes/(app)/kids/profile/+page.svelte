@@ -312,15 +312,8 @@
 		sel.name = childName;
 		sel.child_age = childAge;
 		sel.child_gender = childGender;
-		// Combine personality traits with characteristics
-		const personalityDesc = getPersonalityDescription();
-		const combinedCharacteristics = personalityDesc
-			? childCharacteristics.trim()
-				? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
-				: personalityDesc
-			: childCharacteristics;
-
-		sel.child_characteristics = combinedCharacteristics;
+		// Characteristics will be collected in exit survey
+		sel.child_characteristics = '';
 		// Attach research fields to selected child for local view
 		(sel as any).is_only_child = isOnlyChild === 'yes';
 		(sel as any).child_has_ai_use = childHasAIUse || null;
@@ -500,48 +493,14 @@
 				toast.error('Please select a gender');
 				return;
 			}
-			// Enforce child quiz required fields
-			if (!isOnlyChild) {
-				toast.error('Please indicate if this child is an only child');
-				return;
-			}
-			if (!childHasAIUse) {
-				toast.error('Please answer whether this child has used ChatGPT or similar AI tools');
-				return;
-			}
-			if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
-				toast.error('Please select at least one context of AI use');
-				return;
-			}
-			if (
-				childHasAIUse === 'yes' &&
-				childAIUseContexts.includes('other') &&
-				!childAIUseContextsOther.trim()
-			) {
-				toast.error('Please specify the context of AI use');
-				return;
-			}
-			if (!parentLLMMonitoringLevel) {
-				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
-				return;
-			}
-			if (parentLLMMonitoringLevel === 'other' && !parentLLMMonitoringOther.trim()) {
-				toast.error("Please specify how you have monitored or adjusted your child's AI use");
-				return;
-			}
+			// Child quiz fields moved to exit survey - no validation needed here
 
 			// Track if we're editing an existing profile
 			const isEditingExisting = childProfiles.length > 0 && selectedChildIndex >= 0;
 
 			// If no profiles exist or we're creating a new profile, create a new one
 			if (childProfiles.length === 0 || selectedChildIndex === -1) {
-				// Combine personality traits with characteristics
-				const personalityDesc = getPersonalityDescription();
-				const combinedCharacteristics = personalityDesc
-					? childCharacteristics.trim()
-						? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
-						: personalityDesc
-					: childCharacteristics;
+				// Personality traits and characteristics will be collected in exit survey
 
 				// Determine session number before creating child profile
 				const userId = get(user)?.id;
@@ -556,14 +515,8 @@
 					name: childName,
 					child_age: childAge,
 					child_gender: childGender === 'Other' ? 'Other' : childGender,
-					child_characteristics: combinedCharacteristics,
-					is_only_child: isOnlyChild === 'yes',
-					child_has_ai_use: childHasAIUse as any,
-					child_ai_use_contexts: childAIUseContexts,
-					parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
+					child_characteristics: '', // Will be filled in exit survey
 					child_gender_other: childGenderOther || undefined,
-					child_ai_use_contexts_other: childAIUseContextsOther || undefined,
-					parent_llm_monitoring_other: parentLLMMonitoringOther || undefined,
 					session_number: sessionNumber
 				} as any);
 				if (childProfiles.length === 0) {
@@ -626,14 +579,8 @@
 						name: childName,
 						child_age: childAge,
 						child_gender: childGender,
-						child_characteristics: combinedCharacteristics,
-						is_only_child: isOnlyChild === 'yes',
-						child_has_ai_use: childHasAIUse as any,
-						child_ai_use_contexts: childAIUseContexts,
-						parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
-						child_gender_other: childGenderOther || undefined,
-						child_ai_use_contexts_other: childAIUseContextsOther || undefined,
-						parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
+						child_characteristics: '', // Will be filled in exit survey
+						child_gender_other: childGenderOther || undefined
 					} as any);
 
 					// Update childSelectedForQuestions to show the green checkmark on the saved profile
@@ -1085,7 +1032,14 @@
 					<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
 						<!-- Form Fields -->
 						<div class="space-y-6">
-							<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
+							<div class="mb-4">
+								<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+									Please select and consider a single child between the ages of 9-18 for this study. 
+									You will be asked to provide information about this child and moderate AI scenarios 
+									as if you were making decisions for them.
+								</p>
+								<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
+							</div>
 
 							<div>
 								<label
@@ -1159,347 +1113,7 @@
 								{/if}
 							</div>
 
-							<!-- Personality Traits Selection - Multi-Trait Support -->
-							<div>
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Personality Traits <span class="text-red-500">*</span>
-								</label>
-								<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-									Select personality traits and choose specific characteristics from one or more
-									traits that describe your child.
-								</p>
-
-								<!-- All Personality Traits as Expandable Sections -->
-								<div class="space-y-3 mb-4">
-									{#each personalityTraits as trait}
-										<div
-											class="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-										>
-											<!-- Trait Header - Click to expand/collapse -->
-											<button
-												type="button"
-												on:click={() => toggleTrait(trait.id)}
-												class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors rounded-lg"
-											>
-												<div class="text-left flex-1">
-													<div
-														class="font-medium text-gray-900 dark:text-white flex items-center space-x-2"
-													>
-														<span>{trait.name}</span>
-														{#if trait.subCharacteristics.some( (sub) => selectedSubCharacteristics.includes(sub.id) )}
-															<span
-																class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-															>
-																{trait.subCharacteristics.filter((sub) =>
-																	selectedSubCharacteristics.includes(sub.id)
-																).length} selected
-															</span>
-														{/if}
-													</div>
-													<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-														{trait.description}
-													</div>
-												</div>
-												<div class="ml-2 flex-shrink-0">
-													<svg
-														class="w-5 h-5 text-gray-500 transition-transform {expandedTraits.has(
-															trait.id
-														)
-															? 'transform rotate-180'
-															: ''}"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M19 9l-7 7-7-7"
-														></path>
-													</svg>
-												</div>
-											</button>
-
-											<!-- Trait Characteristics - Show when expanded -->
-											{#if expandedTraits.has(trait.id)}
-												<div
-													class="px-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-600 pt-4"
-												>
-													<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-														Select characteristics that apply:
-													</p>
-													{#each trait.subCharacteristics as subChar}
-														<label
-															class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-														>
-															<input
-																type="checkbox"
-																bind:group={selectedSubCharacteristics}
-																value={subChar.id}
-																class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-															/>
-															<div class="flex-1">
-																<div class="font-medium text-gray-900 dark:text-white">
-																	{subChar.name}
-																</div>
-																<div class="text-sm text-gray-600 dark:text-gray-400">
-																	{subChar.description}
-																</div>
-															</div>
-														</label>
-													{/each}
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-
-								<!-- Summary of selections -->
-								{#if selectedSubCharacteristics.length > 0}
-									<div
-										class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4"
-									>
-										<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-											Selected: {selectedSubCharacteristics.length} characteristic{selectedSubCharacteristics.length !==
-											1
-												? 's'
-												: ''}
-										</div>
-										<div class="text-xs text-blue-700 dark:text-blue-300">
-											{getSelectedSubCharacteristicNames().join(', ')}
-										</div>
-									</div>
-								{/if}
-
-								<!-- Additional Characteristics -->
-								<div>
-									<label
-										for="childCharacteristics"
-										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-									>
-										Additional Characteristics & Interests <span class="text-red-500">*</span>
-									</label>
-									<textarea
-										id="childCharacteristics"
-										bind:value={childCharacteristics}
-										rows="3"
-										placeholder="Add any additional details about your child's personality, interests, learning style, etc."
-										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-									></textarea>
-								</div>
-							</div>
-
-							<!-- Child Quiz (Required) -->
-							<div class="pt-2">
-								<!-- Only child -->
-								<div class="mb-4">
-									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										Is this child an only child? <span class="text-red-500">*</span>
-									</div>
-									<div class="space-y-2">
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={isOnlyChild}
-												value="yes"
-												class="mr-3"
-											/>Yes</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={isOnlyChild}
-												value="no"
-												class="mr-3"
-											/>No</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={isOnlyChild}
-												value="prefer_not_to_say"
-												class="mr-3"
-											/>Prefer not to say</label
-										>
-									</div>
-								</div>
-
-								<!-- Child AI use -->
-								<div class="mb-4">
-									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										Has this child used ChatGPT or similar AI tools? <span class="text-red-500"
-											>*</span
-										>
-									</div>
-									<div class="space-y-2">
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={childHasAIUse}
-												value="yes"
-												class="mr-3"
-											/>Yes</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={childHasAIUse}
-												value="no"
-												class="mr-3"
-											/>No</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={childHasAIUse}
-												value="unsure"
-												class="mr-3"
-											/>Not sure</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={childHasAIUse}
-												value="prefer_not_to_say"
-												class="mr-3"
-											/>Prefer not to say</label
-										>
-									</div>
-								</div>
-
-								{#if childHasAIUse === 'yes'}
-									<!-- Contexts -->
-									<div class="mb-4">
-										<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											In what contexts has this child used these tools? <span class="text-red-500"
-												>*</span
-											>
-										</div>
-										<div class="space-y-2">
-											<label class="flex items-center"
-												><input
-													type="checkbox"
-													bind:group={childAIUseContexts}
-													value="school_homework"
-													class="mr-3"
-												/>For school or homework</label
-											>
-											<label class="flex items-center"
-												><input
-													type="checkbox"
-													bind:group={childAIUseContexts}
-													value="general_knowledge"
-													class="mr-3"
-												/>For general knowledge or casual questions</label
-											>
-											<label class="flex items-center"
-												><input
-													type="checkbox"
-													bind:group={childAIUseContexts}
-													value="games_chatting"
-													class="mr-3"
-												/>For playing games or chatting with the AI</label
-											>
-											<label class="flex items-center"
-												><input
-													type="checkbox"
-													bind:group={childAIUseContexts}
-													value="personal_advice"
-													class="mr-3"
-												/>For advice on personal or social issues</label
-											>
-											<label class="flex items-center"
-												><input
-													type="checkbox"
-													bind:group={childAIUseContexts}
-													value="other"
-													class="mr-3"
-												/>Other</label
-											>
-										</div>
-										{#if childAIUseContexts.includes('other')}
-											<input
-												type="text"
-												bind:value={childAIUseContextsOther}
-												placeholder="Please specify the context"
-												class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-												required
-											/>
-										{/if}
-									</div>
-								{/if}
-
-								<!-- Monitoring level -->
-								<div class="mb-2">
-									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										Have you monitored or adjusted your child’s use of Large Language Models like
-										ChatGPT? <span class="text-red-500">*</span>
-									</div>
-									<div class="space-y-2">
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={parentLLMMonitoringLevel}
-												value="active_rules"
-												class="mr-3"
-											/>Yes — I actively monitor and set rules/limits</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={parentLLMMonitoringLevel}
-												value="occasional_guidance"
-												class="mr-3"
-											/>Yes — occasional reminders or guidance</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={parentLLMMonitoringLevel}
-												value="plan_to"
-												class="mr-3"
-											/>Not yet, but I plan to</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={parentLLMMonitoringLevel}
-												value="no_monitoring"
-												class="mr-3"
-											/>No — I have not monitored or adjusted</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={parentLLMMonitoringLevel}
-												value="other"
-												class="mr-3"
-											/>Other</label
-										>
-										<label class="flex items-center"
-											><input
-												type="radio"
-												bind:group={parentLLMMonitoringLevel}
-												value="prefer_not_to_say"
-												class="mr-3"
-											/>Prefer not to say</label
-										>
-									</div>
-									{#if parentLLMMonitoringLevel === 'other'}
-										<input
-											type="text"
-											bind:value={parentLLMMonitoringOther}
-											placeholder="Please specify how you have monitored or adjusted your child's AI use"
-											class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-											required
-										/>
-									{/if}
-								</div>
-							</div>
-						</div>
-
-						<!-- Save Button -->
+							
 						<div class="flex justify-end space-x-3 pt-6">
 							{#if childProfiles.length > 0}
 								<button
