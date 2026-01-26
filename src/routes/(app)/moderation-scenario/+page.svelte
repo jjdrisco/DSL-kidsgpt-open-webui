@@ -1414,11 +1414,17 @@
 	let originalResponse1: string =
 		scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][1] : '';
 	let highlightedTexts1: HighlightInfo[] = [];
+	// Separate arrays for prompt and response highlights
+	let promptHighlights: HighlightInfo[] = [];
+	let responseHighlights: HighlightInfo[] = [];
 	let childPromptHTML: string = '';
 
 	// HTML storage for highlights (Approach 3)
 	let responseHighlightedHTML: string = ''; // Store HTML with marks embedded for response
 	let promptHighlightedHTML: string = ''; // Store HTML with marks embedded for prompt
+
+	// Modal state for highlighted concerns
+	let showHighlightedConcernsModal: boolean = false;
 
 	// Hydration guard to avoid DOM mutations before Svelte finishes hydrating
 	let hasHydrated = false;
@@ -1934,6 +1940,9 @@
 				currentSelection1 = selectedText;
 				selectionInPrompt = activeContainer === promptContainer1;
 
+				// Update separate highlight arrays
+				updateHighlightArrays();
+
 				// Automatically save the selection (stores HTML and saves to backend)
 				saveSelection();
 
@@ -2111,6 +2120,9 @@
 			}
 		}
 
+		// Update separate highlight arrays after removing highlight
+		updateHighlightArrays();
+
 		// Delete from `selection` table (debounced to batch rapid removals)
 		try {
 			const scenarioId = `scenario_${selectedScenarioIndex}`;
@@ -2133,6 +2145,39 @@
 			}, 250);
 		} catch (e) {
 			console.error('Failed to schedule selection removal from selection table', e);
+		}
+	}
+
+	/**
+	 * Update separate highlight arrays from HTML storage
+	 */
+	function updateHighlightArrays() {
+		// Extract highlights from prompt HTML
+		promptHighlights = [];
+		if (promptHighlightedHTML) {
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = promptHighlightedHTML;
+			const marks = tempDiv.querySelectorAll('mark.selection-highlight');
+			marks.forEach((mark) => {
+				const text = mark.textContent?.trim() || '';
+				if (text && !promptHighlights.some((h) => h.text === text)) {
+					promptHighlights.push({ text });
+				}
+			});
+		}
+
+		// Extract highlights from response HTML
+		responseHighlights = [];
+		if (responseHighlightedHTML) {
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = responseHighlightedHTML;
+			const marks = tempDiv.querySelectorAll('mark.selection-highlight');
+			marks.forEach((mark) => {
+				const text = mark.textContent?.trim() || '';
+				if (text && !responseHighlights.some((h) => h.text === text)) {
+					responseHighlights.push({ text });
+				}
+			});
 		}
 	}
 
@@ -3217,6 +3262,9 @@
 
 		// Clear loading flag to allow reactive updates now that all state is restored
 		isLoadingScenario = false;
+
+		// Update separate highlight arrays
+		updateHighlightArrays();
 
 		// Wait for reactive updates to complete after clearing the flag
 		await tick();
@@ -6036,51 +6084,105 @@
 													Step 1: Highlight the content that concerns you
 												</h3>
 
-												{#if highlightedTexts1.length > 0}
+												<!-- Two sections for prompt and response highlights -->
+												<div class="space-y-4 mb-4">
+													<!-- Concerns in Prompt Section -->
 													<div
-														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+														class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
 													>
-														<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-															✓ {highlightedTexts1.length} section{highlightedTexts1.length === 1
-																? ''
-																: 's'} highlighted
-														</p>
-														<div class="flex flex-wrap gap-2">
-															{#each highlightedTexts1 as highlight}
-																<button
-																	class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-																	on:click={() => removeHighlight(highlight)}
-																	title="Click to remove"
-																>
-																	{highlight.text.length > 40
-																		? highlight.text.substring(0, 40) + '...'
-																		: highlight.text}
-																	<svg
-																		class="w-3 h-3 ml-1"
-																		fill="none"
-																		stroke="currentColor"
-																		viewBox="0 0 24 24"
-																	>
-																		<path
-																			stroke-linecap="round"
-																			stroke-linejoin="round"
-																			stroke-width="2"
-																			d="M6 18L18 6M6 6l12 12"
-																		></path>
-																	</svg>
-																</button>
-															{/each}
+														<div class="flex items-center justify-between mb-2">
+															<h4 class="text-sm font-semibold text-gray-900 dark:text-white">
+																Concerns in Prompt
+															</h4>
+															<button
+																type="button"
+																on:click={() => (showHighlightedConcernsModal = true)}
+																class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+															>
+																View All Highlights
+															</button>
 														</div>
-														<p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-															Drag over more text to add highlights, or click "Continue" when done.
-														</p>
+														{#if promptHighlights.length > 0}
+															<p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+																✓ {promptHighlights.length} section{promptHighlights.length === 1
+																	? ''
+																	: 's'} highlighted
+															</p>
+															<div class="flex flex-wrap gap-2">
+																{#each promptHighlights.slice(0, 3) as highlight}
+																	<span
+																		class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-700 text-gray-800 dark:text-gray-100 rounded"
+																	>
+																		{highlight.text.length > 30
+																			? highlight.text.substring(0, 30) + '...'
+																			: highlight.text}
+																	</span>
+																{/each}
+																{#if promptHighlights.length > 3}
+																	<span class="text-xs text-gray-500 dark:text-gray-400">
+																		+{promptHighlights.length - 3} more
+																	</span>
+																{/if}
+															</div>
+														{:else}
+															<p class="text-xs text-gray-500 dark:text-gray-400">
+																No concerns highlighted in prompt yet. Drag over text in the prompt above to highlight.
+															</p>
+														{/if}
 													</div>
-												{:else}
+
+													<!-- Concerns in Response Section -->
+													<div
+														class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+													>
+														<div class="flex items-center justify-between mb-2">
+															<h4 class="text-sm font-semibold text-gray-900 dark:text-white">
+																Concerns in Response
+															</h4>
+															<button
+																type="button"
+																on:click={() => (showHighlightedConcernsModal = true)}
+																class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+															>
+																View All Highlights
+															</button>
+														</div>
+														{#if responseHighlights.length > 0}
+															<p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+																✓ {responseHighlights.length} section{responseHighlights.length === 1
+																	? ''
+																	: 's'} highlighted
+															</p>
+															<div class="flex flex-wrap gap-2">
+																{#each responseHighlights.slice(0, 3) as highlight}
+																	<span
+																		class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded"
+																	>
+																		{highlight.text.length > 30
+																			? highlight.text.substring(0, 30) + '...'
+																			: highlight.text}
+																	</span>
+																{/each}
+																{#if responseHighlights.length > 3}
+																	<span class="text-xs text-gray-500 dark:text-gray-400">
+																		+{responseHighlights.length - 3} more
+																	</span>
+																{/if}
+															</div>
+														{:else}
+															<p class="text-xs text-gray-500 dark:text-gray-400">
+																No concerns highlighted in response yet. Drag over text in the response above to highlight.
+															</p>
+														{/if}
+													</div>
+												</div>
+
+												{#if highlightedTexts1.length === 0}
 													<div
 														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
 													>
 														<p class="text-xs text-yellow-800 dark:text-yellow-200">
-															⚠️ Drag over text in the response above to highlight concerns. If this
+															⚠️ Drag over text in the prompt or response above to highlight concerns. If this
 															scenario is not relevant, click "Skip Scenario".
 														</p>
 													</div>
@@ -6093,13 +6195,13 @@
 											>
 												<button
 													on:click={() => completeStep1(false)}
-													disabled={highlightedTexts1.length === 0}
-													class="flex-1 px-6 py-3 {highlightedTexts1.length > 0
+													disabled={promptHighlights.length === 0 && responseHighlights.length === 0}
+													class="flex-1 px-6 py-3 {(promptHighlights.length > 0 || responseHighlights.length > 0)
 														? 'bg-green-500 hover:bg-green-600 text-white'
 														: 'bg-gray-400 text-white cursor-not-allowed opacity-50'} font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed"
 												>
 													<span>Continue</span>
-													{#if highlightedTexts1.length === 0}
+													{#if promptHighlights.length === 0 && responseHighlights.length === 0}
 														<span class="text-xs opacity-75">(highlight required)</span>
 													{/if}
 												</button>
@@ -6160,12 +6262,53 @@
 														class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
 													></textarea>
 												</div>
+
+												<!-- Level of Concern Likert Scale (1-5) -->
+												<div>
+													<label
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+													>
+														Level of Concern <span class="text-red-500">*</span>
+													</label>
+													<div class="space-y-2">
+														{#each [1, 2, 3, 4, 5] as level}
+															<label
+																class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {concernLevel ===
+																level
+																	? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+																	: ''}"
+															>
+																<input
+																	type="radio"
+																	name="concernLevel"
+																	value={level}
+																	bind:group={concernLevel}
+																	class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+																/>
+																<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+																	{level === 1
+																		? '1 - Not concerned at all'
+																		: level === 2
+																			? '2 - Slightly concerned'
+																			: level === 3
+																				? '3 - Moderately concerned'
+																				: level === 4
+																					? '4 - Very concerned'
+																					: '5 - Extremely concerned'}
+																</span>
+															</label>
+														{/each}
+													</div>
+													<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+														Select your level of concern about the highlighted content.
+													</p>
+												</div>
 											</div>
 
 											<div>
 												<button
 													on:click={completeStep2}
-													disabled={!concernReason.trim() || concernReason.trim().length < 10}
+													disabled={!concernReason.trim() || concernReason.trim().length < 10 || concernLevel === null}
 													class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 												>
 													Submit
@@ -7332,6 +7475,131 @@
 	videoSrc="/video/Moderation-Scenario-Demo.mp4"
 	title="Moderation Scenario Tutorial"
 />
+
+<!-- Highlighted Concerns Modal -->
+{#if showHighlightedConcernsModal}
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+	<div
+		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+		on:click={() => (showHighlightedConcernsModal = false)}
+		on:keydown={(e) => e.key === 'Escape' && (showHighlightedConcernsModal = false)}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="highlighted-concerns-modal-title"
+	>
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div
+			class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto"
+			on:click|stopPropagation
+		>
+			<div class="flex justify-between items-center mb-6">
+				<h3 id="highlighted-concerns-modal-title" class="text-2xl font-bold text-gray-900 dark:text-white">
+					Highlighted Concerns
+				</h3>
+				<button
+					on:click={() => (showHighlightedConcernsModal = false)}
+					class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+					aria-label="Close modal"
+				>
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						></path>
+					</svg>
+				</button>
+			</div>
+
+			<div class="space-y-6">
+				<!-- Concerns in Prompt Section -->
+				<div>
+					<h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+						Concerns in Prompt
+					</h4>
+					{#if promptHighlights.length > 0}
+						<div class="space-y-2">
+							{#each promptHighlights as highlight, index}
+								<div
+									class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+								>
+									<div class="flex items-start justify-between">
+										<span class="text-sm text-gray-900 dark:text-white flex-1">{highlight.text}</span>
+										<button
+											on:click={() => removeHighlight(highlight)}
+											class="ml-2 text-red-500 hover:text-red-700"
+											title="Remove highlight"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M6 18L18 6M6 6l12 12"
+												></path>
+											</svg>
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-gray-500 dark:text-gray-400">No concerns highlighted in prompt.</p>
+					{/if}
+				</div>
+
+				<!-- Concerns in Response Section -->
+				<div>
+					<h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+						Concerns in Response
+					</h4>
+					{#if responseHighlights.length > 0}
+						<div class="space-y-2">
+							{#each responseHighlights as highlight, index}
+								<div
+									class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+								>
+									<div class="flex items-start justify-between">
+										<span class="text-sm text-gray-900 dark:text-white flex-1">{highlight.text}</span>
+										<button
+											on:click={() => removeHighlight(highlight)}
+											class="ml-2 text-red-500 hover:text-red-700"
+											title="Remove highlight"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M6 18L18 6M6 6l12 12"
+												></path>
+											</svg>
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-gray-500 dark:text-gray-400">No concerns highlighted in response.</p>
+					{/if}
+				</div>
+			</div>
+
+			<div class="mt-6 flex justify-end">
+				<button
+					on:click={() => (showHighlightedConcernsModal = false)}
+					class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+				>
+					Close
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.response-text :global(.selection-highlight) {
