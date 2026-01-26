@@ -2717,6 +2717,9 @@
 		});
 		responseHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		promptHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
+		// Clear separate highlight arrays
+		promptHighlights = [];
+		responseHighlights = [];
 		concernLevel = null;
 		concernReason = '';
 		satisfactionLevel = null;
