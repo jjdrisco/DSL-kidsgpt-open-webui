@@ -889,6 +889,9 @@
 			return;
 		}
 
+		// Set loading state
+		isLoadingScenarios = true;
+
 		// Get user ID from user store
 		const userObj = $user as any;
 		const participantId = userObj?.id;
@@ -1088,6 +1091,9 @@
 			toast.error(
 				'Failed to load scenarios. Please refresh the page or contact support if the issue persists.'
 			);
+		} finally {
+			// Clear loading state
+			isLoadingScenarios = false;
 		}
 	}
 
@@ -1440,6 +1446,8 @@
 	let moderationPanelVisible: boolean = false;
 	// Loading flag to gate reactive updates during state restoration to prevent flashing
 	let isLoadingScenario: boolean = false;
+	// Loading flag for initial scenario population
+	let isLoadingScenarios: boolean = false;
 	let expandedGroups: Set<string> = new Set();
 	let markedNotApplicable: boolean = false;
 
@@ -5547,6 +5555,20 @@
 				</div>
 
 				<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
+					<!-- Loading Screen for Scenario Population -->
+					{#if isLoadingScenarios}
+						<div class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+							<div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 dark:border-blue-400"></div>
+							<div class="text-center">
+								<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+									Loading Scenarios
+								</h3>
+								<p class="text-gray-600 dark:text-gray-400">
+									Please wait while we prepare your moderation scenarios...
+								</p>
+							</div>
+						</div>
+					{:else}
 					<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
 					{#if isCustomScenario && !customScenarioGenerated}
 						<div class="max-w-3xl mx-auto mt-2 space-y-6">
@@ -7185,6 +7207,8 @@
 				</div>
 			</div>
 		</div>
+			{/if}
+		</div>
 
 		<!-- Custom Instruction Modal - REMOVED: Now using inline input -->
 
@@ -7298,8 +7322,6 @@
 				</div>
 			</div>
 		{/if}
-	</div>
-{/if}
 
 <!-- Assignment Time Tracker (separate from moderation tracking) -->
 <AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />

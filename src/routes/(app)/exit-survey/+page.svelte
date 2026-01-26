@@ -8,6 +8,12 @@
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
+	import {
+		personalityTraits,
+		type PersonalityTrait,
+		type SubCharacteristic
+	} from '$lib/data/personalityTraits';
+	import { getChildProfileById } from '$lib/apis/child-profiles';
 
 	// Ensure sidebar is visible on survey pages (unless on mobile)
 	onMount(() => {
@@ -18,6 +24,31 @@
 
 	// Assignment workflow state
 	let assignmentStep: number = 1;
+
+	// Child information modal state
+	let showChildInfoModal: boolean = false;
+	let childInfoData = {
+		name: '',
+		age: '',
+		gender: ''
+	};
+
+	// Personality traits system
+	let expandedTraits: Set<string> = new Set();
+	let selectedSubCharacteristics: string[] = [];
+	let childCharacteristics: string = '';
+
+	// Child quiz research fields
+	let isOnlyChild: string = '';
+	let childHasAIUse: string = '';
+	let childAIUseContexts: string[] = [];
+	let parentLLMMonitoringLevel: string = '';
+	let childAIUseContextsOther: string = '';
+	let parentLLMMonitoringOther: string = '';
+
+	// Duplicate questions for attention check
+	let childHasAIUseCheck: string = '';
+	let parentLLMMonitoringCheck: string = '';
 
 	// Survey responses
 	let surveyResponses = {
@@ -95,8 +126,79 @@
 		return child_id;
 	}
 
+	// Personality trait helper functions
+	function toggleTrait(traitId: string) {
+		if (expandedTraits.has(traitId)) {
+			expandedTraits.delete(traitId);
+		} else {
+			expandedTraits.add(traitId);
+		}
+		expandedTraits = expandedTraits; // Trigger reactivity
+	}
+
+	function getSelectedSubCharacteristics(): SubCharacteristic[] {
+		const selected: SubCharacteristic[] = [];
+		for (const trait of personalityTraits) {
+			const matchingChars = trait.subCharacteristics.filter((sub) =>
+				selectedSubCharacteristics.includes(sub.id)
+			);
+			selected.push(...matchingChars);
+		}
+		return selected;
+	}
+
+	function getSelectedSubCharacteristicNames(): string[] {
+		return getSelectedSubCharacteristics().map((sub) => sub.name);
+	}
+
+	function getPersonalityDescription(): string {
+		const selected = getSelectedSubCharacteristics();
+		if (selected.length === 0) return '';
+		const groupedByTrait: Record<string, string[]> = {};
+		for (const sub of selected) {
+			const trait = personalityTraits.find((t) =>
+				t.subCharacteristics.some((sc) => sc.id === sub.id)
+			);
+			if (trait) {
+				if (!groupedByTrait[trait.name]) {
+					groupedByTrait[trait.name] = [];
+				}
+				groupedByTrait[trait.name].push(sub.name);
+			}
+		}
+		return Object.entries(groupedByTrait)
+			.map(([traitName, charNames]) => `${traitName}: ${charNames.join(', ')}`)
+			.join('\n');
+	}
+
+	// Load child information from current child profile
+	async function loadChildInfo() {
+		try {
+			const token = localStorage.token || '';
+			const currentChild = childProfileSync.getCurrentChild();
+			if (currentChild) {
+				childInfoData.name = currentChild.name || '';
+				childInfoData.age = currentChild.child_age || '';
+				childInfoData.gender = currentChild.child_gender || '';
+			} else {
+				const childId = await resolveChildId(token);
+				if (childId) {
+					const profile = await getChildProfileById(token, childId);
+					if (profile) {
+						childInfoData.name = profile.name || '';
+						childInfoData.age = profile.child_age || '';
+						childInfoData.gender = profile.child_gender || '';
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Failed to load child info:', error);
+		}
+	}
+
 	onMount(async () => {
 		assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '3');
+		await loadChildInfo(); // Load child info for modal
 
 		// Get current attempt number and child ID
 		try {
@@ -207,6 +309,38 @@
 				return;
 			}
 
+			// Validate child information fields
+			if (childCharacteristics.length < 10) {
+				toast.error('Please provide a description of your child (at least 10 characters)');
+				return;
+			}
+			if (!isOnlyChild) {
+				toast.error('Please indicate if this child is an only child');
+				return;
+			}
+			if (!childHasAIUse) {
+				toast.error('Please indicate if this child has used ChatGPT or similar AI tools');
+				return;
+			}
+			if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
+				toast.error('Please select at least one context in which your child has used AI tools');
+				return;
+			}
+			if (!parentLLMMonitoringLevel) {
+				toast.error('Please indicate your monitoring level of your child\'s AI tool use');
+				return;
+			}
+
+			// Validate attention check questions
+			if (!childHasAIUseCheck) {
+				toast.error('Please answer the attention check question about AI tool use');
+				return;
+			}
+			if (!parentLLMMonitoringCheck) {
+				toast.error('Please answer the attention check question about monitoring');
+				return;
+			}
+
 			// Resolve child_id using the consolidated resolveChildId function
 			const token = localStorage.token || '';
 			let child_id = await resolveChildId(token);
@@ -218,6 +352,9 @@
 				return;
 			}
 
+			// Get personality description
+			const personalityDesc = getPersonalityDescription();
+
 			// Map survey responses into answers payload
 			const answers = {
 				parentGender: surveyResponses.parentGender,
@@ -227,7 +364,26 @@
 				parentEthnicity: surveyResponses.parentEthnicity,
 				genaiFamiliarity: surveyResponses.genaiFamiliarity,
 				genaiUsageFrequency: surveyResponses.genaiUsageFrequency,
-				parentingStyle: surveyResponses.parentingStyle
+				parentingStyle: surveyResponses.parentingStyle,
+				// Child information
+				childName: childInfoData.name,
+				childAge: childInfoData.age,
+				childGender: childInfoData.gender,
+				// Personality traits
+				personalityTraits: personalityDesc,
+				selectedSubCharacteristics: selectedSubCharacteristics,
+				// Additional characteristics
+				childCharacteristics: childCharacteristics,
+				// Child quiz questions
+				isOnlyChild: isOnlyChild,
+				childHasAIUse: childHasAIUse,
+				childAIUseContexts: childAIUseContexts,
+				childAIUseContextsOther: childAIUseContextsOther,
+				parentLLMMonitoringLevel: parentLLMMonitoringLevel,
+				parentLLMMonitoringOther: parentLLMMonitoringOther,
+				// Attention check
+				childHasAIUseCheck: childHasAIUseCheck,
+				parentLLMMonitoringCheck: parentLLMMonitoringCheck
 			};
 
 			// Persist to backend (exit quiz)
@@ -1053,6 +1209,425 @@
 							</div>
 						</div>
 
+						<!-- Child Information Section -->
+						<div class="border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+							<div class="flex items-center justify-between mb-4">
+								<h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+									Child Information
+								</h3>
+								<button
+									type="button"
+									on:click={() => (showChildInfoModal = true)}
+									class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+								>
+									View/Edit Child Information
+								</button>
+							</div>
+							{#if childInfoData.name || childInfoData.age || childInfoData.gender}
+								<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-2">
+									{#if childInfoData.name}
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Name:</span>
+											<span class="ml-2 text-gray-900 dark:text-white">{childInfoData.name}</span>
+										</div>
+									{/if}
+									{#if childInfoData.age}
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Age:</span>
+											<span class="ml-2 text-gray-900 dark:text-white">{childInfoData.age}</span>
+										</div>
+									{/if}
+									{#if childInfoData.gender}
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Gender:</span>
+											<span class="ml-2 text-gray-900 dark:text-white">{childInfoData.gender}</span>
+										</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
+
+						<!-- Personality Traits Selection -->
+						<div class="border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+							<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+								Personality Traits Selection
+							</h3>
+							<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+								Please select the personality traits that best describe your child. Click on each trait
+								to expand and select specific characteristics.
+							</p>
+							<div class="space-y-4">
+								{#each personalityTraits as trait}
+									<div
+										class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+									>
+										<button
+											type="button"
+											on:click={() => toggleTrait(trait.id)}
+											class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition-colors"
+										>
+											<div class="text-left">
+												<div class="font-medium text-gray-900 dark:text-white">{trait.name}</div>
+												<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+													{trait.description}
+												</div>
+											</div>
+											<svg
+												class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedTraits.has(trait.id)
+													? 'rotate-180'
+													: ''}"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 9l-7 7-7-7"
+												></path>
+											</svg>
+										</button>
+										{#if expandedTraits.has(trait.id)}
+											<div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+												<div class="space-y-2">
+													{#each trait.subCharacteristics as subChar}
+														<label class="flex items-start">
+															<input
+																type="checkbox"
+																bind:group={selectedSubCharacteristics}
+																value={subChar.id}
+																class="mt-1 mr-3"
+															/>
+															<div class="flex-1">
+																<div class="text-sm font-medium text-gray-900 dark:text-white">
+																	{subChar.name}
+																</div>
+																<div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+																	{subChar.description}
+																</div>
+															</div>
+														</label>
+													{/each}
+												</div>
+											</div>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						</div>
+
+						<!-- Additional Characteristics -->
+						<div class="border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+							<label
+								for="childCharacteristics"
+								class="block text-lg font-medium text-gray-900 dark:text-white mb-3"
+							>
+								Please provide a description of your child (at least 10 characters)
+								<span class="text-red-500">*</span>
+							</label>
+							<textarea
+								id="childCharacteristics"
+								bind:value={childCharacteristics}
+								placeholder="Describe your child's personality, interests, and characteristics..."
+								rows="4"
+								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+								minlength="10"
+								required
+							></textarea>
+							<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								{childCharacteristics.length}/10 minimum characters
+							</p>
+						</div>
+
+						<!-- Is Child Only Child -->
+						<div class="border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+								Is this child an only child? <span class="text-red-500">*</span>
+							</div>
+							<div class="space-y-2">
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={isOnlyChild}
+										value="yes"
+										class="mr-3"
+										id="only-child-yes"
+									/>
+									<span class="text-gray-900 dark:text-white">Yes</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={isOnlyChild}
+										value="no"
+										class="mr-3"
+										id="only-child-no"
+									/>
+									<span class="text-gray-900 dark:text-white">No</span>
+								</label>
+							</div>
+						</div>
+
+						<!-- Has This Child Used ChatGPT -->
+						<div class="border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+								Has this child used ChatGPT or similar AI tools? <span class="text-red-500">*</span>
+							</div>
+							<div class="space-y-2">
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={childHasAIUse}
+										value="yes"
+										class="mr-3"
+										id="child-ai-use-yes"
+									/>
+									<span class="text-gray-900 dark:text-white">Yes</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={childHasAIUse}
+										value="no"
+										class="mr-3"
+										id="child-ai-use-no"
+									/>
+									<span class="text-gray-900 dark:text-white">No</span>
+								</label>
+							</div>
+							{#if childHasAIUse === 'yes'}
+								<div class="mt-4">
+									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										In what contexts has your child used AI tools? (Select all that apply)
+									</div>
+									<div class="space-y-2">
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={childAIUseContexts}
+												value="homework"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Homework/Schoolwork</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={childAIUseContexts}
+												value="creative"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Creative writing/Stories</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={childAIUseContexts}
+												value="questions"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Answering questions</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={childAIUseContexts}
+												value="entertainment"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Entertainment/Conversation</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={childAIUseContexts}
+												value="other"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Other</span>
+										</label>
+									</div>
+									{#if childAIUseContexts.includes('other')}
+										<input
+											type="text"
+											bind:value={childAIUseContextsOther}
+											placeholder="Please specify"
+											class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+										/>
+									{/if}
+								</div>
+							{/if}
+						</div>
+
+						<!-- Have You Monitored or Adjusted -->
+						<div class="border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+								Have you monitored or adjusted your child's use of ChatGPT or similar AI tools?
+								<span class="text-red-500">*</span>
+							</div>
+							<div class="space-y-2">
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={parentLLMMonitoringLevel}
+										value="always"
+										class="mr-3"
+										id="monitoring-always"
+									/>
+									<span class="text-gray-900 dark:text-white">Always</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={parentLLMMonitoringLevel}
+										value="often"
+										class="mr-3"
+										id="monitoring-often"
+									/>
+									<span class="text-gray-900 dark:text-white">Often</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={parentLLMMonitoringLevel}
+										value="sometimes"
+										class="mr-3"
+										id="monitoring-sometimes"
+									/>
+									<span class="text-gray-900 dark:text-white">Sometimes</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={parentLLMMonitoringLevel}
+										value="rarely"
+										class="mr-3"
+										id="monitoring-rarely"
+									/>
+									<span class="text-gray-900 dark:text-white">Rarely</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={parentLLMMonitoringLevel}
+										value="never"
+										class="mr-3"
+										id="monitoring-never"
+									/>
+									<span class="text-gray-900 dark:text-white">Never</span>
+								</label>
+							</div>
+							{#if parentLLMMonitoringLevel === 'other'}
+								<input
+									type="text"
+									bind:value={parentLLMMonitoringOther}
+									placeholder="Please specify"
+									class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+								/>
+							{/if}
+						</div>
+
+						<!-- Attention Check: Duplicate Questions -->
+						<div class="border-t-2 border-blue-300 dark:border-blue-600 pt-8 mt-8">
+							<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+								Attention Check Questions
+							</h3>
+							<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+								Please answer these questions again to help us verify your responses.
+							</p>
+
+							<!-- Duplicate: Has This Child Used ChatGPT -->
+							<div class="mb-6">
+								<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+									Has this child used ChatGPT or similar AI tools? (Please answer again)
+									<span class="text-red-500">*</span>
+								</div>
+								<div class="space-y-2">
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={childHasAIUseCheck}
+											value="yes"
+											class="mr-3"
+											id="child-ai-use-check-yes"
+										/>
+										<span class="text-gray-900 dark:text-white">Yes</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={childHasAIUseCheck}
+											value="no"
+											class="mr-3"
+											id="child-ai-use-check-no"
+										/>
+										<span class="text-gray-900 dark:text-white">No</span>
+									</label>
+								</div>
+							</div>
+
+							<!-- Duplicate: Have You Monitored or Adjusted -->
+							<div>
+								<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+									Have you monitored or adjusted your child's use of ChatGPT or similar AI tools?
+									(Please answer again) <span class="text-red-500">*</span>
+								</div>
+								<div class="space-y-2">
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={parentLLMMonitoringCheck}
+											value="always"
+											class="mr-3"
+											id="monitoring-check-always"
+										/>
+										<span class="text-gray-900 dark:text-white">Always</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={parentLLMMonitoringCheck}
+											value="often"
+											class="mr-3"
+											id="monitoring-check-often"
+										/>
+										<span class="text-gray-900 dark:text-white">Often</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={parentLLMMonitoringCheck}
+											value="sometimes"
+											class="mr-3"
+											id="monitoring-check-sometimes"
+										/>
+										<span class="text-gray-900 dark:text-white">Sometimes</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={parentLLMMonitoringCheck}
+											value="rarely"
+											class="mr-3"
+											id="monitoring-check-rarely"
+										/>
+										<span class="text-gray-900 dark:text-white">Rarely</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={parentLLMMonitoringCheck}
+											value="never"
+											class="mr-3"
+											id="monitoring-check-never"
+										/>
+										<span class="text-gray-900 dark:text-white">Never</span>
+									</label>
+								</div>
+							</div>
+						</div>
+
 						<!-- Submit Button -->
 						<div class="flex justify-end pt-6">
 							<button
@@ -1133,4 +1708,101 @@
 		videoSrc="/video/Exit-Survey-Demo.mp4"
 		title="Exit Survey Tutorial"
 	/>
+
+	<!-- Child Information Modal -->
+	{#if showChildInfoModal}
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+		<div
+			class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			on:click={() => (showChildInfoModal = false)}
+			on:keydown={(e) => e.key === 'Escape' && (showChildInfoModal = false)}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="child-info-modal-title"
+		>
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<!-- svelte-ignore a11y-no-static-element-interactions -->
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl"
+				on:click|stopPropagation
+			>
+				<div class="flex justify-between items-center mb-6">
+					<h3 id="child-info-modal-title" class="text-2xl font-bold text-gray-900 dark:text-white">
+						Child Information
+					</h3>
+					<button
+						on:click={() => (showChildInfoModal = false)}
+						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+						aria-label="Close modal"
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							></path>
+						</svg>
+					</button>
+				</div>
+				<div class="space-y-4">
+					<div>
+						<label
+							for="modal-child-name"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+						>
+							Name
+						</label>
+						<input
+							type="text"
+							id="modal-child-name"
+							bind:value={childInfoData.name}
+							readonly
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed"
+						/>
+					</div>
+					<div>
+						<label
+							for="modal-child-age"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+						>
+							Age
+						</label>
+						<input
+							type="text"
+							id="modal-child-age"
+							bind:value={childInfoData.age}
+							readonly
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed"
+						/>
+					</div>
+					<div>
+						<label
+							for="modal-child-gender"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+						>
+							Gender
+						</label>
+						<input
+							type="text"
+							id="modal-child-gender"
+							bind:value={childInfoData.gender}
+							readonly
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed"
+						/>
+					</div>
+				</div>
+				<div class="mt-6 flex justify-end">
+					<button
+						on:click={() => (showChildInfoModal = false)}
+						class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+					>
+						Close
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
