@@ -62,6 +62,11 @@ export default defineConfig({
 	},
 	optimizeDeps: {
 		// Exclude large dependencies from pre-bundling
-		exclude: ['@mediapipe/tasks-vision', 'pyodide']
+		exclude: ['@mediapipe/tasks-vision', 'pyodide'],
+		// Force include @azure/msal-browser to fix resolution issues
+		include: ['@azure/msal-browser']
+	},
+	resolve: {
+		dedupe: ['@azure/msal-browser']
 	}
 });
