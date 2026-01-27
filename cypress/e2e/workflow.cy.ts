@@ -127,8 +127,9 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
-				cy.log(`Token received in test, length: ${token ? token.length : 0}, type: ${typeof token}`);
+			authenticate();
+			cy.get('@authToken').then((token) => {
+				cy.log(`Token received via alias, length: ${token ? token.length : 0}, type: ${typeof token}`);
 				if (!token || token === '' || (typeof token === 'object' && token.length === undefined)) {
 					cy.log('Authentication failed - token is empty or invalid');
 					throw new Error('Authentication failed - no token received');
@@ -170,7 +171,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -196,7 +198,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -227,7 +230,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -255,7 +259,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -288,7 +293,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -323,7 +329,8 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current attempt before reset
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -362,7 +369,8 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current moderation attempt before reset
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -402,7 +410,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'POST',
@@ -427,7 +436,8 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// First get child profiles to use a valid child_id
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -480,7 +490,8 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'POST',
@@ -508,7 +519,8 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Test workflow state progression
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -547,7 +559,8 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Make multiple requests and verify consistency
-			authenticate().then((token) => {
+			authenticate();
+			cy.get('@authToken').then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
