@@ -1,4 +1,8 @@
 import { defineConfig } from 'cypress';
+import fs from 'fs';
+import { execSync } from 'child_process';
+import os from 'os';
+import path from 'path';
 
 export default defineConfig({
 	e2e: {
@@ -29,11 +33,6 @@ export default defineConfig({
 			// Task to upload scenario file using curl (simpler and more reliable)
 			on('task', {
 				uploadScenario({ token, scenarioData, baseUrl }) {
-					const fs = require('fs');
-					const { execSync } = require('child_process');
-					const os = require('os');
-					const path = require('path');
-					
 					// Create temp file
 					const tempDir = os.tmpdir();
 					const tempFile = path.join(tempDir, `cypress-scenario-${Date.now()}.json`);
