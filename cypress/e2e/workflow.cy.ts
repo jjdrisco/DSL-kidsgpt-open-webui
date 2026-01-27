@@ -9,10 +9,16 @@
  * CYPRESS_baseUrl must match the dev server port (e.g. http://localhost:5173 or 5174).
  * Run: RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 npx cypress run --spec cypress/e2e/workflow.cy.ts
  */
-const EMAIL = Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || 'jjdrisco@ucsd.edu';
-const PASSWORD = Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000';
 
 describe('Workflow API Endpoints', () => {
+	// Get credentials - must be called inside test context where Cypress is available
+	function getCredentials() {
+		return {
+			email: Cypress.env('INTERVIEWEE_EMAIL') || Cypress.env('TEST_EMAIL') || 'jjdrisco@ucsd.edu',
+			password: Cypress.env('INTERVIEWEE_PASSWORD') || Cypress.env('TEST_PASSWORD') || '0000'
+		};
+	}
+
 	// Helper to get API base URL (must be called inside test context where Cypress is available)
 	function getApiBaseUrl(): string {
 		const baseUrl = Cypress.config().baseUrl || 'http://localhost:8080';
@@ -21,14 +27,15 @@ describe('Workflow API Endpoints', () => {
 
 	// Helper to get auth token (with retry for rate limiting)
 	function authenticate() {
+		const credentials = getCredentials();
 		const API_BASE_URL = getApiBaseUrl();
 		return cy.wait(3000).then(() => {
 			return cy.request({
 				method: 'POST',
 				url: `${API_BASE_URL}/auths/signin`,
 				body: {
-					email: EMAIL,
-					password: PASSWORD
+					email: credentials.email,
+					password: credentials.password
 				},
 				failOnStatusCode: false
 			}).then((response) => {
@@ -39,12 +46,13 @@ describe('Workflow API Endpoints', () => {
 				} else if (response.status === 429) {
 					// Rate limited, wait and retry
 					cy.log('Rate limited, waiting and retrying...');
+					const credentials = getCredentials();
 					return cy.wait(5000).then(() => {
 						const API_BASE_URL = getApiBaseUrl();
 						return cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/auths/signin`,
-							body: { email: EMAIL, password: PASSWORD },
+							body: { email: credentials.email, password: credentials.password },
 							failOnStatusCode: false
 						}).then((retry) => {
 							if (retry.status === 200 && retry.body && retry.body.token) {
@@ -59,13 +67,14 @@ describe('Workflow API Endpoints', () => {
 				} else if (response.status === 401 || response.status === 404) {
 					// User doesn't exist, try signup
 					cy.log('User not found, trying signup...');
+					const credentials = getCredentials();
 					const API_BASE_URL = getApiBaseUrl();
 					return cy.request({
 						method: 'POST',
 						url: `${API_BASE_URL}/auths/signup`,
 						body: {
-							email: EMAIL,
-							password: PASSWORD,
+							email: credentials.email,
+							password: credentials.password,
 							name: 'Test User'
 						},
 						failOnStatusCode: false
@@ -77,12 +86,13 @@ describe('Workflow API Endpoints', () => {
 						}
 						// Try signin after signup
 						cy.log('Trying signin after signup...');
+						const credentials = getCredentials();
 						return cy.wait(2000).then(() => {
 							const API_BASE_URL = getApiBaseUrl();
 							return cy.request({
 								method: 'POST',
 								url: `${API_BASE_URL}/auths/signin`,
-								body: { email: EMAIL, password: PASSWORD },
+								body: { email: credentials.email, password: credentials.password },
 								failOnStatusCode: false
 							}).then((retry) => {
 								if (retry.status === 200 && retry.body && retry.body.token) {
@@ -104,7 +114,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/state', () => {
 		it('should return workflow state with next route and progress', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -141,7 +152,7 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should return workflow state for new user (no child profile)', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -167,7 +178,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/current-attempt', () => {
 		it('should return current attempt number', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -198,7 +209,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/session-info', () => {
 		it('should return session information', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -226,7 +237,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/completed-scenarios', () => {
 		it('should return completed scenario indices', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -259,7 +270,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/study-status', () => {
 		it('should return study completion status', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -293,7 +304,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('POST /workflow/reset', () => {
 		it('should reset entire user workflow and increment attempt number', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -332,7 +343,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('POST /workflow/reset-moderation', () => {
 		it('should reset only moderation workflow and increment attempt', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -373,7 +384,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('POST /workflow/moderation/finalize', () => {
 		it('should finalize moderation without filters', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -397,7 +408,7 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should finalize moderation with child_id filter', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -451,7 +462,7 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should finalize moderation with session_number filter', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -478,7 +489,7 @@ describe('Workflow API Endpoints', () => {
 
 	describe('Workflow State Transitions', () => {
 		it('should progress through workflow states correctly', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -517,7 +528,7 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should maintain consistent state across multiple requests', function () {
-			if (!EMAIL || !PASSWORD) {
+			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
