@@ -197,7 +197,12 @@ We offer various installation alternatives, including non-Docker native installa
 
 Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/advanced-topics/development) for instructions on setting up a local development environment.
 
-For cloud development environments (Cursor Cloud, GitHub Codespaces, Gitpod, etc.) and Cypress E2E testing, see [Cloud Development and Testing](docs/CLOUD_DEVELOPMENT_AND_TESTING.md).
+For cloud development environments (Cursor Cloud, GitHub Codespaces, Gitpod, etc.) and Cypress E2E testing, see [Cypress Test Running Guide](docs/CYPRESS_TEST_RUNNING_GUIDE.md).
+
+**Quick Test Run:**
+```bash
+./scripts/run-cypress-tests.sh
+```
 
 ### Troubleshooting
 
