@@ -26,6 +26,57 @@ export default defineConfig({
 				config.baseUrl = process.env.CYPRESS_baseUrl;
 			}
 
+			// Task to upload scenario file using curl (simpler and more reliable)
+			on('task', {
+				uploadScenario({ token, scenarioData, baseUrl }) {
+					const fs = require('fs');
+					const { execSync } = require('child_process');
+					const os = require('os');
+					const path = require('path');
+					
+					// Create temp file
+					const tempDir = os.tmpdir();
+					const tempFile = path.join(tempDir, `cypress-scenario-${Date.now()}.json`);
+					
+					try {
+						// Write scenario data to temp file
+						fs.writeFileSync(tempFile, JSON.stringify(scenarioData));
+						
+						// Use curl to upload
+						const url = baseUrl || 'http://localhost:8080';
+						const command = `curl -X POST "${url}/api/v1/admin/scenarios/upload" ` +
+							`-H "Authorization: Bearer ${token}" ` +
+							`-F "file=@${tempFile}" ` +
+							`-F "set_name=test" ` +
+							`-F "source=cypress_test" ` +
+							`-F "deactivate_previous=false" ` +
+							`-s -w "\\n%{http_code}"`;
+						
+						const result = execSync(command, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+						const lines = result.trim().split('\n');
+						const statusCode = parseInt(lines[lines.length - 1], 10);
+						const body = lines.slice(0, -1).join('\n');
+						
+						// Clean up temp file
+						try {
+							fs.unlinkSync(tempFile);
+						} catch (e) {
+							// Ignore cleanup errors
+						}
+						
+						return { status: statusCode, body: body };
+					} catch (error) {
+						// Clean up temp file on error
+						try {
+							fs.unlinkSync(tempFile);
+						} catch (e) {
+							// Ignore cleanup errors
+						}
+						throw error;
+					}
+				}
+			});
+
 			return config;
 		}
 	},

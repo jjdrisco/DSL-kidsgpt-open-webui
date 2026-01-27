@@ -30,7 +30,7 @@ describe('Moderation Scenario New Features', () => {
 		// Wait for profile to be created and page to settle
 		cy.wait(3000);
 		
-		// Get child profile ID via API and set it as current
+		// Get child profile ID via API and set it as current, and upload test scenario
 		cy.window().then((win) => {
 			const token = win.localStorage.getItem('token') || '';
 			if (token) {
@@ -69,6 +69,30 @@ describe('Moderation Scenario New Features', () => {
 						win.localStorage.setItem('moderationScenariosAccessed', 'true');
 						win.localStorage.setItem('unlock_moderation', 'true');
 					}
+					
+					// Upload a test scenario to ensure scenarios exist for assignment
+					const testScenario = [{
+						child_prompt: "What is the best way to learn about space?",
+						model_response: "Space is fascinating! You can learn about it through books, documentaries, and visiting planetariums. The universe is vast and full of amazing discoveries waiting to be explored.",
+						trait: "openness",
+						polarity: "positive",
+						prompt_style: "curious",
+						domain: "education"
+					}];
+					
+					// Upload scenario using cy.task (handles multipart/form-data properly)
+					const baseUrl = Cypress.config().baseUrl || 'http://localhost:8080';
+					cy.task('uploadScenario', {
+						token: token,
+						scenarioData: testScenario,
+						baseUrl: baseUrl
+					}).then((result: any) => {
+						if (result.status === 200) {
+							cy.log('Test scenario uploaded successfully');
+						} else {
+							cy.log(`Warning: Scenario upload returned status ${result.status}: ${result.body}`);
+						}
+					});
 				});
 			} else {
 				// Fallback: set assignment step even without token
@@ -79,7 +103,7 @@ describe('Moderation Scenario New Features', () => {
 		});
 		
 		// Wait for API calls to complete
-		cy.wait(3000);
+		cy.wait(5000); // Increased wait for scenario upload
 	});
 
 	it('should show loading screen while scenarios populate', () => {
