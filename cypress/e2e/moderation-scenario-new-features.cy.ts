@@ -70,27 +70,36 @@ describe('Moderation Scenario New Features', () => {
 						win.localStorage.setItem('unlock_moderation', 'true');
 					}
 					
-					// Upload a test scenario to ensure scenarios exist for assignment
-					const testScenario = [{
-						child_prompt: "What is the best way to learn about space?",
-						model_response: "Space is fascinating! You can learn about it through books, documentaries, and visiting planetariums. The universe is vast and full of amazing discoveries waiting to be explored.",
-						trait: "openness",
-						polarity: "positive",
-						prompt_style: "curious",
-						domain: "education"
-					}];
-					
-					// Upload scenario using cy.task (handles multipart/form-data properly)
+					// Upload scenario files using the existing admin tool
+					// Upload main scenarios from prompt_generation/child_llm_scenarios_50.json
 					const baseUrl = Cypress.config().baseUrl || 'http://localhost:8080';
-					cy.task('uploadScenario', {
+					
+					cy.task('uploadScenarioFile', {
 						token: token,
-						scenarioData: testScenario,
+						filePath: 'prompt_generation/child_llm_scenarios_50.json',
+						setName: 'cypress_test',
+						source: 'cypress_test',
 						baseUrl: baseUrl
 					}).then((result: any) => {
 						if (result.status === 200) {
-							cy.log('Test scenario uploaded successfully');
+							cy.log(`Scenarios uploaded successfully: ${result.body}`);
 						} else {
 							cy.log(`Warning: Scenario upload returned status ${result.status}: ${result.body}`);
+						}
+					});
+					
+					// Upload attention checks from Persona_generation/mock_attention_checks.json
+					cy.task('uploadScenarioFile', {
+						token: token,
+						filePath: 'Persona_generation/mock_attention_checks.json',
+						setName: 'cypress_test_attention',
+						source: 'cypress_test',
+						baseUrl: baseUrl
+					}).then((result: any) => {
+						if (result.status === 200) {
+							cy.log(`Attention checks uploaded successfully: ${result.body}`);
+						} else {
+							cy.log(`Warning: Attention check upload returned status ${result.status}: ${result.body}`);
 						}
 					});
 				});

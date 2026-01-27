@@ -30,24 +30,26 @@ export default defineConfig({
 				config.baseUrl = process.env.CYPRESS_baseUrl;
 			}
 
-			// Task to upload scenario file using curl (simpler and more reliable)
+			// Task to upload scenario files using curl (simpler and more reliable)
 			on('task', {
-				uploadScenario({ token, scenarioData, baseUrl }) {
-					// Create temp file
-					const tempDir = os.tmpdir();
-					const tempFile = path.join(tempDir, `cypress-scenario-${Date.now()}.json`);
+				uploadScenarioFile({ token, filePath, setName, source, baseUrl }) {
+					const url = baseUrl || 'http://localhost:8080';
+					const absolutePath = path.isAbsolute(filePath) 
+						? filePath 
+						: path.join(process.cwd(), filePath);
+					
+					// Check if file exists
+					if (!fs.existsSync(absolutePath)) {
+						throw new Error(`Scenario file not found: ${absolutePath}`);
+					}
 					
 					try {
-						// Write scenario data to temp file
-						fs.writeFileSync(tempFile, JSON.stringify(scenarioData));
-						
 						// Use curl to upload
-						const url = baseUrl || 'http://localhost:8080';
 						const command = `curl -X POST "${url}/api/v1/admin/scenarios/upload" ` +
 							`-H "Authorization: Bearer ${token}" ` +
-							`-F "file=@${tempFile}" ` +
-							`-F "set_name=test" ` +
-							`-F "source=cypress_test" ` +
+							`-F "file=@${absolutePath}" ` +
+							`-F "set_name=${setName || 'test'}" ` +
+							`-F "source=${source || 'cypress_test'}" ` +
 							`-F "deactivate_previous=false" ` +
 							`-s -w "\\n%{http_code}"`;
 						
@@ -56,22 +58,9 @@ export default defineConfig({
 						const statusCode = parseInt(lines[lines.length - 1], 10);
 						const body = lines.slice(0, -1).join('\n');
 						
-						// Clean up temp file
-						try {
-							fs.unlinkSync(tempFile);
-						} catch (e) {
-							// Ignore cleanup errors
-						}
-						
 						return { status: statusCode, body: body };
-					} catch (error) {
-						// Clean up temp file on error
-						try {
-							fs.unlinkSync(tempFile);
-						} catch (e) {
-							// Ignore cleanup errors
-						}
-						throw error;
+					} catch (error: any) {
+						throw new Error(`Failed to upload scenario file: ${error.message}`);
 					}
 				}
 			});
