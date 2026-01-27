@@ -59,8 +59,9 @@ export default defineConfig({
 						const body = lines.slice(0, -1).join('\n');
 						
 						return { status: statusCode, body: body };
-					} catch (error: any) {
-						throw new Error(`Failed to upload scenario file: ${error.message}`);
+					} catch (error) {
+						const errorMessage = error instanceof Error ? error.message : String(error);
+						throw new Error(`Failed to upload scenario file: ${errorMessage}`);
 					}
 				}
 			});
