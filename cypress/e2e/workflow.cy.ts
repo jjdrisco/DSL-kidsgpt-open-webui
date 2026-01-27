@@ -40,11 +40,14 @@ describe('Workflow API Endpoints', () => {
 				},
 				failOnStatusCode: false
 			}).then((response) => {
+				cy.log(`Signin response status: ${response.status}, has body: ${!!response.body}, has token: ${!!(response.body && response.body.token)}`);
 				if (response.status === 200 && response.body && response.body.token) {
 					const token = response.body.token;
-					cy.log(`Auth successful, token length: ${token.length}`);
-					// Return cy.wrap() to maintain Cypress chain
-					return cy.wrap(token);
+					cy.log(`Auth successful, token length: ${token.length}, token type: ${typeof token}`);
+					// Store as alias and return the actual token value
+					cy.wrap(token).as('authToken');
+					// Return the token directly - Cypress will handle it in the chain
+					return token;
 				} else if (response.status === 429) {
 					// Rate limited, wait and retry
 					cy.log('Rate limited, waiting and retrying...');
@@ -60,10 +63,11 @@ describe('Workflow API Endpoints', () => {
 							if (retry.status === 200 && retry.body && retry.body.token) {
 								const token = retry.body.token;
 								cy.log(`Auth successful after retry, token length: ${token.length}`);
-								return cy.wrap(token);
+								cy.wrap(token).as('authToken');
+								return token;
 							}
 							cy.log(`Auth failed after retry: ${retry.status}`);
-							return cy.wrap('');
+							return '';
 						});
 					});
 				} else if (response.status === 401 || response.status === 404) {
@@ -84,7 +88,8 @@ describe('Workflow API Endpoints', () => {
 						if (signupResponse.status === 200 && signupResponse.body && signupResponse.body.token) {
 							const token = signupResponse.body.token;
 							cy.log(`Signup successful, token length: ${token.length}`);
-							return cy.wrap(token);
+							cy.wrap(token).as('authToken');
+							return token;
 						}
 						// Try signin after signup
 						cy.log('Trying signin after signup...');
@@ -100,16 +105,17 @@ describe('Workflow API Endpoints', () => {
 								if (retry.status === 200 && retry.body && retry.body.token) {
 									const token = retry.body.token;
 									cy.log(`Auth successful after signup, token length: ${token.length}`);
-									return cy.wrap(token);
+									cy.wrap(token).as('authToken');
+									return token;
 								}
 								cy.log(`Auth failed after signup: ${retry.status}`);
-								return cy.wrap('');
+								return '';
 							});
 						});
 					});
 				}
 				cy.log(`Auth failed: ${response.status}`);
-				return cy.wrap('');
+				return '';
 			});
 		});
 	}
@@ -122,11 +128,13 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			authenticate().then((token) => {
-				if (!token || token === '') {
-					cy.log('Authentication failed - token is empty');
+				cy.log(`Token received in test, length: ${token ? token.length : 0}, type: ${typeof token}`);
+				if (!token || token === '' || (typeof token === 'object' && token.length === undefined)) {
+					cy.log('Authentication failed - token is empty or invalid');
 					throw new Error('Authentication failed - no token received');
 				}
 				const API_BASE_URL = getApiBaseUrl();
+				cy.log(`Making request to ${API_BASE_URL}/workflow/state with token prefix: ${token.substring(0, 20)}...`);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
