@@ -137,6 +137,19 @@ describe('Moderation Scenario New Features', () => {
 		// Wait for scenarios to be assigned - check for error messages first
 		cy.wait(10000); // Give initial time for scenario assignment
 		
+		// Check page content for debugging
+		cy.get('body').then(($body) => {
+			const bodyText = $body.text();
+			cy.log(`Page content preview: ${bodyText.substring(0, 500)}`);
+			
+			// Check for error messages first
+			if (bodyText.includes('No scenarios available') || bodyText.includes('Failed to load scenarios')) {
+				cy.log('ERROR: Scenarios failed to load');
+				cy.log(`Full page text: ${bodyText}`);
+				throw new Error('Scenarios failed to load - cannot continue test');
+			}
+		});
+		
 		// Wait for "Conversation Review" to appear (indicates scenarios loaded)
 		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
 		
@@ -144,14 +157,6 @@ describe('Moderation Scenario New Features', () => {
 		cy.wait(5000);
 		
 		cy.get('body').then(($body) => {
-			// Check for error messages
-			if ($body.text().includes('No scenarios available') || $body.text().includes('Failed to load scenarios')) {
-				cy.log('Warning: Scenarios failed to load - backend may not have scenarios available');
-				// In this case, we can't test Step 1, so we'll skip the assertions
-				cy.log('Skipping Step 1 assertions - scenarios not available');
-				return;
-			}
-			
 			// Check if Step 1 is visible
 			if ($body.text().includes('Step 1: Highlight the content that concerns you')) {
 				// Step 1 is visible, check for sections
@@ -162,6 +167,7 @@ describe('Moderation Scenario New Features', () => {
 				cy.contains('Concerns in Response', { timeout: 10000 }).should('exist');
 			} else {
 				cy.log('Step 1 not visible - scenarios may still be loading or not available');
+				cy.log(`Current page text: ${$body.text().substring(0, 1000)}`);
 			}
 		});
 	});
