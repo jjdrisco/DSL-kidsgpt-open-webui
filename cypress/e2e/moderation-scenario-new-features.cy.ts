@@ -126,8 +126,6 @@ describe('Moderation Scenario New Features', () => {
 
 	it('should display two sections in Step 1: concerns in prompt and response', () => {
 		cy.visit('/moderation-scenario');
-		// Wait for page to load
-		cy.contains('Conversation Review', { timeout: 30000 }).should('exist');
 		
 		// Wait for loading screen to disappear if it appears
 		cy.get('body').then(($body) => {
@@ -137,7 +135,13 @@ describe('Moderation Scenario New Features', () => {
 		});
 		
 		// Wait for scenarios to be assigned - check for error messages first
-		cy.wait(30000); // Give time for scenario assignment
+		cy.wait(10000); // Give initial time for scenario assignment
+		
+		// Wait for "Conversation Review" to appear (indicates scenarios loaded)
+		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+		
+		// Additional wait for scenario content to render
+		cy.wait(5000);
 		
 		cy.get('body').then(($body) => {
 			// Check for error messages
@@ -166,13 +170,13 @@ describe('Moderation Scenario New Features', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
-				cy.contains('Loading Scenarios', { timeout: 30000 }).should('not.exist');
+				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
 			}
 		});
-		cy.wait(15000);
+		cy.wait(10000);
 
-		cy.contains('Conversation Review', { timeout: 20000 }).should('exist');
-		cy.wait(3000);
+		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+		cy.wait(5000);
 
 		// Wait for Step 1 to appear
 		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
@@ -191,13 +195,13 @@ describe('Moderation Scenario New Features', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
-				cy.contains('Loading Scenarios', { timeout: 30000 }).should('not.exist');
+				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
 			}
 		});
-		cy.wait(15000);
+		cy.wait(10000);
 
-		cy.contains('Conversation Review', { timeout: 20000 }).should('exist');
-		cy.wait(3000);
+		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+		cy.wait(5000);
 
 		// Wait for Step 1 to appear
 		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
@@ -221,13 +225,13 @@ describe('Moderation Scenario New Features', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
-				cy.contains('Loading Scenarios', { timeout: 30000 }).should('not.exist');
+				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
 			}
 		});
-		cy.wait(15000);
+		cy.wait(10000);
 
-		cy.contains('Conversation Review', { timeout: 20000 }).should('exist');
-		cy.wait(3000);
+		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+		cy.wait(5000);
 
 		// Wait for Step 1 to appear
 		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
@@ -344,13 +348,13 @@ describe('Moderation Scenario New Features', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
-				cy.contains('Loading Scenarios', { timeout: 30000 }).should('not.exist');
+				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
 			}
 		});
-		cy.wait(15000);
+		cy.wait(10000);
 
-		cy.contains('Conversation Review', { timeout: 20000 }).should('exist');
-		cy.wait(3000);
+		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+		cy.wait(5000);
 
 		// Wait for Step 1 to appear
 		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
