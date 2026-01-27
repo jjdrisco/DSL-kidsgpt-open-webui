@@ -1,4 +1,5 @@
-/// <reference path="../support/e2e.ts" />
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../support/index.d.ts" />
 
 /**
  * Workflow API tests: /workflow/*
