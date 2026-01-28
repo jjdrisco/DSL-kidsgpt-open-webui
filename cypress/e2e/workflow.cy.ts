@@ -27,82 +27,99 @@ describe('Workflow API Endpoints', () => {
 		return 'http://localhost:8080/api/v1';
 	}
 
-	// Authenticate once before all tests and store token as alias
-	before(() => {
+	// Helper to authenticate using cy.session() for caching
+	// This ensures authentication happens once and is cached across tests
+	function authenticate() {
 		const credentials = getCredentials();
 		const API_BASE_URL = getApiBaseUrl();
-		cy.log(`Using API_BASE_URL: ${API_BASE_URL}`);
-		cy.log(`Using credentials: email=${credentials.email}, password=${credentials.password ? '***' : 'missing'}`);
-		// Wait a bit before starting to avoid rate limits from previous test runs
-		cy.wait(3000);
-		// First, try to register the user (tolerates 403 if signup is disabled)
-		cy.request({
-			method: 'POST',
-			url: `${API_BASE_URL}/auths/signup`,
-			body: {
-				name: 'Test User',
-				email: credentials.email,
-				password: credentials.password
-			},
-			failOnStatusCode: false
-		}).then((signupResponse) => {
-			// Accept 200 (success), 400 (bad request), or 403 (signup disabled)
-			cy.log(`Signup response: ${signupResponse.status}, body: ${JSON.stringify(signupResponse.body)}`);
-			// Wait a bit after signup before signin
-			cy.wait(2000);
-			// Now login via API with retry logic for rate limiting
-			const attemptSignin = (retryCount = 0): Cypress.Chainable<string> => {
-				cy.log(`Attempting signin (attempt ${retryCount + 1}) to ${API_BASE_URL}/auths/signin`);
+		const TOKEN_ENV_KEY = 'WORKFLOW_AUTH_TOKEN';
+		return cy.session(
+			`workflow-auth-${credentials.email}`,
+			() => {
+				cy.log(`Authenticating user: ${credentials.email}`);
+				// First, try to register the user (tolerates 403 if signup is disabled)
 				return cy.request({
 					method: 'POST',
-					url: `${API_BASE_URL}/auths/signin`,
+					url: `${API_BASE_URL}/auths/signup`,
 					body: {
+						name: 'Test User',
 						email: credentials.email,
 						password: credentials.password
 					},
 					failOnStatusCode: false
-				}).then((signinResponse) => {
-					if (signinResponse.status === 200 && signinResponse.body && signinResponse.body.token) {
-						const token = signinResponse.body.token;
-						cy.log(`Signin successful, token length: ${token.length}`);
-						// Store token as alias for reuse across tests
-						cy.wrap(token).as('authToken');
-						return cy.wrap(token);
-					} else if (signinResponse.status === 429 && retryCount < 5) {
-						// Rate limited, wait and retry (up to 5 times with increasing delays)
-						const waitTime = Math.min((retryCount + 1) * 10000, 30000); // 10s, 20s, 30s, 30s, 30s
-						cy.log(`Rate limited (attempt ${retryCount + 1}/5), waiting ${waitTime}ms...`);
-						return cy.wait(waitTime).then(() => attemptSignin(retryCount + 1));
-					} else {
-						cy.log(`Signin failed: ${signinResponse.status} after ${retryCount} retries`);
-						cy.log(`Response body: ${JSON.stringify(signinResponse.body)}`);
-						throw new Error(`Authentication failed: ${signinResponse.status} - ${JSON.stringify(signinResponse.body)}`);
-					}
+				}).then((signupResponse) => {
+					// Accept 200 (success), 400 (bad request), or 403 (signup disabled)
+					cy.log(`Signup response: ${signupResponse.status}`);
+					// Wait a bit after signup before signin
+					cy.wait(2000);
+					// Now login via API with retry logic for rate limiting
+					const attemptSignin = (retryCount = 0): Cypress.Chainable<string> => {
+						return cy.request({
+							method: 'POST',
+							url: `${API_BASE_URL}/auths/signin`,
+							body: {
+								email: credentials.email,
+								password: credentials.password
+							},
+							failOnStatusCode: false
+						}).then((signinResponse) => {
+							if (signinResponse.status === 200 && signinResponse.body && signinResponse.body.token) {
+								const token = signinResponse.body.token;
+								cy.log(`Signin successful, token length: ${token.length}`);
+								// Persist token for the remainder of the spec run.
+								// NOTE: cy.session() does not persist aliases across restores, so we use Cypress.env().
+								Cypress.env(TOKEN_ENV_KEY, token);
+								return cy.wrap(token);
+							} else if (signinResponse.status === 429 && retryCount < 8) {
+								// Rate limited, wait and retry (up to 8 times with increasing delays)
+								const waitTime = Math.min((retryCount + 1) * 10000, 60000);
+								cy.log(`Rate limited (attempt ${retryCount + 1}/8), waiting ${waitTime}ms...`);
+								return cy.wait(waitTime).then(() => attemptSignin(retryCount + 1));
+							} else {
+								cy.log(`Signin failed: ${signinResponse.status} after ${retryCount} retries`);
+								throw new Error(`Authentication failed: ${signinResponse.status}`);
+							}
+						});
+					};
+					return attemptSignin();
 				});
-			};
-			return attemptSignin();
-		});
-	});
+			},
+			{
+				validate: () => {
+					// Validate cached token without relying on aliases (not persisted by cy.session()).
+					return cy.then(() => {
+						const token = (Cypress.env(TOKEN_ENV_KEY) as string) || '';
+						if (!token) throw new Error('No cached auth token');
 
-	// Helper to get token from alias
-	// The alias should be set in the before() hook
+						return cy
+							.request({
+								method: 'GET',
+								url: `${API_BASE_URL}/auths/`,
+								headers: { Authorization: `Bearer ${token}` },
+								failOnStatusCode: false
+							})
+							.then((res) => {
+								if (res.status !== 200) throw new Error(`Token validation failed: ${res.status}`);
+							});
+					});
+				}
+			}
+		);
+	}
+
+	// Helper to get token - authenticates if needed using cy.session()
 	// Returns a Cypress chainable that resolves to the token string
 	function loginAndGetToken() {
-		// Get the token alias - it should be set by the before() hook
-		return cy.get('@authToken');
+		return authenticate().then(() => {
+			return cy.then(() => {
+				const token = (Cypress.env('WORKFLOW_AUTH_TOKEN') as string) || '';
+				if (!token) throw new Error('Authentication failed - no cached token');
+				return token;
+			});
+		});
 	}
 
 	describe('GET /workflow/state', () => {
-		beforeEach(() => {
-			// Ensure auth token alias exists for this describe block
-			cy.get('@authToken').then(() => {
-				// Alias exists, do nothing
-			}).catch(() => {
-				// Alias doesn't exist, this shouldn't happen if before() ran
-				cy.log('Warning: authToken alias not found in nested describe block');
-			});
-		});
-
 		it('should return workflow state with next route and progress', function () {
 			const credentials = getCredentials();
 			if (!credentials.email || !credentials.password) {
