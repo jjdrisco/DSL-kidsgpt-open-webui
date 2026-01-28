@@ -294,6 +294,15 @@ class ModerationSessionTable:
             db.commit()
             return True
 
+    def get_completed_scenario_indices(self, user_id: str) -> List[int]:
+        """Get list of scenario indices that have been completed (have a terminal decision)"""
+        sessions = self.get_sessions_by_user(user_id)
+        completed = set()
+        for session in sessions:
+            if session.initial_decision in ("accept_original", "moderate", "not_applicable"):
+                completed.add(session.scenario_index)
+        return sorted(list(completed))
+
 
 ModerationSessions = ModerationSessionTable()
 
