@@ -31,68 +31,28 @@ describe('Workflow API Endpoints', () => {
 	function authenticate() {
 		const credentials = getCredentials();
 		const API_BASE_URL = getApiBaseUrl();
-		cy.wait(3000);
-		cy.request({
-			method: 'POST',
-			url: `${API_BASE_URL}/auths/signin`,
-			body: {
-				email: credentials.email,
-				password: credentials.password
-			},
-			failOnStatusCode: false
-		}).then((response) => {
-			if (response.status === 200 && response.body && response.body.token) {
-				const token = response.body.token;
-				cy.log(`Auth successful, token length: ${token.length}`);
-				// Store as alias - this is the reliable way to pass values in Cypress
-				cy.wrap(token).as('authToken');
-			} else if (response.status === 429) {
-				// Rate limited, wait and retry
-				cy.log('Rate limited, waiting and retrying...');
-				const credentials = getCredentials();
-				cy.wait(5000);
-				const API_BASE_URL = getApiBaseUrl();
-				cy.request({
-					method: 'POST',
-					url: `${API_BASE_URL}/auths/signin`,
-					body: { email: credentials.email, password: credentials.password },
-					failOnStatusCode: false
-				}).then((retry) => {
-					if (retry.status === 200 && retry.body && retry.body.token) {
-						const token = retry.body.token;
-						cy.log(`Auth successful after retry, token length: ${token.length}`);
-						cy.wrap(token).as('authToken');
-					} else {
-						cy.log(`Auth failed after retry: ${retry.status}`);
-						cy.wrap('').as('authToken');
-					}
-				});
-			} else if (response.status === 401 || response.status === 404) {
-				// User doesn't exist, try signup
-				cy.log('User not found, trying signup...');
-				const credentials = getCredentials();
-				const API_BASE_URL = getApiBaseUrl();
-				cy.request({
-					method: 'POST',
-					url: `${API_BASE_URL}/auths/signup`,
-					body: {
-						email: credentials.email,
-						password: credentials.password,
-						name: 'Test User'
-					},
-					failOnStatusCode: false
-				}).then((signupResponse) => {
-					if (signupResponse.status === 200 && signupResponse.body && signupResponse.body.token) {
-						const token = signupResponse.body.token;
-						cy.log(`Signup successful, token length: ${token.length}`);
-						cy.wrap(token).as('authToken');
-					} else {
-						// Try signin after signup
-						cy.log('Trying signin after signup...');
-						const credentials = getCredentials();
-						cy.wait(2000);
+		return cy.wait(3000).then(() => {
+			return cy.request({
+				method: 'POST',
+				url: `${API_BASE_URL}/auths/signin`,
+				body: {
+					email: credentials.email,
+					password: credentials.password
+				},
+				failOnStatusCode: false
+			}).then((response) => {
+				if (response.status === 200 && response.body && response.body.token) {
+					const token = response.body.token;
+					cy.log(`Auth successful, token length: ${token.length}`);
+					// Store as alias - this is the reliable way to pass values in Cypress
+					cy.wrap(token).as('authToken');
+					} else if (response.status === 429) {
+					// Rate limited, wait and retry
+					cy.log('Rate limited, waiting and retrying...');
+					const credentials = getCredentials();
+					return cy.wait(5000).then(() => {
 						const API_BASE_URL = getApiBaseUrl();
-						cy.request({
+						return cy.request({
 							method: 'POST',
 							url: `${API_BASE_URL}/auths/signin`,
 							body: { email: credentials.email, password: credentials.password },
@@ -100,19 +60,62 @@ describe('Workflow API Endpoints', () => {
 						}).then((retry) => {
 							if (retry.status === 200 && retry.body && retry.body.token) {
 								const token = retry.body.token;
-								cy.log(`Auth successful after signup, token length: ${token.length}`);
+								cy.log(`Auth successful after retry, token length: ${token.length}`);
 								cy.wrap(token).as('authToken');
 							} else {
-								cy.log(`Auth failed after signup: ${retry.status}`);
+								cy.log(`Auth failed after retry: ${retry.status}`);
 								cy.wrap('').as('authToken');
 							}
 						});
-					}
-				});
-			} else {
-				cy.log(`Auth failed: ${response.status}`);
-				cy.wrap('').as('authToken');
-			}
+					});
+				} else if (response.status === 401 || response.status === 404) {
+					// User doesn't exist, try signup
+					cy.log('User not found, trying signup...');
+					const credentials = getCredentials();
+					const API_BASE_URL = getApiBaseUrl();
+					return cy.request({
+						method: 'POST',
+						url: `${API_BASE_URL}/auths/signup`,
+						body: {
+							email: credentials.email,
+							password: credentials.password,
+							name: 'Test User'
+						},
+						failOnStatusCode: false
+					}).then((signupResponse) => {
+						if (signupResponse.status === 200 && signupResponse.body && signupResponse.body.token) {
+							const token = signupResponse.body.token;
+							cy.log(`Signup successful, token length: ${token.length}`);
+							cy.wrap(token).as('authToken');
+						} else {
+							// Try signin after signup
+							cy.log('Trying signin after signup...');
+							const credentials = getCredentials();
+							return cy.wait(2000).then(() => {
+								const API_BASE_URL = getApiBaseUrl();
+								return cy.request({
+									method: 'POST',
+									url: `${API_BASE_URL}/auths/signin`,
+									body: { email: credentials.email, password: credentials.password },
+									failOnStatusCode: false
+								}).then((retry) => {
+									if (retry.status === 200 && retry.body && retry.body.token) {
+										const token = retry.body.token;
+										cy.log(`Auth successful after signup, token length: ${token.length}`);
+										cy.wrap(token).as('authToken');
+									} else {
+										cy.log(`Auth failed after signup: ${retry.status}`);
+										cy.wrap('').as('authToken');
+									}
+								});
+							});
+						}
+					});
+				} else {
+					cy.log(`Auth failed: ${response.status}`);
+					cy.wrap('').as('authToken');
+				}
+			});
 		});
 	}
 
