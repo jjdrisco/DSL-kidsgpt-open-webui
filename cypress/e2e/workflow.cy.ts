@@ -134,18 +134,24 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			authenticate().then((token) => {
-				cy.log(`Token received via alias, length: ${token ? token.length : 0}, type: ${typeof token}`);
-				if (!token || token === '' || (typeof token === 'object' && token.length === undefined)) {
-					cy.log('Authentication failed - token is empty or invalid');
+				cy.log(`Token received in test, raw value: ${JSON.stringify(token)}, length: ${token ? (typeof token === 'string' ? token.length : 'not a string') : 'null/undefined'}, type: ${typeof token}`);
+				// Handle case where token might be a Cypress chainable or JQuery object
+				let actualToken = token;
+				if (token && typeof token === 'object' && 'length' in token && typeof token.length === 'number' && token.length > 0) {
+					// Might be JQuery object, try to get first element
+					actualToken = token[0] || token;
+				}
+				if (!actualToken || actualToken === '' || (typeof actualToken !== 'string')) {
+					cy.log(`Authentication failed - token is empty or invalid. Token value: ${JSON.stringify(actualToken)}`);
 					throw new Error('Authentication failed - no token received');
 				}
 				const API_BASE_URL = getApiBaseUrl();
-				cy.log(`Making request to ${API_BASE_URL}/workflow/state with token prefix: ${token.substring(0, 20)}...`);
+				cy.log(`Making request to ${API_BASE_URL}/workflow/state with token prefix: ${actualToken.substring(0, 20)}...`);
 				cy.request({
 					method: 'GET',
 					url: `${API_BASE_URL}/workflow/state`,
 					headers: {
-						Authorization: `Bearer ${token}`,
+						Authorization: `Bearer ${actualToken}`,
 						'Content-Type': 'application/json'
 					}
 				}).then((response) => {
