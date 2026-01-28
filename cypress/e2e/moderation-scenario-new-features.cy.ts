@@ -45,7 +45,8 @@ describe('Moderation Scenario New Features', () => {
 				}).then((response) => {
 					if (response.status === 200 && response.body && Array.isArray(response.body) && response.body.length > 0) {
 						const childId = response.body[0].id;
-						Cypress.env('TEST_CHILD_ID', childId);
+						// Store childId in localStorage for tests to access
+						win.localStorage.setItem('TEST_CHILD_ID', childId);
 						// Set current child via user settings API (as the service does)
 						cy.request({
 							method: 'PUT',
@@ -202,55 +203,199 @@ describe('Moderation Scenario New Features', () => {
 	});
 
 	it('should detect attention check text in Step 2 and send pass flags on submit', () => {
-		const childId = Cypress.env('TEST_CHILD_ID');
-		expect(childId, 'TEST_CHILD_ID should be set in beforeEach').to.be.ok;
+		cy.window().then((win) => {
+			const token = win.localStorage.getItem('token') || '';
+			expect(token, 'Token should be available').to.be.ok;
 
-		cy.visit('/moderation-scenario');
-		cy.get('body').then(($body) => {
-			if ($body.text().includes('Loading Scenarios')) {
-				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
-			}
-		});
+			// Get childId from API (wait for profile to exist)
+			cy.request({
+				method: 'GET',
+				url: '/api/v1/child-profiles',
+				headers: { Authorization: `Bearer ${token}` },
+				failOnStatusCode: false
+			}).then((response) => {
+				expect(response.status).to.eq(200);
+				expect(response.body).to.be.an('array');
+				if (!response.body || response.body.length === 0) {
+					// Create a child profile if none exists
+					return cy.request({
+						method: 'POST',
+						url: '/api/v1/child-profiles',
+						headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+						body: { name: 'Test Child', age: '10 years old', gender: 'Male' },
+						failOnStatusCode: false
+					}).then(() => {
+						return cy.request({
+							method: 'GET',
+							url: '/api/v1/child-profiles',
+							headers: { Authorization: `Bearer ${token}` }
+						});
+					});
+				}
+				return cy.wrap(response);
+			}).then((response) => {
+				expect(response.body).to.be.an('array').and.not.be.empty;
+				const childId = response.body[0].id;
+				expect(childId, 'Child ID should be available').to.be.ok;
 
-		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
-
-		// Find the attention check scenario by switching indices and looking for the embedded instructions.
-		const attentionText = 'Please moderate this question. Follow these steps:';
-		const maxIndexToTry = 10;
-
-		const openScenarioIndex = (idx: number): Cypress.Chainable<void> => {
-			return cy
-				.window()
-				.then((win) => {
-					win.localStorage.setItem(`moderationCurrentScenario_${childId}`, String(idx));
-				})
-				.then(() => {
-					return cy.reload();
+				cy.visit('/moderation-scenario');
+				cy.get('body').then(($body) => {
+					if ($body.text().includes('Loading Scenarios')) {
+						cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
+					}
 				});
-		};
 
-		const findAttentionCheckIndex = (idx: number): Cypress.Chainable<number> => {
-			if (idx > maxIndexToTry) {
-				throw new Error('Attention check scenario not found in first indices');
-			}
-			return openScenarioIndex(idx).then(() => {
-				return cy.get('body').then(($body) => {
-					if ($body.text().includes(attentionText)) return idx;
-					return findAttentionCheckIndex(idx + 1);
+				cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+
+				// Wait for scenarios to load first
+				cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+				cy.wait(3000); // Give scenarios time to populate
+
+				// Find the attention check scenario by switching indices and looking for the embedded instructions.
+				const attentionText = 'Please moderate this question. Follow these steps:';
+				const maxIndexToTry = 15; // Increased range
+
+				const openScenarioIndex = (idx: number): Cypress.Chainable<void> => {
+					return cy
+						.window()
+						.then((win) => {
+							win.localStorage.setItem(`moderationCurrentScenario_${childId}`, String(idx));
+						})
+						.then(() => {
+							return cy.reload();
+						});
+				};
+
+				const findAttentionCheckIndex = (idx: number): Cypress.Chainable<number> => {
+					if (idx > maxIndexToTry) {
+						cy.log(`Attention check not found in indices 0-${maxIndexToTry}, checking if scenarios loaded`);
+						// Try one more time with index 0 to see current state
+						return openScenarioIndex(0).then(() => {
+							cy.get('body').then(($body) => {
+								cy.log(`Page text preview: ${$body.text().substring(0, 500)}`);
+							});
+							throw new Error(`Attention check scenario not found in first ${maxIndexToTry + 1} indices`);
+						});
+					}
+					return openScenarioIndex(idx).then(() => {
+						return cy.get('body').then(($body) => {
+							if ($body.text().includes(attentionText)) {
+								cy.log(`Found attention check at index ${idx}`);
+								return idx;
+							}
+							return findAttentionCheckIndex(idx + 1);
+						});
+					});
+				};
+
+				findAttentionCheckIndex(0).then((scenarioIndex) => {
+					cy.contains(attentionText, { timeout: 60000 }).should('exist');
+
+					// Ensure Step 2 is visible by seeding localStorage state for the attention check scenario index
+					cy.window().then((win) => {
+						const seededState = {
+							versions: [],
+							currentVersionIndex: -1,
+							confirmedVersionIndex: null,
+							highlightedTexts1: [],
+							selectedModerations: [],
+							customInstructions: [],
+							showOriginal1: true,
+							showComparisonView: false,
+							attentionCheckSelected: false,
+							attentionCheckPassed: false,
+							markedNotApplicable: false,
+							responseHighlightedHTML: '',
+							promptHighlightedHTML: '',
+							step1Completed: true,
+							step2Completed: false,
+							step3Completed: false,
+							concernLevel: 3,
+							concernReason: '',
+							satisfactionLevel: null,
+							satisfactionReason: '',
+							nextAction: null
+						};
+
+						win.localStorage.setItem(
+							`moderationScenarioStates_${childId}`,
+							JSON.stringify([[scenarioIndex, seededState]])
+						);
+						win.localStorage.setItem(`moderationCurrentScenario_${childId}`, String(scenarioIndex));
+					});
+
+					cy.reload();
+					cy.contains('Step 2: Explain why this content concerns you', { timeout: 60000 }).should('exist');
+
+					cy.intercept('POST', '/api/v1/moderation/sessions').as('saveSession');
+
+					cy.get('textarea').first().clear().type('attention check');
+					cy.contains('Attention check detected! You can continue as normal.', { timeout: 10000 }).should('exist');
+
+					// Select concern level (required by UI validation)
+					cy.contains('3 - Moderately concerned', { timeout: 5000 }).click({ force: true });
+
+					cy.get('button')
+						.contains('Submit', { timeout: 10000 })
+						.should('not.be.disabled')
+						.click({ force: true });
+
+					cy.wait('@saveSession', { timeout: 60000 }).then((interception) => {
+						const body = interception.request.body as any;
+						expect(body).to.have.property('is_attention_check', true);
+						expect(body).to.have.property('attention_check_selected', true);
+						expect(body).to.have.property('attention_check_passed', true);
+					});
 				});
 			});
-		};
+		});
+	});
 
-		findAttentionCheckIndex(0).then((scenarioIndex) => {
-			cy.contains(attentionText, { timeout: 60000 }).should('exist');
+	it('should display Likert scale for level of concern in Step 2', () => {
+		cy.window().then((win) => {
+			const token = win.localStorage.getItem('token') || '';
+			expect(token, 'Token should be available').to.be.ok;
 
-			// Ensure Step 2 is visible by seeding localStorage state for the attention check scenario index
-			cy.window().then((win) => {
+			// Get childId from API (wait for profile to exist)
+			cy.request({
+				method: 'GET',
+				url: '/api/v1/child-profiles',
+				headers: { Authorization: `Bearer ${token}` },
+				failOnStatusCode: false
+			}).then((response) => {
+				expect(response.status).to.eq(200);
+				expect(response.body).to.be.an('array');
+				if (!response.body || response.body.length === 0) {
+					// Create a child profile if none exists
+					return cy.request({
+						method: 'POST',
+						url: '/api/v1/child-profiles',
+						headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+						body: { name: 'Test Child', age: '10 years old', gender: 'Male' },
+						failOnStatusCode: false
+					}).then(() => {
+						return cy.request({
+							method: 'GET',
+							url: '/api/v1/child-profiles',
+							headers: { Authorization: `Bearer ${token}` }
+						});
+					});
+				}
+				return cy.wrap(response);
+			}).then((response) => {
+				expect(response.body).to.be.an('array').and.not.be.empty;
+				const childId = response.body[0].id;
+				expect(childId, 'Child ID should be available').to.be.ok;
+
+				// Seed state so that Step 2 is active for the current scenario
+				const idxStr = win.localStorage.getItem(`moderationCurrentScenario_${childId}`) || '0';
+				const scenarioIndex = parseInt(idxStr, 10) || 0;
+
 				const seededState = {
 					versions: [],
 					currentVersionIndex: -1,
 					confirmedVersionIndex: null,
-					highlightedTexts1: [],
+					highlightedTexts1: [{ text: 'dummy highlight' }],
 					selectedModerations: [],
 					customInstructions: [],
 					showOriginal1: true,
@@ -263,7 +408,7 @@ describe('Moderation Scenario New Features', () => {
 					step1Completed: true,
 					step2Completed: false,
 					step3Completed: false,
-					concernLevel: 3,
+					concernLevel: null,
 					concernReason: '',
 					satisfactionLevel: null,
 					satisfactionReason: '',
@@ -275,99 +420,14 @@ describe('Moderation Scenario New Features', () => {
 					JSON.stringify([[scenarioIndex, seededState]])
 				);
 				win.localStorage.setItem(`moderationCurrentScenario_${childId}`, String(scenarioIndex));
-			});
 
-			cy.reload();
-			cy.contains('Step 2: Explain why this content concerns you', { timeout: 60000 }).should('exist');
-
-			cy.intercept('POST', '/api/v1/moderation/sessions').as('saveSession');
-
-			cy.get('textarea').first().clear().type('attention check');
-			cy.contains('Attention check detected! You can continue as normal.', { timeout: 10000 }).should('exist');
-
-			// Select concern level (required by UI validation)
-			cy.contains('3 - Moderately concerned', { timeout: 5000 }).click({ force: true });
-
-			cy.get('button')
-				.contains('Submit', { timeout: 10000 })
-				.should('not.be.disabled')
-				.click({ force: true });
-
-			cy.wait('@saveSession', { timeout: 60000 }).then((interception) => {
-				const body = interception.request.body as any;
-				expect(body).to.have.property('is_attention_check', true);
-				expect(body).to.have.property('attention_check_selected', true);
-				expect(body).to.have.property('attention_check_passed', true);
-			});
-		});
-	});
-
-	it('should display Likert scale for level of concern in Step 2', () => {
-		cy.visit('/moderation-scenario');
-		cy.get('body').then(($body) => {
-			if ($body.text().includes('Loading Scenarios')) {
-				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
-			}
-		});
-		cy.wait(10000);
-
-		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
-		cy.wait(5000);
-
-		// Wait for Step 1 to appear
-		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
-		
-		// To get to Step 2, we need to complete Step 1 by highlighting text and clicking Continue
-		// For now, let's check if we can navigate to Step 2 by simulating the flow
-		// First, try to highlight some text in the response area
-		cy.window().scrollTo(0, 2000, { ensureScrollable: false });
-		cy.wait(1000);
-		
-		// Try to find response content and highlight it
-		cy.get('body').then(($body) => {
-			// Look for response content - it might be in various containers
-			const responseElements = $body.find('[class*="response"], [class*="message"], .response-content');
-			if (responseElements.length > 0) {
-				// Try to select text to create a highlight
-				cy.wrap(responseElements.first()).then(($el) => {
-					// Simulate text selection
-					const text = $el.text();
-					if (text.length > 20) {
-						// Try to trigger selection
-						cy.wrap($el).trigger('mousedown', { which: 1, clientX: 100, clientY: 100 });
-						cy.wait(100);
-						cy.wrap($el).trigger('mousemove', { which: 1, clientX: 200, clientY: 100 });
-						cy.wait(100);
-						cy.wrap($el).trigger('mouseup');
-						cy.wait(500);
-					}
-				});
-			}
-		});
-		
-		// Try to click Continue button if highlights exist, or check if Step 2 is already visible
-		cy.get('body').then(($body) => {
-			if ($body.text().includes('Step 2: Explain why this content concerns you')) {
-				// Step 2 is visible, check for Likert scale
+				cy.visit('/moderation-scenario');
+				cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
+				cy.contains('Step 2: Explain why this content concerns you', { timeout: 60000 }).should('exist');
 				cy.contains('Level of Concern', { timeout: 5000 }).should('exist');
 				cy.contains('1 - Not concerned at all', { timeout: 5000 }).should('exist');
 				cy.contains('5 - Extremely concerned', { timeout: 5000 }).should('exist');
-			} else {
-				// Try clicking Continue if button is enabled
-				cy.get('button').contains('Continue').then(($btn) => {
-					if (!$btn.is(':disabled')) {
-						cy.wrap($btn).click({ force: true });
-						cy.wait(2000);
-						// Now check for Step 2
-						cy.contains('Step 2: Explain why this content concerns you', { timeout: 10000 }).should('exist');
-						cy.contains('Level of Concern', { timeout: 5000 }).should('exist');
-						cy.contains('1 - Not concerned at all', { timeout: 5000 }).should('exist');
-						cy.contains('5 - Extremely concerned', { timeout: 5000 }).should('exist');
-					} else {
-						cy.log('Continue button disabled - highlights required to proceed to Step 2');
-					}
-				});
-			}
+			});
 		});
 	});
 
@@ -444,7 +504,7 @@ describe('Moderation Scenario New Features', () => {
 		cy.window().scrollTo(0, 3000, { ensureScrollable: false });
 		cy.wait(1000);
 		// Check that continue button is disabled (no highlights yet)
-		cy.get('button').contains('Continue', { timeout: 10000 }).should('be.disabled');
+		cy.contains('button', 'Continue', { timeout: 10000 }).should('be.disabled');
 		// Check for hint text
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('highlight required') || $body.text().includes('(highlight required)')) {

@@ -47,8 +47,10 @@ fi
 
 # Install frontend dependencies if needed
 if [ ! -d "node_modules" ]; then
-    echo -e "${GREEN}Installing frontend dependencies...${NC}"
-    npm install --legacy-peer-deps
+    echo -e "${GREEN}Installing frontend dependencies (ignoring engine field)...${NC}"
+    # Some environments may run newer Node versions than specified in package.json.
+    # Disable strict engine checks so installation can proceed under Node 22+.
+    npm_config_engine_strict=false npm install --legacy-peer-deps
 fi
 echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
 
@@ -78,15 +80,24 @@ export PORT=$BACKEND_PORT
 uvicorn open_webui.main:app --port $BACKEND_PORT --host 127.0.0.1 --forwarded-allow-ips '*' > /tmp/cypress-backend.log 2>&1 &
 BACKEND_PID=$!
 cd ..
-sleep 5
+sleep 10
 
-# Verify backend is running
-if ! curl -s http://localhost:$BACKEND_PORT/api/v1/auths/ > /dev/null 2>&1; then
-    echo -e "${RED}Error: Backend failed to start${NC}"
-    echo -e "${YELLOW}Check logs: tail -f /tmp/cypress-backend.log${NC}"
-    kill $BACKEND_PID 2>/dev/null || true
-    exit 1
-fi
+# Verify backend is running with retries
+echo -e "${YELLOW}Waiting for backend to start...${NC}"
+for i in {1..30}; do
+    if curl -s http://localhost:$BACKEND_PORT/api/v1/auths/ > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Backend running on port $BACKEND_PORT${NC}"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo -e "${RED}Error: Backend failed to start after 30 attempts${NC}"
+        echo -e "${YELLOW}Check logs: tail -f /tmp/cypress-backend.log${NC}"
+        tail -50 /tmp/cypress-backend.log
+        kill $BACKEND_PID 2>/dev/null || true
+        exit 1
+    fi
+    sleep 1
+done
 echo -e "${GREEN}✓ Backend running on port $BACKEND_PORT${NC}"
 
 # Create test user
@@ -100,16 +111,24 @@ curl -s -X POST "http://localhost:$BACKEND_PORT/api/v1/auths/signup" \
 echo -e "${GREEN}Starting frontend dev server on port $FRONTEND_PORT...${NC}"
 npm run dev -- --port $FRONTEND_PORT --host > /tmp/cypress-frontend.log 2>&1 &
 FRONTEND_PID=$!
-sleep 10
+sleep 15
 
-# Verify frontend is running
-if ! curl -s http://localhost:$FRONTEND_PORT > /dev/null 2>&1; then
-    echo -e "${RED}Error: Frontend failed to start${NC}"
-    echo -e "${YELLOW}Check logs: tail -f /tmp/cypress-frontend.log${NC}"
-    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
-    exit 1
-fi
-echo -e "${GREEN}✓ Frontend running on port $FRONTEND_PORT${NC}"
+# Verify frontend is running with retries
+echo -e "${YELLOW}Waiting for frontend to start...${NC}"
+for i in {1..60}; do
+    if curl -s http://localhost:$FRONTEND_PORT > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Frontend running on port $FRONTEND_PORT${NC}"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        echo -e "${RED}Error: Frontend failed to start after 60 attempts${NC}"
+        echo -e "${YELLOW}Check logs: tail -f /tmp/cypress-frontend.log${NC}"
+        tail -50 /tmp/cypress-frontend.log
+        kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+        exit 1
+    fi
+    sleep 2
+done
 
 # Run Cypress tests
 echo -e "${GREEN}========================================${NC}"
