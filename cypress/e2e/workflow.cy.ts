@@ -27,7 +27,7 @@ describe('Workflow API Endpoints', () => {
 	}
 
 	// Helper to get auth token (with retry for rate limiting)
-	// Uses Cypress alias pattern for reliable token access
+	// Returns a Cypress chainable that resolves to the token string
 	function authenticate() {
 		const credentials = getCredentials();
 		const API_BASE_URL = getApiBaseUrl();
@@ -44,8 +44,9 @@ describe('Workflow API Endpoints', () => {
 				if (response.status === 200 && response.body && response.body.token) {
 					const token = response.body.token;
 					cy.log(`Auth successful, token length: ${token.length}`);
-					// Store as alias - this is the reliable way to pass values in Cypress
+					// Store as alias AND return wrapped token
 					cy.wrap(token).as('authToken');
+					return cy.wrap(token);
 				} else if (response.status === 429) {
 					// Rate limited, wait and retry
 					cy.log('Rate limited, waiting and retrying...');
@@ -62,9 +63,11 @@ describe('Workflow API Endpoints', () => {
 								const token = retry.body.token;
 								cy.log(`Auth successful after retry, token length: ${token.length}`);
 								cy.wrap(token).as('authToken');
+								return cy.wrap(token);
 							} else {
 								cy.log(`Auth failed after retry: ${retry.status}`);
 								cy.wrap('').as('authToken');
+								return cy.wrap('');
 							}
 						});
 					});
@@ -87,6 +90,7 @@ describe('Workflow API Endpoints', () => {
 							const token = signupResponse.body.token;
 							cy.log(`Signup successful, token length: ${token.length}`);
 							cy.wrap(token).as('authToken');
+							return cy.wrap(token);
 						} else {
 							// Try signin after signup
 							cy.log('Trying signin after signup...');
@@ -103,9 +107,11 @@ describe('Workflow API Endpoints', () => {
 										const token = retry.body.token;
 										cy.log(`Auth successful after signup, token length: ${token.length}`);
 										cy.wrap(token).as('authToken');
+										return cy.wrap(token);
 									} else {
 										cy.log(`Auth failed after signup: ${retry.status}`);
 										cy.wrap('').as('authToken');
+										return cy.wrap('');
 									}
 								});
 							});
@@ -114,6 +120,7 @@ describe('Workflow API Endpoints', () => {
 				} else {
 					cy.log(`Auth failed: ${response.status}`);
 					cy.wrap('').as('authToken');
+					return cy.wrap('');
 				}
 			});
 		});
@@ -126,9 +133,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				cy.log(`Token received via alias, length: ${token ? token.length : 0}, type: ${typeof token}`);
 				if (!token || token === '' || (typeof token === 'object' && token.length === undefined)) {
 					cy.log('Authentication failed - token is empty or invalid');
@@ -171,9 +176,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -199,9 +202,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -232,9 +233,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -262,9 +261,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -297,9 +294,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -334,9 +329,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current attempt before reset
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -375,9 +368,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Get current moderation attempt before reset
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -417,9 +408,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'POST',
@@ -444,9 +433,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// First get child profiles to use a valid child_id
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -499,9 +486,7 @@ describe('Workflow API Endpoints', () => {
 				this.skip();
 				return;
 			}
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'POST',
@@ -529,9 +514,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Test workflow state progression
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
@@ -570,9 +553,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			// Make multiple requests and verify consistency
-			authenticate().then(() => {
-				return cy.get('@authToken');
-			}).then((token) => {
+			authenticate().then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
 					method: 'GET',
