@@ -56,7 +56,8 @@ const register = (name: string, email: string, password: string) => {
 			failOnStatusCode: false
 		})
 		.then((response) => {
-			expect(response.status).to.be.oneOf([200, 400]);
+			// Accept 200 (success), 400 (bad request), or 403 (signup disabled)
+			expect(response.status).to.be.oneOf([200, 400, 403]);
 		});
 };
 
