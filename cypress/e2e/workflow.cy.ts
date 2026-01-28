@@ -46,7 +46,7 @@ describe('Workflow API Endpoints', () => {
 					cy.log(`Auth successful, token length: ${token.length}`);
 					// Store as alias - this is the reliable way to pass values in Cypress
 					cy.wrap(token).as('authToken');
-					} else if (response.status === 429) {
+				} else if (response.status === 429) {
 					// Rate limited, wait and retry
 					cy.log('Rate limited, waiting and retrying...');
 					const credentials = getCredentials();
@@ -127,7 +127,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			authenticate().then(() => {
-			authenticate().then(() => {
+				return cy.get('@authToken');
 			}).then((token) => {
 				cy.log(`Token received via alias, length: ${token ? token.length : 0}, type: ${typeof token}`);
 				if (!token || token === '' || (typeof token === 'object' && token.length === undefined)) {
@@ -172,7 +172,7 @@ describe('Workflow API Endpoints', () => {
 				return;
 			}
 			authenticate().then(() => {
-			authenticate().then(() => {
+				return cy.get('@authToken');
 			}).then((token) => {
 				const API_BASE_URL = getApiBaseUrl();
 				cy.request({
