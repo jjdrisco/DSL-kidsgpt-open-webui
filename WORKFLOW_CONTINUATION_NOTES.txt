@@ -1,0 +1,117 @@
+WORKFLOW CONTINUATION NOTES (handoff)
+====================================
+
+Repo: jjdrisco/DSL-kidsgpt-open-webui
+Workspace path: /workspace
+
+What was done / current status
+------------------------------
+- Cypress workflow API spec was refactored and stabilized.
+- Main issue fixed: Cypress auth token propagation for API calls + avoiding signin rate-limits (429).
+- Key change: cy.session() does NOT persist Cypress aliases across session restores, so token storage moved to Cypress.env().
+- Result: cypress/e2e/workflow.cy.ts now runs 15/15 passing in the remote environment.
+
+Branches / PRs / merges
+----------------------
+- Work branch: cursor/new-workflow-cypress-tests-03aa
+- Target integration branch: feature/separate-quiz-workflow
+- PR: #6 https://github.com/jjdrisco/DSL-kidsgpt-open-webui/pull/6
+- PR #6 was merged (squash) into feature/separate-quiz-workflow
+- Merge commit: 7d12e84381004ca440e5bfb2ab36ec8846c2fd6f
+
+Key files touched (most important)
+----------------------------------
+- cypress/e2e/workflow.cy.ts
+  - Uses direct backend API base URL for cy.request() calls:
+      http://localhost:8080/api/v1
+  - Auth caching uses cy.session() + Cypress.env('WORKFLOW_AUTH_TOKEN')
+  - Session validate() calls GET /api/v1/auths/ with Bearer token to confirm validity
+  - Increased retry/backoff on 429 during signin
+
+- cypress/support/e2e.ts
+  - Signup helper now accepts status 403 (signup disabled) without failing tests.
+
+Why Cypress was failing before (root cause)
+-------------------------------------------
+- Earlier versions attempted to return a token through nested cy.then()/cy.wrap() chains and/or store it as an alias.
+- With cy.session(), aliases are NOT reliably persisted across session restores.
+  - That caused Cypress to recreate sessions repeatedly, triggering /auths/signin often.
+  - Repeated signin attempts triggered 429 rate limiting.
+- Fix: store token in Cypress.env() instead of aliases, and validate token via /auths/ endpoint.
+
+How to run the app locally (remote) for Cypress
+-----------------------------------------------
+You need BOTH backend and frontend running.
+
+Backend (expected port 8080)
+----------------------------
+This repo has been run in remote using uvicorn.
+Typical command (from repo root):
+
+  cd /workspace/backend
+  # activate env as appropriate for your environment (conda/venv/etc)
+  # then run:
+  python3 -m uvicorn open_webui.main:app --port 8080 --host 127.0.0.1 --forwarded-allow-ips '*'
+
+Frontend (expected port 5173)
+-----------------------------
+From repo root:
+
+  cd /workspace
+  npm run dev -- --port 5173 --host
+
+Node version:
+- Cypress stability work assumed Node 20.x (used v20.20.0 in remote).
+
+How to run the workflow Cypress spec (known-good)
+-------------------------------------------------
+IMPORTANT: Cypress “env” must be passed in a way Cypress can read.
+Known-good invocation (from /workspace):
+
+  export CYPRESS_baseUrl=http://localhost:5173
+  export RUN_CHILD_PROFILE_TESTS=1
+  xvfb-run -a npx cypress run \
+    --spec cypress/e2e/workflow.cy.ts \
+    --env TEST_EMAIL=test@example.com,TEST_PASSWORD=testpassword
+
+Notes:
+- The spec uses Cypress.env('TEST_EMAIL') and Cypress.env('TEST_PASSWORD').
+- Passing TEST_EMAIL/TEST_PASSWORD via shell env alone is NOT always sufficient; the --env flag is reliable.
+
+Useful debugging commands
+-------------------------
+- Quick auth sanity check (backend direct):
+  curl -s -X POST http://localhost:8080/api/v1/auths/signin \
+    -H "Content-Type: application/json" \
+    -d '{"email":"test@example.com","password":"testpassword"}'
+
+- Check services are up:
+  curl -s http://localhost:5173 >/dev/null && echo "frontend ok"
+  curl -s http://localhost:8080/api/v1/health >/dev/null || true
+
+What to do if tests start failing again
+---------------------------------------
+1) If failures are 401/empty token:
+   - Confirm Cypress is receiving creds via --env.
+   - Confirm workflow.cy.ts is still using Cypress.env('WORKFLOW_AUTH_TOKEN') (not aliases).
+
+2) If failures are 429 (rate-limited):
+   - Confirm session validate() isn’t forcing re-auth unnecessarily.
+   - Increase backoff in attemptSignin() if needed.
+   - Ensure only one authentication path is used (avoid per-test signin).
+
+3) If backend errors (500 / missing tables/columns):
+   - This repo previously required DB schema alignment in some environments.
+   - Re-run migrations / ensure sqlite schema is up to date for the workflow endpoints.
+
+Where the workflow endpoints live
+--------------------------------
+- Backend workflow router:
+  backend/open_webui/routers/workflow.py
+
+General reminders / gotchas
+---------------------------
+- cy.session() caches cookies/storage state, but NOT Cypress aliases in a reliable way across restores.
+- For cross-test cached data, prefer Cypress.env() or re-derive in validate().
+- Keep API requests pointed at backend (8080) unless you explicitly need Vite proxy behavior.
+
