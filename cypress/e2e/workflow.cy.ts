@@ -31,16 +31,16 @@ describe('Workflow API Endpoints', () => {
 	function authenticate() {
 		const credentials = getCredentials();
 		const API_BASE_URL = getApiBaseUrl();
-		cy.wait(3000);
-		return cy.request({
-			method: 'POST',
-			url: `${API_BASE_URL}/auths/signin`,
-			body: {
-				email: credentials.email,
-				password: credentials.password
-			},
-			failOnStatusCode: false
-		}).then((response) => {
+		return cy.wait(3000).then(() => {
+			return cy.request({
+				method: 'POST',
+				url: `${API_BASE_URL}/auths/signin`,
+				body: {
+					email: credentials.email,
+					password: credentials.password
+				},
+				failOnStatusCode: false
+			}).then((response) => {
 			cy.log(`Signin response: status=${response.status}, hasToken=${!!(response.body && response.body.token)}`);
 			if (response.status === 200 && response.body && response.body.token) {
 				const token = response.body.token;
