@@ -7328,15 +7328,15 @@
 							{/if}
 						</div>
 					</div>
+					{/if}
 				</div>
 			</div>
 		</div>
-			{/if}
-		</div>
+	</div>
 
-		<!-- Custom Instruction Modal - REMOVED: Now using inline input -->
+	<!-- Custom Instruction Modal - REMOVED: Now using inline input -->
 
-		<!-- Confirmation Modal -->
+	<!-- Confirmation Modal -->
 		{#if showConfirmationModal}
 			<div
 				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
@@ -7446,6 +7446,7 @@
 				</div>
 			</div>
 		{/if}
+{/if}
 
 <!-- Assignment Time Tracker (separate from moderation tracking) -->
 <AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
