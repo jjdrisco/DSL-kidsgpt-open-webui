@@ -31,23 +31,23 @@ describe('Workflow API Endpoints', () => {
 	function authenticate() {
 		const credentials = getCredentials();
 		const API_BASE_URL = getApiBaseUrl();
-		return cy.wait(3000).then(() => {
-			return cy.request({
-				method: 'POST',
-				url: `${API_BASE_URL}/auths/signin`,
-				body: {
-					email: credentials.email,
-					password: credentials.password
-				},
-				failOnStatusCode: false
-			}).then((response) => {
-				cy.log(`Signin response: status=${response.status}, hasToken=${!!(response.body && response.body.token)}`);
-				if (response.status === 200 && response.body && response.body.token) {
-					const token = response.body.token;
-					cy.log(`Auth successful, token length: ${token.length}, token type: ${typeof token}, token value: ${token.substring(0, 30)}...`);
-					// Return wrapped token - this is the correct Cypress pattern
-					return cy.wrap(token);
-				} else if (response.status === 429) {
+		cy.wait(3000);
+		return cy.request({
+			method: 'POST',
+			url: `${API_BASE_URL}/auths/signin`,
+			body: {
+				email: credentials.email,
+				password: credentials.password
+			},
+			failOnStatusCode: false
+		}).then((response) => {
+			cy.log(`Signin response: status=${response.status}, hasToken=${!!(response.body && response.body.token)}`);
+			if (response.status === 200 && response.body && response.body.token) {
+				const token = response.body.token;
+				cy.log(`Auth successful, token length: ${token.length}, token type: ${typeof token}, token value: ${token.substring(0, 30)}...`);
+				// Return wrapped token - this is the correct Cypress pattern
+				return cy.wrap(token);
+			} else if (response.status === 429) {
 					// Rate limited, wait and retry
 					cy.log('Rate limited, waiting and retrying...');
 					const credentials = getCredentials();
