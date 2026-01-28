@@ -74,7 +74,6 @@
 		],
 		'Match their Age': ['Tailor to Age Group'],
 		'Defer to Support': ['Defer to Parents', 'Defer to Resources'],
-		'Attention Check': ['I read the instructions'],
 		Custom: ['Custom']
 	};
 
@@ -121,16 +120,14 @@
 		'Defer to Resources':
 			'Recommend professional resources, hotlines, or trusted adults who can provide specialized help.',
 		Custom: 'Create your own moderation instruction tailored to this specific scenario.',
-		'I read the instructions':
-			'Only select this if you saw attention check instructions embedded in the scenario text. If you did not see any special instructions in the scenario, do not select this option.'
 	};
 
 	// Attention check marker and instruction suffix
 	// Marker is embedded in response text to identify attention check scenarios.
-	// Suffix contains 3-step instructions appended to attention check responses.
+	// Suffix contains workflow instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n3) Step 3: Select \'I read the instructions\' from the "Attention Check" dropdown under "Step 3: Moderate". ' +
+		'\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the prompt or response, then click "Continue".\n2) Step 2: In the "Explain why this content concerns you" field, enter "attention check", then click "Submit". ' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
@@ -1202,21 +1199,15 @@
 	/**
 	 * Check if a scenario is completed.
 	 *
-	 * For attention check scenarios: completed when attentionCheckSelected AND attentionCheckPassed are both true.
-	 * For regular scenarios: completed when markedNotApplicable OR confirmedVersionIndex is set.
+	 * Completed when markedNotApplicable OR confirmedVersionIndex is set.
 	 *
 	 * @param index - Scenario index to check
 	 * @returns true if scenario is completed, false otherwise
 	 */
 	function isScenarioCompleted(index: number): boolean {
 		const state = scenarioStates.get(index);
-		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
 
 		if (state) {
-			// Check if this is an attention check scenario and if it's been passed
-			if (isAttentionCheck && state.attentionCheckSelected && state.attentionCheckPassed) {
-				return true;
-			}
 			// Completed if: marked not applicable or confirmed a moderated version
 			const completed =
 				state.markedNotApplicable ||
@@ -1225,10 +1216,6 @@
 		}
 		// Check current scenario
 		if (index === selectedScenarioIndex) {
-			// Check if this is an attention check scenario and if it's been passed
-			if (isAttentionCheck && attentionCheckSelected && attentionCheckPassed) {
-				return true;
-			}
 			// For current scenario, check if they've made a decision
 			// Scenario is completed if: marked as not applicable OR a version has been confirmed
 			const completed =
@@ -1237,9 +1224,6 @@
 				index,
 				markedNotApplicable,
 				confirmedVersionIndex,
-				isAttentionCheck,
-				attentionCheckSelected,
-				attentionCheckPassed,
 				completed
 			});
 			return completed;
@@ -1413,9 +1397,6 @@
 	let responseHighlightedHTML: string = ''; // Store HTML with marks embedded for response
 	let promptHighlightedHTML: string = ''; // Store HTML with marks embedded for prompt
 
-	// Modal state for highlighted concerns
-	let showHighlightedConcernsModal: boolean = false;
-
 	// Hydration guard to avoid DOM mutations before Svelte finishes hydrating
 	let hasHydrated = false;
 
@@ -1475,6 +1456,10 @@
 	// Step 2 (Assess): Concern assessment fields
 	let concernLevel: number | null = null; // 1-5 (mapped from: 1=Not concerned at all, 2=Somewhat unconcerned, 3=Neutral, 4=Somewhat concerned, 5=Concerned)
 	let concernReason: string = ''; // "Why?" field - required text explanation
+
+	// Attention check pass detection (new workflow): non-blocking, Step 2 text entry based.
+	let attentionCheckTextDetected: boolean = false;
+	$: attentionCheckTextDetected = concernReason.trim().toLowerCase().includes('attention check');
 
 	// Step 3 (Update): Satisfaction check fields (after version created)
 	let satisfactionLevel: number | null = null; // 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
@@ -3565,92 +3550,6 @@
 			return;
 		}
 
-		// Handle attention check selection: sets flags, saves to backend, navigates to next scenario
-		if (option === 'ATTENTION_CHECK' || option === 'I read the instructions') {
-			// If deselecting, just toggle
-			if (attentionCheckSelected) {
-				attentionCheckSelected = false;
-				attentionCheckPassed = false;
-				attentionCheckProcessing = false;
-				return;
-			}
-
-			// If selecting and this is an attention check scenario, handle specially
-			if (isAttentionCheckScenario) {
-				attentionCheckSelected = true;
-				attentionCheckPassed = true;
-				attentionCheckProcessing = true; // Lock button immediately
-				console.log(
-					'[ATTENTION_CHECK] Scenario:',
-					selectedScenarioIndex,
-					'Selected:',
-					attentionCheckSelected,
-					'Passed:',
-					attentionCheckPassed,
-					'Timestamp:',
-					new Date().toISOString()
-				);
-
-				// Immediately save attention check as passed and navigate to next
-				(async () => {
-					try {
-						// Save attention check status to backend
-						const sessionId = `scenario_${selectedScenarioIndex}`;
-						await saveModerationSession(localStorage.token, {
-							session_id: sessionId,
-							user_id: $user?.id || 'unknown',
-							child_id: selectedChildId || 'unknown',
-							scenario_index: selectedScenarioIndex,
-							attempt_number: 1,
-							version_number: 0,
-							session_number: sessionNumber,
-							scenario_prompt: childPrompt1,
-							original_response: originalResponse1,
-							initial_decision: undefined,
-							strategies: [],
-							custom_instructions: [],
-							highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })),
-							refactored_response: undefined,
-							is_final_version: false,
-							is_attention_check: true,
-							attention_check_selected: true,
-							attention_check_passed: true
-						});
-
-						// Show success message
-						toast.success('✓ Passed attention check!');
-
-						// Mark scenario as completed with all necessary flags
-						// Scenario completion is now tracked via confirmedVersionIndex
-						step3Completed = true; // Complete the initial decision flow
-						moderationPanelVisible = false; // Close moderation panel
-						// showInitialDecisionPane is now derived // Hide initial decision pane
-
-						// Save state to localStorage so it persists when navigating back
-						saveCurrentScenarioState();
-					} catch (e) {
-						console.error('Failed to save attention check status:', e);
-						toast.error('Failed to save attention check status');
-						attentionCheckProcessing = false; // Unlock on error
-					}
-				})();
-
-				return;
-			} else {
-				// Not an attention check scenario, just toggle
-				attentionCheckSelected = !attentionCheckSelected;
-				console.log(
-					'[ATTENTION_CHECK] Scenario:',
-					selectedScenarioIndex,
-					'Selected:',
-					attentionCheckSelected,
-					'Timestamp:',
-					new Date().toISOString()
-				);
-				return;
-			}
-		}
-
 		// Toggle selection for standard options and saved customs
 		if (selectedModerations.has(option)) {
 			selectedModerations.delete(option);
@@ -4004,6 +3903,13 @@
 		step2Completed = true;
 		step3Completed = true; // Mark step 3 complete since we're skipping moderation
 
+		// Attention check (new workflow): detect pass via Step 2 text entry (non-blocking)
+		const passedAttentionCheck = isAttentionCheckScenario && attentionCheckTextDetected;
+		if (isAttentionCheckScenario) {
+			attentionCheckSelected = passedAttentionCheck;
+			attentionCheckPassed = passedAttentionCheck;
+		}
+
 		// Mark scenario as complete by setting confirmedVersionIndex
 		// This triggers isScenarioCompleted() to return true
 		confirmedVersionIndex = 0; // 0 indicates original/identification is confirmed
@@ -4056,10 +3962,13 @@
 				refactored_response: undefined,
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
-				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_selected: passedAttentionCheck,
+				attention_check_passed: passedAttentionCheck
 			});
 			console.log('✅ Identification complete - scenario marked as final');
+			if (passedAttentionCheck) {
+				toast.success('✓ Passed attention check!');
+			}
 		} catch (e) {
 			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
@@ -6065,23 +5974,25 @@
 													Step 1: Highlight the content that concerns you
 												</h3>
 
+												<div
+													class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+												>
+													<p class="text-xs text-yellow-800 dark:text-yellow-200">
+														Drag over text in the prompt or response above to highlight concerns. If this
+														scenario is not relevant, click "Skip Scenario".
+													</p>
+												</div>
+
 												<!-- Two sections for prompt and response highlights -->
 												<div class="space-y-4 mb-4">
 													<!-- Concerns in Prompt Section -->
 													<div
 														class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
 													>
-														<div class="flex items-center justify-between mb-2">
+														<div class="mb-2">
 															<h4 class="text-sm font-semibold text-gray-900 dark:text-white">
 																Concerns in Prompt
 															</h4>
-															<button
-																type="button"
-																on:click={() => (showHighlightedConcernsModal = true)}
-																class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-															>
-																View All Highlights
-															</button>
 														</div>
 														{#if promptHighlights.length > 0}
 															<p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
@@ -6116,17 +6027,10 @@
 													<div
 														class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
 													>
-														<div class="flex items-center justify-between mb-2">
+														<div class="mb-2">
 															<h4 class="text-sm font-semibold text-gray-900 dark:text-white">
 																Concerns in Response
 															</h4>
-															<button
-																type="button"
-																on:click={() => (showHighlightedConcernsModal = true)}
-																class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
-															>
-																View All Highlights
-															</button>
 														</div>
 														{#if responseHighlights.length > 0}
 															<p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
@@ -6157,17 +6061,6 @@
 														{/if}
 													</div>
 												</div>
-
-												{#if highlightedTexts1.length === 0}
-													<div
-														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-													>
-														<p class="text-xs text-yellow-800 dark:text-yellow-200">
-															⚠️ Drag over text in the prompt or response above to highlight concerns. If this
-															scenario is not relevant, click "Skip Scenario".
-														</p>
-													</div>
-												{/if}
 											</div>
 
 											<!-- Action buttons - Continue disabled when no highlights, only Skip enabled -->
@@ -6242,6 +6135,11 @@
 														minlength="10"
 														class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
 													></textarea>
+													{#if isAttentionCheckScenario && attentionCheckTextDetected}
+														<p class="mt-2 text-sm text-green-700 dark:text-green-300">
+															Attention check detected! You can continue as normal.
+														</p>
+													{/if}
 												</div>
 
 												<!-- Level of Concern Likert Scale (1-5) -->
@@ -7457,131 +7355,6 @@
 	videoSrc="/video/Moderation-Scenario-Demo.mp4"
 	title="Moderation Scenario Tutorial"
 />
-
-<!-- Highlighted Concerns Modal -->
-{#if showHighlightedConcernsModal}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-	<div
-		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-		on:click={() => (showHighlightedConcernsModal = false)}
-		on:keydown={(e) => e.key === 'Escape' && (showHighlightedConcernsModal = false)}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="highlighted-concerns-modal-title"
-	>
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div
-			class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto"
-			on:click|stopPropagation
-		>
-			<div class="flex justify-between items-center mb-6">
-				<h3 id="highlighted-concerns-modal-title" class="text-2xl font-bold text-gray-900 dark:text-white">
-					Highlighted Concerns
-				</h3>
-				<button
-					on:click={() => (showHighlightedConcernsModal = false)}
-					class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-					aria-label="Close modal"
-				>
-					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						></path>
-					</svg>
-				</button>
-			</div>
-
-			<div class="space-y-6">
-				<!-- Concerns in Prompt Section -->
-				<div>
-					<h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-						Concerns in Prompt
-					</h4>
-					{#if promptHighlights.length > 0}
-						<div class="space-y-2">
-							{#each promptHighlights as highlight, index}
-								<div
-									class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
-								>
-									<div class="flex items-start justify-between">
-										<span class="text-sm text-gray-900 dark:text-white flex-1">{highlight.text}</span>
-										<button
-											on:click={() => removeHighlight(highlight)}
-											class="ml-2 text-red-500 hover:text-red-700"
-											title="Remove highlight"
-										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												></path>
-											</svg>
-										</button>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{:else}
-						<p class="text-sm text-gray-500 dark:text-gray-400">No concerns highlighted in prompt.</p>
-					{/if}
-				</div>
-
-				<!-- Concerns in Response Section -->
-				<div>
-					<h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-						Concerns in Response
-					</h4>
-					{#if responseHighlights.length > 0}
-						<div class="space-y-2">
-							{#each responseHighlights as highlight, index}
-								<div
-									class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-								>
-									<div class="flex items-start justify-between">
-										<span class="text-sm text-gray-900 dark:text-white flex-1">{highlight.text}</span>
-										<button
-											on:click={() => removeHighlight(highlight)}
-											class="ml-2 text-red-500 hover:text-red-700"
-											title="Remove highlight"
-										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												></path>
-											</svg>
-										</button>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{:else}
-						<p class="text-sm text-gray-500 dark:text-gray-400">No concerns highlighted in response.</p>
-					{/if}
-				</div>
-			</div>
-
-			<div class="mt-6 flex justify-end">
-				<button
-					on:click={() => (showHighlightedConcernsModal = false)}
-					class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-				>
-					Close
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
 
 <style>
 	.response-text :global(.selection-highlight) {
