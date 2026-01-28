@@ -45,6 +45,7 @@ describe('Moderation Scenario New Features', () => {
 				}).then((response) => {
 					if (response.status === 200 && response.body && Array.isArray(response.body) && response.body.length > 0) {
 						const childId = response.body[0].id;
+						Cypress.env('TEST_CHILD_ID', childId);
 						// Set current child via user settings API (as the service does)
 						cy.request({
 							method: 'PUT',
@@ -181,7 +182,7 @@ describe('Moderation Scenario New Features', () => {
 		});
 	});
 
-	it('should display "View All Highlights" buttons in both sections', () => {
+	it('should show Step 1 highlight instructions under the heading', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
@@ -193,47 +194,112 @@ describe('Moderation Scenario New Features', () => {
 		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
 		cy.wait(5000);
 
-		// Wait for Step 1 to appear
 		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
-		
-		// Scroll to find the buttons
-		cy.window().scrollTo(0, 3000, { ensureScrollable: false });
-		cy.wait(1000);
-		// Check for view buttons - should have at least 2 (one for prompt, one for response)
-		cy.get('body').then(($body) => {
-			const buttons = $body.find('button, a').filter((i, el) => el.textContent?.includes('View All Highlights'));
-			expect(buttons.length).to.be.at.least(1); // At least one should exist
-		});
+		cy.contains(
+			'Drag over text in the prompt or response above to highlight concerns. If this scenario is not relevant, click "Skip Scenario".',
+			{ timeout: 10000 }
+		).should('exist');
 	});
 
-	it('should open highlighted concerns modal when clicking view button', () => {
+	it('should detect attention check text in Step 2 and send pass flags on submit', () => {
+		const childId = Cypress.env('TEST_CHILD_ID');
+		expect(childId, 'TEST_CHILD_ID should be set in beforeEach').to.be.ok;
+
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
 				cy.contains('Loading Scenarios', { timeout: 60000 }).should('not.exist');
 			}
 		});
-		cy.wait(10000);
 
 		cy.contains('Conversation Review', { timeout: 60000 }).should('exist');
-		cy.wait(5000);
 
-		// Wait for Step 1 to appear
-		cy.contains('Step 1: Highlight the content that concerns you', { timeout: 20000 }).should('exist');
-		
-		// Scroll to find the button
-		cy.window().scrollTo(0, 3000, { ensureScrollable: false });
-		cy.wait(1000);
-		// Click first "View All Highlights" button
-		cy.contains('View All Highlights', { timeout: 10000 }).first().click({ force: true });
-		cy.wait(1000);
-		// Check that modal opens
-		cy.contains('Highlighted Concerns', { timeout: 5000 }).should('be.visible');
-		// Check for both sections in modal
-		cy.contains('Concerns in Prompt', { timeout: 5000 }).should('be.visible');
-		cy.contains('Concerns in Response', { timeout: 5000 }).should('be.visible');
-		// Close modal
-		cy.get('button').contains('Close', { timeout: 5000 }).click();
+		// Find the attention check scenario by switching indices and looking for the embedded instructions.
+		const attentionText = 'Please moderate this question. Follow these steps:';
+		const maxIndexToTry = 10;
+
+		const openScenarioIndex = (idx: number): Cypress.Chainable<void> => {
+			return cy
+				.window()
+				.then((win) => {
+					win.localStorage.setItem(`moderationCurrentScenario_${childId}`, String(idx));
+				})
+				.then(() => {
+					return cy.reload();
+				});
+		};
+
+		const findAttentionCheckIndex = (idx: number): Cypress.Chainable<number> => {
+			if (idx > maxIndexToTry) {
+				throw new Error('Attention check scenario not found in first indices');
+			}
+			return openScenarioIndex(idx).then(() => {
+				return cy.get('body').then(($body) => {
+					if ($body.text().includes(attentionText)) return idx;
+					return findAttentionCheckIndex(idx + 1);
+				});
+			});
+		};
+
+		findAttentionCheckIndex(0).then((scenarioIndex) => {
+			cy.contains(attentionText, { timeout: 60000 }).should('exist');
+
+			// Ensure Step 2 is visible by seeding localStorage state for the attention check scenario index
+			cy.window().then((win) => {
+				const seededState = {
+					versions: [],
+					currentVersionIndex: -1,
+					confirmedVersionIndex: null,
+					highlightedTexts1: [],
+					selectedModerations: [],
+					customInstructions: [],
+					showOriginal1: true,
+					showComparisonView: false,
+					attentionCheckSelected: false,
+					attentionCheckPassed: false,
+					markedNotApplicable: false,
+					responseHighlightedHTML: '',
+					promptHighlightedHTML: '',
+					step1Completed: true,
+					step2Completed: false,
+					step3Completed: false,
+					concernLevel: 3,
+					concernReason: '',
+					satisfactionLevel: null,
+					satisfactionReason: '',
+					nextAction: null
+				};
+
+				win.localStorage.setItem(
+					`moderationScenarioStates_${childId}`,
+					JSON.stringify([[scenarioIndex, seededState]])
+				);
+				win.localStorage.setItem(`moderationCurrentScenario_${childId}`, String(scenarioIndex));
+			});
+
+			cy.reload();
+			cy.contains('Step 2: Explain why this content concerns you', { timeout: 60000 }).should('exist');
+
+			cy.intercept('POST', '/api/v1/moderation/sessions').as('saveSession');
+
+			cy.get('textarea').first().clear().type('attention check');
+			cy.contains('Attention check detected! You can continue as normal.', { timeout: 10000 }).should('exist');
+
+			// Select concern level (required by UI validation)
+			cy.contains('3 - Moderately concerned', { timeout: 5000 }).click({ force: true });
+
+			cy.get('button')
+				.contains('Submit', { timeout: 10000 })
+				.should('not.be.disabled')
+				.click({ force: true });
+
+			cy.wait('@saveSession', { timeout: 60000 }).then((interception) => {
+				const body = interception.request.body as any;
+				expect(body).to.have.property('is_attention_check', true);
+				expect(body).to.have.property('attention_check_selected', true);
+				expect(body).to.have.property('attention_check_passed', true);
+			});
+		});
 	});
 
 	it('should display Likert scale for level of concern in Step 2', () => {
