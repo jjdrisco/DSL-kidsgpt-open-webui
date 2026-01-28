@@ -45,10 +45,8 @@ describe('Workflow API Endpoints', () => {
 				if (response.status === 200 && response.body && response.body.token) {
 					const token = response.body.token;
 					cy.log(`Auth successful, token length: ${token.length}, token type: ${typeof token}, token value: ${token.substring(0, 30)}...`);
-					// Use cy.then() to ensure proper chaining
-					return cy.then(() => {
-						return token;
-					});
+					// Return wrapped token - this is the correct Cypress pattern
+					return cy.wrap(token);
 				} else if (response.status === 429) {
 					// Rate limited, wait and retry
 					cy.log('Rate limited, waiting and retrying...');
@@ -64,10 +62,10 @@ describe('Workflow API Endpoints', () => {
 							if (retry.status === 200 && retry.body && retry.body.token) {
 								const token = retry.body.token;
 								cy.log(`Auth successful after retry, token length: ${token.length}`);
-								return cy.then(() => token);
+								return cy.wrap(token);
 							} else {
 								cy.log(`Auth failed after retry: ${retry.status}`);
-								return cy.then(() => '');
+								return cy.wrap('');
 							}
 						});
 					});
@@ -89,7 +87,7 @@ describe('Workflow API Endpoints', () => {
 						if (signupResponse.status === 200 && signupResponse.body && signupResponse.body.token) {
 							const token = signupResponse.body.token;
 							cy.log(`Signup successful, token length: ${token.length}`);
-							return cy.then(() => token);
+							return cy.wrap(token);
 						} else {
 							// Try signin after signup
 							cy.log('Trying signin after signup...');
@@ -105,10 +103,10 @@ describe('Workflow API Endpoints', () => {
 									if (retry.status === 200 && retry.body && retry.body.token) {
 										const token = retry.body.token;
 										cy.log(`Auth successful after signup, token length: ${token.length}`);
-										return cy.then(() => token);
+										return cy.wrap(token);
 									} else {
 										cy.log(`Auth failed after signup: ${retry.status}`);
-										return cy.then(() => '');
+										return cy.wrap('');
 									}
 								});
 							});
@@ -116,7 +114,7 @@ describe('Workflow API Endpoints', () => {
 					});
 				} else {
 					cy.log(`Auth failed: ${response.status}`);
-					return cy.then(() => '');
+					return cy.wrap('');
 				}
 			});
 		});
