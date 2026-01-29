@@ -4,7 +4,10 @@ This document provides instructions for setting up and running Cypress end-to-en
 
 ## Prerequisites
 
-1. **Node.js and npm** - Ensure Node.js (v22+) and npm are installed
+1. **Node.js and npm** - Ensure Node.js v20.x is installed (recommended for Cypress compatibility)
+   - The project supports Node.js >=18.13.0 <=22.x.x (see `package.json` engines field)
+   - **Node.js v20.x is recommended** for running Cypress tests reliably
+   - Check your version: `node --version`
 2. **Python 3** - Required for backend (Python 3.12+)
 3. **System Dependencies** - For headless Cypress on Linux:
    ```bash
@@ -19,7 +22,7 @@ This document provides instructions for setting up and running Cypress end-to-en
    npm install --legacy-peer-deps
    ```
 
-   Note: `--legacy-peer-deps` is required due to peer dependency conflicts with @tiptap packages.
+   **Important**: `--legacy-peer-deps` is required due to peer dependency conflicts with @tiptap packages. This flag tells npm to use the legacy peer dependency resolution algorithm, which is more permissive and works better with Node.js v20.
 
 2. **Install Backend Dependencies** (if not already installed):
    ```bash
@@ -149,6 +152,16 @@ The `workflow.cy.ts` test suite covers:
 **Solution**: 
 - Use `npm install --legacy-peer-deps` as documented
 - This is expected due to @tiptap version conflicts
+- Ensure you're using Node.js v20.x for best compatibility
+
+### Cypress Crashes with Node.js v22
+
+**Error**: Cypress crashes with `node:internal/modules/run_main` errors on Node.js v22
+
+**Solution**:
+- **Use Node.js v20.x instead** - Cypress has better compatibility with Node.js v20
+- Install Node.js v20 using nvm: `nvm install 20 && nvm use 20`
+- Then reinstall dependencies: `npm install --legacy-peer-deps`
 
 ## CI/CD Integration
 
