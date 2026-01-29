@@ -27,6 +27,7 @@
 	import UserStatusModal from './UserStatusModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
 	import { updateUserStatus } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
 
@@ -240,6 +241,25 @@
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				as="a"
+				href="/exit-survey"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				on:click={async () => {
+					show = false;
+					await goto('/exit-survey');
+					if ($mobile) {
+						await tick();
+						showSidebar.set(false);
+					}
+				}}
+			>
+				<div class=" self-center mr-3">
+					<DocumentChartBar className="size-5" strokeWidth="1.5" />
+				</div>
+				<div class=" self-center truncate">{$i18n.t('Survey View')}</div>
 			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
