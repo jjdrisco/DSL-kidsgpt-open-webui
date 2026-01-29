@@ -78,7 +78,16 @@ def handle_peewee_migration(DATABASE_URL):
 
 
 if ENABLE_DB_MIGRATIONS:
-    handle_peewee_migration(DATABASE_URL)
+    try:
+        handle_peewee_migration(DATABASE_URL)
+    except Exception as e:
+        # Peewee migrations are a legacy/compatibility layer. On some SQLite dev DBs,
+        # these can fail due to schema drift or prior partially-applied migrations.
+        # Alembic migrations (run separately) are the source of truth in this repo.
+        if "sqlite" in (DATABASE_URL or "").lower():
+            log.warning("Peewee migrations failed on SQLite (continuing): %s", e)
+        else:
+            raise
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

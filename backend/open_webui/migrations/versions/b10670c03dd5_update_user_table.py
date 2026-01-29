@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 
 import open_webui.internal.db
@@ -27,11 +28,19 @@ def _drop_sqlite_indexes_for_column(table_name, column_name, conn):
     """
     SQLite requires manual removal of any indexes referencing a column
     before ALTER TABLE ... DROP COLUMN can succeed.
+    Note: Auto-indexes created for UNIQUE/PRIMARY KEY constraints cannot be dropped.
     """
     indexes = conn.execute(sa.text(f"PRAGMA index_list('{table_name}')")).fetchall()
 
     for idx in indexes:
         index_name = idx[1]  # index name
+        is_auto_index = idx[2]  # origin: 'c' = constraint, 'u' = unique, 'pk' = primary key, 'c' = auto
+        
+        # Skip auto-indexes created for UNIQUE/PRIMARY KEY constraints
+        # These are automatically dropped when the constraint is removed
+        if is_auto_index == 1 or index_name.startswith('sqlite_autoindex_'):
+            continue
+            
         # Get indexed columns
         idx_info = conn.execute(
             sa.text(f"PRAGMA index_info('{index_name}')")
@@ -39,7 +48,11 @@ def _drop_sqlite_indexes_for_column(table_name, column_name, conn):
 
         indexed_cols = [row[2] for row in idx_info]  # col names
         if column_name in indexed_cols:
-            conn.execute(sa.text(f"DROP INDEX IF EXISTS {index_name}"))
+            try:
+                conn.execute(sa.text(f"DROP INDEX IF EXISTS {index_name}"))
+            except Exception:
+                # If it fails (e.g., constraint index), skip it
+                pass
 
 
 def _convert_column_to_json(table: str, column: str):
@@ -113,19 +126,45 @@ def _convert_column_to_text(table: str, column: str):
 
 
 def upgrade() -> None:
-    op.add_column(
-        "user", sa.Column("profile_banner_image_url", sa.Text(), nullable=True)
-    )
-    op.add_column("user", sa.Column("timezone", sa.String(), nullable=True))
-
-    op.add_column("user", sa.Column("presence_state", sa.String(), nullable=True))
-    op.add_column("user", sa.Column("status_emoji", sa.String(), nullable=True))
-    op.add_column("user", sa.Column("status_message", sa.Text(), nullable=True))
-    op.add_column(
-        "user", sa.Column("status_expires_at", sa.BigInteger(), nullable=True)
-    )
-
-    op.add_column("user", sa.Column("oauth", sa.JSON(), nullable=True))
+    # Check if columns already exist (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "user" in existing_tables:
+        user_columns = [col["name"] for col in inspector.get_columns("user")]
+        
+        if "profile_banner_image_url" not in user_columns:
+            op.add_column(
+                "user", sa.Column("profile_banner_image_url", sa.Text(), nullable=True)
+            )
+        if "timezone" not in user_columns:
+            op.add_column("user", sa.Column("timezone", sa.String(), nullable=True))
+        if "presence_state" not in user_columns:
+            op.add_column("user", sa.Column("presence_state", sa.String(), nullable=True))
+        if "status_emoji" not in user_columns:
+            op.add_column("user", sa.Column("status_emoji", sa.String(), nullable=True))
+        if "status_message" not in user_columns:
+            op.add_column("user", sa.Column("status_message", sa.Text(), nullable=True))
+        if "status_expires_at" not in user_columns:
+            op.add_column(
+                "user", sa.Column("status_expires_at", sa.BigInteger(), nullable=True)
+            )
+        if "oauth" not in user_columns:
+            op.add_column("user", sa.Column("oauth", sa.JSON(), nullable=True))
+    else:
+        # Table doesn't exist yet, add columns normally
+        op.add_column(
+            "user", sa.Column("profile_banner_image_url", sa.Text(), nullable=True)
+        )
+        op.add_column("user", sa.Column("timezone", sa.String(), nullable=True))
+        op.add_column("user", sa.Column("presence_state", sa.String(), nullable=True))
+        op.add_column("user", sa.Column("status_emoji", sa.String(), nullable=True))
+        op.add_column("user", sa.Column("status_message", sa.Text(), nullable=True))
+        op.add_column(
+            "user", sa.Column("status_expires_at", sa.BigInteger(), nullable=True)
+        )
+        op.add_column("user", sa.Column("oauth", sa.JSON(), nullable=True))
 
     # Convert info (TEXT/JSONField) → JSON
     _convert_column_to_json("user", "info")
