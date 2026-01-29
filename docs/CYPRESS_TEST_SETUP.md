@@ -9,11 +9,12 @@ Complete guide for setting up and running Cypress end-to-end tests for the Open 
 1. [System Requirements](#1-system-requirements)
 2. [One-Time Setup](#2-one-time-setup)
 3. [Environment Configuration](#3-environment-configuration)
-4. [Starting Services](#4-starting-services)
-5. [Running Tests](#5-running-tests)
-6. [Test Files Overview](#6-test-files-overview)
-7. [Troubleshooting](#7-troubleshooting)
-8. [Quick Reference](#8-quick-reference)
+4. [Authentication in Cypress Tests](#4-authentication-in-cypress-tests)
+5. [Starting Services](#5-starting-services)
+6. [Running Tests](#6-running-tests)
+7. [Test Files Overview](#7-test-files-overview)
+8. [Troubleshooting](#8-troubleshooting)
+9. [Quick Reference](#9-quick-reference)
 
 ---
 
@@ -161,7 +162,159 @@ export TEST_PASSWORD=0000
 
 ---
 
-## 4. Starting Services
+## 4. Authentication in Cypress Tests
+
+### 4.1 How Authentication Works
+
+Cypress tests use the `cy.login()` command defined in `cypress/support/e2e.ts` to authenticate users. This command:
+
+1. **Uses `cy.session()`** to cache login sessions across tests (improves performance)
+2. **Stores authentication token** in `localStorage.getItem('token')` after successful login
+3. **Handles multiple redirect paths** (home page, `/kids/profile`, `/moderation-scenario`, etc.)
+
+### 4.2 Login Flow
+
+The login process in `cypress/support/e2e.ts`:
+
+```typescript
+cy.login(email, password)
+```
+
+**What it does:**
+
+1. Visits `/auth` page
+2. Fills email and password fields
+3. Submits the login form
+4. Waits for redirect to any valid path (`/`, `/kids/profile`, `/moderation-scenario`, etc.)
+5. Validates session by making authenticated API request to `/api/v1/auths/`
+
+**Session caching:** `cy.session()` caches the login state, so subsequent `cy.login()` calls in the same test run reuse the session without re-authenticating.
+
+### 4.3 Using Authentication Tokens in Tests
+
+After login, tests can access the authentication token:
+
+```typescript
+cy.window().then((win) => {
+  const token = win.localStorage.getItem('token') || '';
+  // Use token for API requests
+  cy.request({
+    method: 'GET',
+    url: '/api/v1/child-profiles',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+});
+```
+
+### 4.4 Child Profile and Settings API Access
+
+Some tests need to access child profiles or user settings. The authentication pattern:
+
+**Getting Child ID:**
+
+```typescript
+cy.window().then((win) => {
+  const token = win.localStorage.getItem('token') || '';
+  
+  // Get child profiles
+  cy.request({
+    method: 'GET',
+    url: '/api/v1/child-profiles',
+    headers: { Authorization: `Bearer ${token}` },
+    failOnStatusCode: false
+  }).then((response) => {
+    if (response.status === 200 && response.body && Array.isArray(response.body) && response.body.length > 0) {
+      const childId = response.body[0].id;
+      // Use childId...
+    } else {
+      // Create child profile if none exists
+      cy.request({
+        method: 'POST',
+        url: '/api/v1/child-profiles',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: { name: 'Test Child', age: '10 years old', gender: 'Male' },
+        failOnStatusCode: false
+      }).then(() => {
+        // Retry GET request
+      });
+    }
+  });
+});
+```
+
+**Getting Selected Child ID from Settings:**
+
+The app uses the `settings` store (not `user.settings`) for `selectedChildId`. To get the correct value for localStorage keys:
+
+```typescript
+cy.request({
+  method: 'GET',
+  url: '/api/v1/users/user/settings',
+  headers: { Authorization: `Bearer ${token}` },
+  failOnStatusCode: false
+}).then((settingsResp) => {
+  const selectedChildIdForKeys =
+    settingsResp.body?.ui?.selectedChildId ??
+    settingsResp.body?.selectedChildId ??
+    childId; // Fallback to childId from profiles API
+  
+  // Use selectedChildIdForKeys for localStorage keys like:
+  // `moderationScenarioStates_${selectedChildIdForKeys}`
+});
+```
+
+### 4.5 Common Authentication Issues
+
+**Issue: Token not found after login**
+
+**Symptoms:**
+- `localStorage.getItem('token')` returns `null`
+- API requests fail with 401/403
+
+**Solutions:**
+
+1. **Wait for login to complete:**
+   ```typescript
+   cy.login(EMAIL, PASSWORD);
+   cy.wait(1000); // Give time for token to be stored
+   ```
+
+2. **Check if login succeeded:**
+   ```typescript
+   cy.login(EMAIL, PASSWORD);
+   cy.window().then((win) => {
+     const token = win.localStorage.getItem('token');
+     expect(token, 'Token should exist after login').to.be.ok;
+   });
+   ```
+
+3. **Verify user account exists:**
+   ```bash
+   # Create test user if missing
+   curl -X POST "http://localhost:8080/api/v1/auths/signup" \
+     -H "Content-Type: application/json" \
+     -d '{"email":"test@example.com","password":"testpassword","name":"Test User"}'
+   ```
+
+**Issue: Child ID not found in tests**
+
+**Symptoms:**
+- Tests fail with "Child ID should be available"
+- `response.body` is empty array
+
+**Solution:** Tests should auto-create child profiles if missing (see pattern above in "Getting Child ID").
+
+**Issue: localStorage keys don't match app expectations**
+
+**Symptoms:**
+- Seeded state not loading
+- App uses different child ID than test expects
+
+**Solution:** Always get `selectedChildId` from `/api/v1/users/user/settings` API and use it for localStorage keys (see pattern above in "Getting Selected Child ID from Settings").
+
+---
+
+## 5. Starting Services
 
 ### 4.1 Start Backend Server
 
@@ -243,9 +396,9 @@ npm run dev -- --port 5173 --host
 
 ---
 
-## 5. Running Tests
+## 6. Running Tests
 
-### 5.1 Standard Tests (Registration, Chat, Settings)
+### 6.1 Standard Tests (Registration, Chat, Settings)
 
 ```bash
 # From project root
@@ -254,7 +407,7 @@ npx cypress run --spec "cypress/e2e/chat.cy.ts"
 npx cypress run --spec "cypress/e2e/settings.cy.ts"
 ```
 
-### 5.2 Child-Profile Tests
+### 6.2 Child-Profile Tests
 
 **Prerequisites:**
 
@@ -298,7 +451,7 @@ export CYPRESS_baseUrl=http://localhost:5173
 xvfb-run -a npx cypress run --spec "cypress/e2e/kids-profile.cy.ts,cypress/e2e/parent-child-profile.cy.ts"
 ```
 
-### 5.3 Run All Tests
+### 6.3 Run All Tests
 
 ```bash
 # Standard tests (will run registerAdmin)
@@ -310,7 +463,7 @@ export CYPRESS_baseUrl=http://localhost:5173
 xvfb-run -a npx cypress run --spec "cypress/e2e/kids-profile.cy.ts,cypress/e2e/parent-child-profile.cy.ts"
 ```
 
-### 5.4 Interactive Mode (with GUI)
+### 6.4 Interactive Mode (with GUI)
 
 ```bash
 # Open Cypress GUI
@@ -323,9 +476,9 @@ npx cypress open
 
 ---
 
-## 6. Test Files Overview
+## 7. Test Files Overview
 
-### 6.1 Standard Test Files
+### 7.1 Standard Test Files
 
 | File                 | Description                       | Requires `RUN_CHILD_PROFILE_TESTS`? |
 | -------------------- | --------------------------------- | ----------------------------------- |
@@ -334,7 +487,7 @@ npx cypress open
 | `settings.cy.ts`     | Tests settings pages              | No                                  |
 | `documents.cy.ts`    | Tests document management         | No                                  |
 
-### 6.2 Child-Profile Test Files
+### 7.2 Child-Profile Test Files
 
 | File                         | Description                                                     | Credentials                                                                |
 | ---------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -349,9 +502,9 @@ npx cypress open
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
-### 7.1 Common Issues
+### 8.1 Common Issues
 
 #### Issue: `npm install` fails with peer dependency conflicts
 
@@ -467,7 +620,7 @@ pip install mimeparse langchain-classic
 export DATABASE_URL="sqlite:///$(pwd)/backend/data/webui-test.db"
 ```
 
-### 7.2 Debugging Tips
+### 8.2 Debugging Tips
 
 **Check if services are running:**
 
@@ -505,9 +658,9 @@ tail -f /tmp/frontend.log
 
 ---
 
-## 8. Quick Reference
+## 9. Quick Reference
 
-### 8.1 Complete Setup Script (One-Time)
+### 9.1 Complete Setup Script (One-Time)
 
 ```bash
 #!/bin/bash
@@ -532,7 +685,7 @@ mkdir -p backend/data
 echo "Setup complete!"
 ```
 
-### 8.2 Quick Start Commands
+### 9.2 Quick Start Commands
 
 **Start Backend:**
 
@@ -568,7 +721,7 @@ export CYPRESS_baseUrl=http://localhost:5173 && \
 xvfb-run -a npx cypress run --spec "cypress/e2e/kids-profile.cy.ts,cypress/e2e/parent-child-profile.cy.ts"
 ```
 
-### 8.3 Environment Variables Cheat Sheet
+### 9.3 Environment Variables Cheat Sheet
 
 ```bash
 # Backend

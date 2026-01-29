@@ -8,8 +8,10 @@ Complete instructions for running Cypress E2E tests in cloud environments (Curso
 2. [Package Versions](#package-versions)
 3. [One-Time Setup](#one-time-setup)
 4. [Running Tests](#running-tests)
-5. [Troubleshooting](#troubleshooting)
-6. [Test Files](#test-files)
+5. [Authentication in Cypress Tests](#authentication-in-cypress-tests)
+6. [Environment Variables](#environment-variables)
+7. [Troubleshooting](#troubleshooting)
+8. [Test Files](#test-files)
 
 ---
 
@@ -253,6 +255,120 @@ xvfb-run -a npx cypress run --spec "cypress/e2e/exit-survey-new-features.cy.ts,c
 ```
 
 **Note:** `xvfb-run -a` is required for headless execution in cloud environments (provides virtual X server).
+
+---
+
+## Authentication in Cypress Tests
+
+### How Authentication Works
+
+Cypress tests authenticate using the `cy.login()` command from `cypress/support/e2e.ts`:
+
+1. **Login Command:** `cy.login(email, password)` handles authentication
+2. **Session Caching:** Uses `cy.session()` to cache login state across tests
+3. **Token Storage:** Authentication token is stored in `localStorage.getItem('token')`
+4. **API Access:** Tests use the token for authenticated API requests
+
+### Accessing Authentication Token
+
+After login, retrieve the token:
+
+```typescript
+cy.window().then((win) => {
+  const token = win.localStorage.getItem('token') || '';
+  // Use token for API requests
+  cy.request({
+    method: 'GET',
+    url: '/api/v1/child-profiles',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+});
+```
+
+### Getting Child Profile Data
+
+Tests that need child profile information should:
+
+1. **Get child profiles from API:**
+   ```typescript
+   cy.request({
+     method: 'GET',
+     url: '/api/v1/child-profiles',
+     headers: { Authorization: `Bearer ${token}` },
+     failOnStatusCode: false
+   }).then((response) => {
+     if (response.body && response.body.length > 0) {
+       const childId = response.body[0].id;
+     } else {
+       // Auto-create if missing
+       cy.request({
+         method: 'POST',
+         url: '/api/v1/child-profiles',
+         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+         body: { name: 'Test Child', age: '10 years old', gender: 'Male' }
+       });
+     }
+   });
+   ```
+
+2. **Get selected child ID from settings:**
+   ```typescript
+   cy.request({
+     method: 'GET',
+     url: '/api/v1/users/user/settings',
+     headers: { Authorization: `Bearer ${token}` }
+   }).then((settingsResp) => {
+     const selectedChildId = 
+       settingsResp.body?.ui?.selectedChildId ?? 
+       settingsResp.body?.selectedChildId ?? 
+       childId; // Fallback
+     
+     // Use for localStorage keys like:
+     // `moderationScenarioStates_${selectedChildId}`
+   });
+   ```
+
+**Why:** The app uses the `settings` store (not `user.settings`) for `selectedChildId`. Tests must use the same value from the settings API to ensure localStorage keys match what the app expects.
+
+### Common Authentication Patterns
+
+**Pattern 1: Login and get token**
+```typescript
+cy.login(EMAIL, PASSWORD);
+cy.window().then((win) => {
+  const token = win.localStorage.getItem('token');
+  expect(token).to.be.ok;
+});
+```
+
+**Pattern 2: Get child profiles with auto-create**
+```typescript
+cy.window().then((win) => {
+  const token = win.localStorage.getItem('token') || '';
+  cy.request({
+    method: 'GET',
+    url: '/api/v1/child-profiles',
+    headers: { Authorization: `Bearer ${token}` },
+    failOnStatusCode: false
+  }).then((response) => {
+    if (!response.body || response.body.length === 0) {
+      return cy.request({
+        method: 'POST',
+        url: '/api/v1/child-profiles',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: { name: 'Test Child', age: '10 years old', gender: 'Male' }
+      }).then(() => {
+        return cy.request({
+          method: 'GET',
+          url: '/api/v1/child-profiles',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      });
+    }
+    return cy.wrap(response);
+  });
+});
+```
 
 ---
 
