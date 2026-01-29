@@ -2,7 +2,8 @@ import { defineConfig } from 'cypress';
 
 export default defineConfig({
 	e2e: {
-		baseUrl: 'http://localhost:8080'
+		// Allow baseUrl to be overridden by CYPRESS_baseUrl environment variable
+		baseUrl: process.env.CYPRESS_baseUrl || 'http://localhost:8080'
 	},
 	video: true,
 	env: {

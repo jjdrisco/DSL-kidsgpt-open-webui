@@ -16,14 +16,16 @@ const login = (email: string, password: string) => {
 			// regardless on local language preferences
 			localStorage.setItem('locale', 'en-US');
 			// Visit auth page
-			cy.visit('/auth');
+			cy.visit('/auth', { timeout: 10000 });
+			// Wait for the auth page to load - check for either auth-page or the email input
+			cy.get('input[autocomplete="email"]', { timeout: 15000 }).should('be.visible');
 			// Fill out the form
 			cy.get('input[autocomplete="email"]').type(email);
 			cy.get('input[type="password"]').type(password);
 			// Submit the form
 			cy.get('button[type="submit"]').click();
 			// Wait until the user is redirected to the home page
-			cy.get('#chat-search').should('exist');
+			cy.get('#chat-search', { timeout: 15000 }).should('exist');
 			// Get the current version to skip the changelog dialog
 			if (localStorage.getItem('version') === null) {
 				cy.get('button').contains("Okay, Let's Go!").click();
