@@ -21,11 +21,11 @@ describe('Navigation', () => {
 			// Click on the user menu
 			cy.get('button[aria-label="User Menu"]').click();
 			
-			// Verify Survey View button exists
-			cy.get('button').contains('Survey View').should('exist');
+			// Verify Survey View item exists
+			cy.contains('Survey View').should('exist');
 			
-			// Click on Survey View button
-			cy.get('button').contains('Survey View').click();
+			// Click on Survey View item
+			cy.contains('Survey View').click();
 			
 			// Verify navigation to exit-survey page
 			cy.url().should('include', '/exit-survey');
