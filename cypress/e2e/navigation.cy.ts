@@ -56,20 +56,21 @@ describe('Navigation', () => {
 			
 			// Wait for settings modal to open - look for the modal or settings title
 			cy.contains('Settings', { timeout: 10000 }).should('exist'); // Modal title
-			cy.wait(1000);
+			cy.wait(2000); // Give modal time to fully render
 			
-			// Find and click About tab - it's in the settings tabs container
-			// Try scrolling the tabs container if it exists, otherwise just find About
+			// Find About tab - try multiple approaches
+			// First try to find it by role="tab"
 			cy.get('body').then(($body) => {
-				const tabsContainer = $body.find('#settings-tabs-container, [role="tablist"]');
-				if (tabsContainer.length > 0) {
-					cy.wrap(tabsContainer).scrollTo('bottom', { ensureScrollable: false });
+				const aboutTab = $body.find('button[role="tab"]').filter((i, el) => {
+					return Cypress.$(el).text().trim() === 'About';
+				});
+				if (aboutTab.length > 0) {
+					cy.wrap(aboutTab.first()).click({ force: true });
+				} else {
+					// Fallback: just find any button with "About" text
+					cy.contains('About', { timeout: 10000 }).click({ force: true });
 				}
 			});
-			cy.wait(500);
-			
-			// Find and click About tab
-			cy.contains('About', { timeout: 10000 }).should('be.visible').click({ force: true });
 			
 			// Wait for About tab content to load
 			cy.wait(1500);
@@ -102,14 +103,17 @@ describe('Navigation', () => {
 			cy.wait(1500);
 			
 			// Then navigate back using Open WebUI button
+			cy.wait(2000);
 			cy.get('body').then(($body) => {
-				const tabsContainer = $body.find('#settings-tabs-container, [role="tablist"]');
-				if (tabsContainer.length > 0) {
-					cy.wrap(tabsContainer).scrollTo('bottom', { ensureScrollable: false });
+				const aboutTab = $body.find('button[role="tab"]').filter((i, el) => {
+					return Cypress.$(el).text().trim() === 'About';
+				});
+				if (aboutTab.length > 0) {
+					cy.wrap(aboutTab.first()).click({ force: true });
+				} else {
+					cy.contains('About', { timeout: 10000 }).click({ force: true });
 				}
 			});
-			cy.wait(500);
-			cy.contains('About', { timeout: 10000 }).should('be.visible').click({ force: true });
 			cy.wait(1000);
 			cy.contains('Open WebUI', { timeout: 10000 }).should('be.visible').click({ force: true });
 			cy.wait(1000);
