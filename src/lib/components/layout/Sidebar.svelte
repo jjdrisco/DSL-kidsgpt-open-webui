@@ -3,6 +3,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import {
 		user,
 		chats,
@@ -39,7 +40,8 @@
 		toggleChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
-		importChats
+		importChats,
+		createNewChat
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -528,6 +530,31 @@
 			await temporaryChatEnabled.set(true);
 		} else {
 			await temporaryChatEnabled.set(false);
+		}
+
+		// Check if we're already on a chat page
+		const currentPath = $page.url.pathname;
+		const isOnChatPage = currentPath.startsWith('/c/');
+		
+		// If not on a chat page, try to navigate to an existing chat
+		if (!isOnChatPage) {
+			try {
+				// Try to get the most recent chat and navigate directly to it
+				// This works for all user types including admins
+				const chatList = await getChatList(localStorage.token, 1);
+				
+				if (chatList && chatList.length > 0) {
+					// Navigate directly to the most recent chat
+					await goto(`/c/${chatList[0].id}`);
+				} else {
+					// No chats exist, navigate to /parent
+					await goto('/parent');
+				}
+			} catch (error) {
+				console.error('Error navigating to chat:', error);
+				// Fallback: navigate to /parent
+				await goto('/parent');
+			}
 		}
 
 		setTimeout(() => {

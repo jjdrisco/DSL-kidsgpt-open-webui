@@ -11,7 +11,7 @@
 	import { WEBUI_NAME } from '$lib/stores';
 	import { getModels } from '$lib/apis';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
-	import { updateModelById, getModels as getWorkspaceModels } from '$lib/apis/models';
+	import { updateModelById, getModelItems as getWorkspaceModels } from '$lib/apis/models';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { applyModeration, type ModerationResponse } from '$lib/apis/moderation';
 	import { toast } from 'svelte-sonner';
