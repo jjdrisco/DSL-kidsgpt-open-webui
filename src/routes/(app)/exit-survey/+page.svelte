@@ -13,16 +13,30 @@
 	let assignmentStep: number = 1;
 
     // Survey responses
-	let surveyResponses = {
-		parentGender: '',
-		parentAge: '',
-		areaOfResidency: '',
-		parentEducation: '',
+let surveyResponses = {
+	parentGender: '',
+	parentAge: '',
+	areaOfResidency: '',
+	parentEducation: '',
     parentEthnicity: [],
     genaiFamiliarity: '',
     genaiUsageFrequency: '',
-    parentingStyle: ''
+    parentingStyle: [] as string[]
 	};
+
+const parentingStyleLabels: Record<string, string> = {
+	A: "I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.",
+	B: "I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.",
+	C: "I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.",
+	D: "I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.",
+	E: "None of these fits me / It depends on the situation.",
+	'prefer-not-to-answer': 'Prefer not to answer'
+};
+
+function formatParentingStyles(values: string[]): string {
+	if (!values || values.length === 0) return 'Not specified';
+	return values.map((v) => parentingStyleLabels[v] || v).join(', ');
+}
 
     // API
     import { createExitQuiz, listExitQuiz } from '$lib/apis/exit-quiz';
@@ -123,7 +137,7 @@ onMount(async () => {
                     parentEthnicity: Array.isArray(ans.parentEthnicity) ? ans.parentEthnicity : [],
                     genaiFamiliarity: ans.genaiFamiliarity || '',
                     genaiUsageFrequency: ans.genaiUsageFrequency || '',
-                    parentingStyle: ans.parentingStyle || ''
+                    parentingStyle: Array.isArray(ans.parentingStyle) ? ans.parentingStyle : (ans.parentingStyle ? [ans.parentingStyle] : [])
                 };
                 isSaved = true;
                 // Ensure sidebar unlock for completion if a saved survey exists
@@ -155,7 +169,7 @@ onMount(async () => {
                     parentEthnicity: Array.isArray(draft.parentEthnicity) ? draft.parentEthnicity : [],
                     genaiFamiliarity: draft.genaiFamiliarity || '',
                     genaiUsageFrequency: draft.genaiUsageFrequency || '',
-                    parentingStyle: draft.parentingStyle || ''
+                    parentingStyle: Array.isArray(draft.parentingStyle) ? draft.parentingStyle : (draft.parentingStyle ? [draft.parentingStyle] : [])
                 };
             }
         }
@@ -189,7 +203,7 @@ onMount(async () => {
                 toast.error('Please select your personal AI use frequency');
 				return;
 			}
-            if (!surveyResponses.parentingStyle) {
+            if (!surveyResponses.parentingStyle || surveyResponses.parentingStyle.length === 0) {
                 toast.error('Please select your parenting style');
 				return;
 			}
@@ -386,15 +400,7 @@ $: saveDraft();
 					<div>
 						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</div>
 						<p class="text-gray-900 dark:text-white">
-							{surveyResponses.parentingStyle 
-								? (surveyResponses.parentingStyle === 'A' ? 'I set clear rules and follow through, but I explain my reasons, listen to my child\'s point of view, and encourage independence.' :
-								   surveyResponses.parentingStyle === 'B' ? 'I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren\'t followed.' :
-								   surveyResponses.parentingStyle === 'C' ? 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.' :
-								   surveyResponses.parentingStyle === 'D' ? 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.' :
-								   surveyResponses.parentingStyle === 'E' ? 'None of these fits me / It depends on the situation.' :
-								   surveyResponses.parentingStyle === 'prefer-not-to-answer' ? 'Prefer not to answer' :
-								   surveyResponses.parentingStyle)
-								: 'Not specified'}
+							{formatParentingStyles(surveyResponses.parentingStyle)}
 						</p>
 					</div>
                     <div>
@@ -434,31 +440,31 @@ $: saveDraft();
 						<!-- Question 1: Parenting Style -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								1. Which description best matches your typical approach to day-to-day parenting? (Choose the closest fit.) <span class="text-red-500">*</span>
+								1. Which descriptions match your typical approach to day-to-day parenting? (Select all that apply.) <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
-								<label class="flex items-center">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="A" class="mr-3" id="parenting-style-a">
+								<label class="flex items-start space-x-3">
+									<input type="checkbox" bind:group={surveyResponses.parentingStyle} value="A" class="mt-1 mr-3" id="parenting-style-a">
 									<span class="text-gray-900 dark:text-white">I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.</span>
 								</label>
-								<label class="flex items-center">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="B" class="mr-3" id="parenting-style-b">
+								<label class="flex items-start space-x-3">
+									<input type="checkbox" bind:group={surveyResponses.parentingStyle} value="B" class="mt-1 mr-3" id="parenting-style-b">
 									<span class="text-gray-900 dark:text-white">I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.</span>
 								</label>
-								<label class="flex items-center">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="C" class="mr-3" id="parenting-style-c">
+								<label class="flex items-start space-x-3">
+									<input type="checkbox" bind:group={surveyResponses.parentingStyle} value="C" class="mt-1 mr-3" id="parenting-style-c">
 									<span class="text-gray-900 dark:text-white">I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.</span>
 								</label>
-								<label class="flex items-center">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="D" class="mr-3" id="parenting-style-d">
+								<label class="flex items-start space-x-3">
+									<input type="checkbox" bind:group={surveyResponses.parentingStyle} value="D" class="mt-1 mr-3" id="parenting-style-d">
 									<span class="text-gray-900 dark:text-white">I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.</span>
 								</label>
-								<label class="flex items-center">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="E" class="mr-3" id="parenting-style-e">
+								<label class="flex items-start space-x-3">
+									<input type="checkbox" bind:group={surveyResponses.parentingStyle} value="E" class="mt-1 mr-3" id="parenting-style-e">
 									<span class="text-gray-900 dark:text-white">None of these fits me / It depends on the situation.</span>
 								</label>
-								<label class="flex items-center">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="prefer-not-to-answer" class="mr-3" id="parenting-style-prefer-not-to-answer">
+								<label class="flex items-start space-x-3">
+									<input type="checkbox" bind:group={surveyResponses.parentingStyle} value="prefer-not-to-answer" class="mt-1 mr-3" id="parenting-style-prefer-not-to-answer">
 									<span class="text-gray-900 dark:text-white">Prefer not to answer</span>
 								</label>
 							</div>

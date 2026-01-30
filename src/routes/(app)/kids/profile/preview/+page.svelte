@@ -22,21 +22,15 @@
 				return;
 			}
 
-			// Get current child
-			const currentChildId = childProfileSync.getCurrentChildId();
-			if (currentChildId) {
-				const index = childProfiles.findIndex(child => child.id === currentChildId);
-				if (index !== -1) {
-					selectedChildIndex = index;
-					currentChild = childProfiles[index];
-				} else {
-					selectedChildIndex = 0;
-					currentChild = childProfiles[0];
-				}
-			} else {
-				selectedChildIndex = 0;
-				currentChild = childProfiles[0];
-			}
+		// Single-child flow: always use the current child if set, otherwise the first profile
+		const currentChildId = childProfileSync.getCurrentChildId();
+		if (currentChildId) {
+			const index = childProfiles.findIndex(child => child.id === currentChildId);
+			selectedChildIndex = index !== -1 ? index : 0;
+		} else {
+			selectedChildIndex = 0;
+		}
+		currentChild = childProfiles[selectedChildIndex];
 		} catch (err) {
 			console.error('Failed to load child profiles:', err);
 			error = 'Failed to load child profile';
@@ -46,9 +40,12 @@
 	};
 
 	const selectChild = (index: number) => {
-		selectedChildIndex = index;
-		currentChild = childProfiles[index];
+	// Single-child flow: ignore manual switching; keep first/current profile
+	if (childProfiles.length > 0) {
+		selectedChildIndex = 0;
+		currentChild = childProfiles[0];
 		childProfileSync.setCurrentChildId(currentChild.id);
+	}
 	};
 
 	// Function to parse child characteristics into structured format
@@ -192,35 +189,12 @@
 				</div>
 			</div>
 		{:else}
-			<!-- Multiple Children Selection -->
 			{#if childProfiles.length > 1}
-				<div class="mb-8">
-					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-						Select Child Profile
-					</h2>
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{#each childProfiles as child, index}
-							<button
-								on:click={() => selectChild(index)}
-								class="p-4 rounded-lg border-2 transition-all duration-200 text-left {selectedChildIndex === index ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'}"
-							>
-								<div class="flex items-center space-x-3">
-									<div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-										<span class="text-white font-semibold text-lg">
-											{(child.name || 'Kid').charAt(0).toUpperCase()}
-										</span>
-									</div>
-									<div class="flex-1">
-										<h3 class="font-medium text-gray-900 dark:text-white">
-											{child.name || `Kid ${index + 1}`}
-										</h3>
-										<p class="text-sm text-gray-500 dark:text-gray-400">
-											{child.child_age || 'Age not set'} • {child.child_gender || 'Gender not set'}
-										</p>
-									</div>
-								</div>
-							</button>
-						{/each}
+				<div class="mb-6">
+					<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+						<p class="text-sm text-yellow-900 dark:text-yellow-100">
+							Multiple profiles exist from earlier sessions. This study uses a single profile; the first/current profile is shown below.
+						</p>
 					</div>
 				</div>
 			{/if}
