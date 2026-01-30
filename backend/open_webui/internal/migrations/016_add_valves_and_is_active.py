@@ -55,19 +55,28 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         try:
             migrator.add_fields("tool", valves=pw.TextField(null=True))
         except Exception as e:
-            if "duplicate column" not in str(e).lower() and "already exists" not in str(e).lower():
+            if (
+                "duplicate column" not in str(e).lower()
+                and "already exists" not in str(e).lower()
+            ):
                 raise
     if not _col(database, "function", "valves"):
         try:
             migrator.add_fields("function", valves=pw.TextField(null=True))
         except Exception as e:
-            if "duplicate column" not in str(e).lower() and "already exists" not in str(e).lower():
+            if (
+                "duplicate column" not in str(e).lower()
+                and "already exists" not in str(e).lower()
+            ):
                 raise
     if not _col(database, "function", "is_active"):
         try:
             migrator.add_fields("function", is_active=pw.BooleanField(default=False))
         except Exception as e:
-            if "duplicate column" not in str(e).lower() and "already exists" not in str(e).lower():
+            if (
+                "duplicate column" not in str(e).lower()
+                and "already exists" not in str(e).lower()
+            ):
                 raise
 
 

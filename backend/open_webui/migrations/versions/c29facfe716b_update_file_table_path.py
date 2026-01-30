@@ -24,7 +24,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     file_columns = [col["name"] for col in inspector.get_columns("file")]
-    
+
     # 1. Add the `path` column to the "file" table.
     if "path" not in file_columns:
         op.add_column("file", sa.Column("path", sa.Text(), nullable=True))

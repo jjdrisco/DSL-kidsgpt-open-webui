@@ -57,7 +57,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
             migrator.add_fields("chat", archived=pw.BooleanField(default=False))
         except Exception as e:
             error_msg = str(e).lower()
-            if "duplicate column" not in error_msg and "already exists" not in error_msg:
+            if (
+                "duplicate column" not in error_msg
+                and "already exists" not in error_msg
+            ):
                 raise
 
 

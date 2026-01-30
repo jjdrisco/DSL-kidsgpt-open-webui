@@ -441,9 +441,9 @@ def is_interviewee_user(study_id: Optional[str]) -> bool:
     """
     if not study_id:
         return False
-    
+
     study_id = study_id.strip()
-    
+
     # First check config database (admin-managed)
     try:
         config = get_config()
@@ -452,7 +452,7 @@ def is_interviewee_user(study_id: Optional[str]) -> bool:
             return True
     except Exception:
         pass  # Fall back to environment variable
-    
+
     # Fall back to environment variable
     return study_id in INTERVIEWEE_STUDY_ID_WHITELIST
 
@@ -464,26 +464,28 @@ def get_user_type(user, study_id: Optional[str] = None) -> str:
     """
     if user.role == "admin":
         return "admin"
-    
+
     if user.role == "child":
         return "child"
-    
+
     if user.role == "parent":
         return "parent"
-    
+
     if user.role == "interviewee":
         return "interviewee"
-    
+
     # For users with role "user", check STUDY_ID to determine if they should be interviewee
     # If they have parent_id, they're a child
-    if hasattr(user, 'parent_id') and user.parent_id:
+    if hasattr(user, "parent_id") and user.parent_id:
         return "child"
-    
+
     # Check STUDY_ID against whitelist
-    study_id_to_check = study_id or (user.study_id if hasattr(user, 'study_id') else None)
+    study_id_to_check = study_id or (
+        user.study_id if hasattr(user, "study_id") else None
+    )
     if is_interviewee_user(study_id_to_check):
         return "interviewee"
-    
+
     # Default to parent for regular users
     return "parent"
 

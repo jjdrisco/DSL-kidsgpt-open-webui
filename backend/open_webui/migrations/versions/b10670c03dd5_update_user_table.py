@@ -34,13 +34,15 @@ def _drop_sqlite_indexes_for_column(table_name, column_name, conn):
 
     for idx in indexes:
         index_name = idx[1]  # index name
-        is_auto_index = idx[2]  # origin: 'c' = constraint, 'u' = unique, 'pk' = primary key, 'c' = auto
-        
+        is_auto_index = idx[
+            2
+        ]  # origin: 'c' = constraint, 'u' = unique, 'pk' = primary key, 'c' = auto
+
         # Skip auto-indexes created for UNIQUE/PRIMARY KEY constraints
         # These are automatically dropped when the constraint is removed
-        if is_auto_index == 1 or index_name.startswith('sqlite_autoindex_'):
+        if is_auto_index == 1 or index_name.startswith("sqlite_autoindex_"):
             continue
-            
+
         # Get indexed columns
         idx_info = conn.execute(
             sa.text(f"PRAGMA index_info('{index_name}')")
@@ -130,10 +132,10 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "user" in existing_tables:
         user_columns = [col["name"] for col in inspector.get_columns("user")]
-        
+
         if "profile_banner_image_url" not in user_columns:
             op.add_column(
                 "user", sa.Column("profile_banner_image_url", sa.Text(), nullable=True)
@@ -141,7 +143,9 @@ def upgrade() -> None:
         if "timezone" not in user_columns:
             op.add_column("user", sa.Column("timezone", sa.String(), nullable=True))
         if "presence_state" not in user_columns:
-            op.add_column("user", sa.Column("presence_state", sa.String(), nullable=True))
+            op.add_column(
+                "user", sa.Column("presence_state", sa.String(), nullable=True)
+            )
         if "status_emoji" not in user_columns:
             op.add_column("user", sa.Column("status_emoji", sa.String(), nullable=True))
         if "status_message" not in user_columns:

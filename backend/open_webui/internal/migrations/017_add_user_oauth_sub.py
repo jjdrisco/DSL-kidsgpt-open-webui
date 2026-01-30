@@ -52,7 +52,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     try:
         migrator.add_fields("user", oauth_sub=pw.TextField(null=True, unique=True))
     except Exception as e:
-        if "duplicate column" not in str(e).lower() and "already exists" not in str(e).lower():
+        if (
+            "duplicate column" not in str(e).lower()
+            and "already exists" not in str(e).lower()
+        ):
             raise
 
 

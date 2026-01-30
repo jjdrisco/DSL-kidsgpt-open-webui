@@ -708,15 +708,21 @@ async def get_interviewee_whitelist(user=Depends(get_admin_user)):
     try:
         config = get_config()
         # Store whitelist in config under "interviewee_study_id_whitelist"
-        whitelist = config.get("interviewee_study_id_whitelist", INTERVIEWEE_STUDY_ID_WHITELIST)
-        return IntervieweeWhitelistResponse(study_ids=whitelist if isinstance(whitelist, list) else [])
+        whitelist = config.get(
+            "interviewee_study_id_whitelist", INTERVIEWEE_STUDY_ID_WHITELIST
+        )
+        return IntervieweeWhitelistResponse(
+            study_ids=whitelist if isinstance(whitelist, list) else []
+        )
     except Exception as e:
         log.error(f"Error getting interviewee whitelist: {e}")
         # Fallback to environment variable
         return IntervieweeWhitelistResponse(study_ids=INTERVIEWEE_STUDY_ID_WHITELIST)
 
 
-@router.post("/admin/interviewee-whitelist", response_model=IntervieweeWhitelistResponse)
+@router.post(
+    "/admin/interviewee-whitelist", response_model=IntervieweeWhitelistResponse
+)
 async def update_interviewee_whitelist(
     form_data: IntervieweeWhitelistUpdateForm, user=Depends(get_admin_user)
 ):
@@ -727,20 +733,27 @@ async def update_interviewee_whitelist(
     try:
         config = get_config()
         # Update whitelist in config
-        config["interviewee_study_id_whitelist"] = [sid.strip() for sid in form_data.study_ids if sid.strip()]
+        config["interviewee_study_id_whitelist"] = [
+            sid.strip() for sid in form_data.study_ids if sid.strip()
+        ]
         save_config(config)
-        
+
         # Also update environment variable for runtime use
         # Note: This won't persist across restarts, but config will
         import open_webui.env
-        open_webui.env.INTERVIEWEE_STUDY_ID_WHITELIST = config["interviewee_study_id_whitelist"]
-        
-        return IntervieweeWhitelistResponse(study_ids=config["interviewee_study_id_whitelist"])
+
+        open_webui.env.INTERVIEWEE_STUDY_ID_WHITELIST = config[
+            "interviewee_study_id_whitelist"
+        ]
+
+        return IntervieweeWhitelistResponse(
+            study_ids=config["interviewee_study_id_whitelist"]
+        )
     except Exception as e:
         log.error(f"Error updating interviewee whitelist: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update interviewee whitelist"
+            detail="Failed to update interviewee whitelist",
         )
 
 
@@ -769,28 +782,27 @@ async def create_child_account(
     if user.role == "child":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Child accounts cannot create other child accounts"
+            detail="Child accounts cannot create other child accounts",
         )
-    
+
     # Validate parent_id doesn't exist (user is not already a child)
-    if hasattr(user, 'parent_id') and user.parent_id:
+    if hasattr(user, "parent_id") and user.parent_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Child accounts cannot create other accounts"
+            detail="Child accounts cannot create other accounts",
         )
-    
+
     # Check if email already exists
     existing_user = Users.get_user_by_email(form_data.email.lower(), db=db)
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already in use"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use"
         )
-    
+
     # Generate password if not provided
     password = form_data.password or str(uuid.uuid4())
     hashed_password = get_password_hash(password)
-    
+
     # Create auth record
     auth_user = Auths.insert_new_auth(
         email=form_data.email.lower(),
@@ -800,26 +812,26 @@ async def create_child_account(
         role="child",
         db=db,
     )
-    
+
     if not auth_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create child account"
+            detail="Failed to create child account",
         )
-    
+
     # Link child to parent
     updated_user = Users.update_user_by_id(
         auth_user.id,
         {"parent_id": user.id},
         db=db,
     )
-    
+
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to link child account to parent"
+            detail="Failed to link child account to parent",
         )
-    
+
     return updated_user
 
 
@@ -835,14 +847,16 @@ async def get_child_accounts(
     if user.role == "child":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Child accounts cannot view other accounts"
+            detail="Child accounts cannot view other accounts",
         )
-    
+
     # Get all users with parent_id matching current user
     filter_dict = {"query": None}  # We'll filter by parent_id manually
     all_users = Users.get_users(filter=filter_dict, db=db)["users"]
-    
+
     # Filter to only children of this parent
-    child_accounts = [u for u in all_users if hasattr(u, 'parent_id') and u.parent_id == user.id]
-    
+    child_accounts = [
+        u for u in all_users if hasattr(u, "parent_id") and u.parent_id == user.id
+    ]
+
     return child_accounts

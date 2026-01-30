@@ -41,7 +41,8 @@ def _column_exists(database, table: str, column: str) -> bool:
             return any(row[1] == column for row in cursor.fetchall())
         cursor = database.execute_sql(
             "SELECT 1 FROM information_schema.columns "
-            f"WHERE table_name = ? AND column_name = ?", (table, column)
+            f"WHERE table_name = ? AND column_name = ?",
+            (table, column),
         )
         return cursor.fetchone() is not None
     except Exception:

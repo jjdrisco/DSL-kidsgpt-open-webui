@@ -79,7 +79,9 @@ class User(Base):
     consent_given = Column(Boolean, nullable=True, default=False)
 
     # Parent-child account linking
-    parent_id = Column(String, nullable=True)  # For child accounts, links to parent user
+    parent_id = Column(
+        String, nullable=True
+    )  # For child accounts, links to parent user
 
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -650,6 +652,7 @@ class UsersTable:
                 # return UserModel(**user.dict())
         except Exception as e:
             import logging
+
             log = logging.getLogger(__name__)
             log.error(f"Error updating user {id} with data {updated}: {e}")
             print(f"Error updating user {id} with data {updated}: {e}")
@@ -756,7 +759,9 @@ class UsersTable:
             else:
                 return None
 
-    def get_user_by_prolific_pid(self, prolific_pid: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def get_user_by_prolific_pid(
+        self, prolific_pid: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 user = db.query(User).filter_by(prolific_pid=prolific_pid).first()
@@ -764,14 +769,22 @@ class UsersTable:
         except Exception:
             return None
 
-    def update_user_session(self, user_id: str, session_id: str, session_number: int, db: Optional[Session] = None) -> Optional[UserModel]:
+    def update_user_session(
+        self,
+        user_id: str,
+        session_id: str,
+        session_number: int,
+        db: Optional[Session] = None,
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                db.query(User).filter_by(id=user_id).update({
-                    "current_session_id": session_id,
-                    "session_number": session_number,
-                    "updated_at": int(time.time())
-                })
+                db.query(User).filter_by(id=user_id).update(
+                    {
+                        "current_session_id": session_id,
+                        "session_number": session_number,
+                        "updated_at": int(time.time()),
+                    }
+                )
                 db.commit()
                 user = db.query(User).filter_by(id=user_id).first()
                 return UserModel.model_validate(user) if user else None

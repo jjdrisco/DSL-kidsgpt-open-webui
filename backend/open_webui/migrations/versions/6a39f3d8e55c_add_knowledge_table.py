@@ -24,11 +24,11 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "knowledge" in existing_tables:
         print("Knowledge table already exists, skipping creation")
         return
-    
+
     # Creating the 'knowledge' table
     print("Creating knowledge table")
     knowledge_table = op.create_table(
