@@ -96,9 +96,23 @@
 	};
 
 	const navigateToChat = async () => {
-		// Navigate to /parent which should show the chat interface for all user types
-		// Admin users get redirected from / to /admin/users, so use /parent instead
-		window.location.href = '/parent';
+		try {
+			// Try to get the most recent chat and navigate directly to it
+			// This works for all user types including admins
+			const chatList = await getChatList(localStorage.token, 1);
+			
+			if (chatList && chatList.length > 0) {
+				// Navigate directly to the most recent chat
+				window.location.href = `/c/${chatList[0].id}`;
+			} else {
+				// No chats exist, navigate to /parent and let the app handle it
+				window.location.href = '/parent';
+			}
+		} catch (error) {
+			console.error('Error navigating to chat:', error);
+			// Fallback: navigate to /parent
+			window.location.href = '/parent';
+		}
 	};
 
 	onMount(async () => {

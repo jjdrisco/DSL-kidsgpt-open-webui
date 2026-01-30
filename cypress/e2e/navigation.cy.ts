@@ -86,10 +86,8 @@ describe('Navigation', () => {
 			// Verify navigation away from admin settings
 			cy.url({ timeout: 15000 }).should('not.include', '/admin/settings');
 			cy.url().should('not.include', '/exit-survey');
-			// Should be on /parent or a chat page (main chat interface)
-			cy.url({ timeout: 15000 }).should('satisfy', (url) => {
-				return url.includes('/parent') || url.includes('/c/');
-			});
+			// Should be on a chat page (main chat interface) - direct navigation to /c/[id] works for all users
+			cy.url({ timeout: 15000 }).should('include', '/c/');
 		});
 	});
 
@@ -125,10 +123,8 @@ describe('Navigation', () => {
 			
 			// Should be back on chat page (not on admin settings)
 			cy.url({ timeout: 15000 }).should('not.include', '/admin/settings');
-			// Should be on /parent or a chat page (main chat interface)
-			cy.url({ timeout: 15000 }).should('satisfy', (url) => {
-				return url.includes('/parent') || url.includes('/c/');
-			});
+			// Should be on a chat page (main chat interface) - direct navigation to /c/[id] works for all users
+			cy.url({ timeout: 15000 }).should('include', '/c/');
 		});
 	});
 });

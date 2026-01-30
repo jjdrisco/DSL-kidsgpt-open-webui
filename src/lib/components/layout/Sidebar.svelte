@@ -536,10 +536,25 @@
 		const currentPath = $page.url.pathname;
 		const isOnChatPage = currentPath.startsWith('/c/');
 		
-		// If not on a chat page, navigate to /parent which shows the chat interface
-		// Admin users get redirected from / to /admin/users, so use /parent instead
+		// If not on a chat page, try to navigate to an existing chat
 		if (!isOnChatPage) {
-			await goto('/parent');
+			try {
+				// Try to get the most recent chat and navigate directly to it
+				// This works for all user types including admins
+				const chatList = await getChatList(localStorage.token, 1);
+				
+				if (chatList && chatList.length > 0) {
+					// Navigate directly to the most recent chat
+					await goto(`/c/${chatList[0].id}`);
+				} else {
+					// No chats exist, navigate to /parent
+					await goto('/parent');
+				}
+			} catch (error) {
+				console.error('Error navigating to chat:', error);
+				// Fallback: navigate to /parent
+				await goto('/parent');
+			}
 		}
 
 		setTimeout(() => {
