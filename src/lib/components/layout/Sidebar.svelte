@@ -536,9 +536,10 @@
 		const currentPath = $page.url.pathname;
 		const isOnChatPage = currentPath.startsWith('/c/');
 		
-		// If not on a chat page, navigate to root - the app will handle routing appropriately
+		// If not on a chat page, navigate to /parent which shows the chat interface
+		// Admin users get redirected from / to /admin/users, so use /parent instead
 		if (!isOnChatPage) {
-			await goto('/');
+			await goto('/parent');
 		}
 
 		setTimeout(() => {

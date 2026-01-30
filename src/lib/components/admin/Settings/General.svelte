@@ -96,9 +96,9 @@
 	};
 
 	const navigateToChat = async () => {
-		// Navigate to root - the app will handle routing to the appropriate chat interface
-		// This avoids issues with chat creation and ensures proper initialization
-		window.location.href = '/';
+		// Navigate to /parent which should show the chat interface for all user types
+		// Admin users get redirected from / to /admin/users, so use /parent instead
+		window.location.href = '/parent';
 	};
 
 	onMount(async () => {
