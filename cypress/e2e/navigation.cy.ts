@@ -44,7 +44,7 @@ describe('Navigation', () => {
 	});
 
 	context('Settings Navigation', () => {
-		it('should have Open WebUI button in About settings that navigates to home page', () => {
+		it('should have Open WebUI button in Admin Settings General tab that navigates to home page', () => {
 			// Click on the user menu
 			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]').first().click();
 			
@@ -56,37 +56,40 @@ describe('Navigation', () => {
 			
 			// Wait for settings modal to open - look for the modal or settings title
 			cy.contains('Settings', { timeout: 10000 }).should('exist'); // Modal title
-			cy.wait(2000); // Give modal time to fully render
+			cy.wait(1500);
 			
-			// Find About tab - try multiple approaches
-			// First try to find it by role="tab"
+			// For admin users, click on "Admin Settings" link which goes to /admin/settings
+			// It's at the bottom of the settings tabs, might need to scroll
 			cy.get('body').then(($body) => {
-				const aboutTab = $body.find('button[role="tab"]').filter((i, el) => {
-					return Cypress.$(el).text().trim() === 'About';
-				});
-				if (aboutTab.length > 0) {
-					cy.wrap(aboutTab.first()).click({ force: true });
+				const adminSettingsLink = $body.find('a:contains("Admin Settings"), [href="/admin/settings"]');
+				if (adminSettingsLink.length > 0) {
+					cy.wrap(adminSettingsLink.first()).scrollIntoView().click({ force: true });
 				} else {
-					// Fallback: just find any button with "About" text
-					cy.contains('About', { timeout: 10000 }).click({ force: true });
+					// Fallback: use contains
+					cy.contains('Admin Settings', { timeout: 10000 }).scrollIntoView().click({ force: true });
 				}
 			});
 			
-			// Wait for About tab content to load
-			cy.wait(1500);
-			
-			// Verify Open WebUI button exists - it's in the About tab content
-			cy.contains('Open WebUI', { timeout: 10000 }).should('be.visible');
-			
-			// Click on Open WebUI button
-			cy.contains('Open WebUI').click({ force: true });
-			
-			// Wait for navigation
+			// Wait for navigation to admin settings page
+			cy.url({ timeout: 10000 }).should('include', '/admin/settings');
 			cy.wait(1000);
 			
-			// Verify navigation away from settings
-			cy.url({ timeout: 10000 }).should('not.include', '/exit-survey');
-			cy.url().should('not.include', '/settings');
+			// Verify we're on the General tab (default) and Open WebUI button exists
+			cy.contains('Open WebUI', { timeout: 10000 }).should('be.visible');
+			
+			// Click on Open WebUI button - it's now a button with type="button"
+			cy.contains('button', 'Open WebUI').should('be.visible').click({ force: true });
+			
+			// Wait for navigation - give it more time
+			cy.wait(2000);
+			
+			// Verify navigation away from admin settings (should go to chat/parent page)
+			cy.url({ timeout: 15000 }).should('not.include', '/admin/settings');
+			cy.url().should('not.include', '/exit-survey');
+			// Should be on a chat-accessible page (parent or chat route)
+			cy.url().should('satisfy', (url) => {
+				return url.includes('/parent') || url.includes('/c/') || url === 'http://localhost:5173/' || url.includes('?');
+			});
 		});
 	});
 
@@ -100,26 +103,32 @@ describe('Navigation', () => {
 			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]').first().click();
 			cy.wait(500);
 			cy.contains('Settings').should('be.visible').click({ force: true });
-			cy.wait(1500);
+			cy.wait(1000);
 			
-			// Then navigate back using Open WebUI button
-			cy.wait(2000);
+			// Click on Admin Settings to go to admin settings page
 			cy.get('body').then(($body) => {
-				const aboutTab = $body.find('button[role="tab"]').filter((i, el) => {
-					return Cypress.$(el).text().trim() === 'About';
-				});
-				if (aboutTab.length > 0) {
-					cy.wrap(aboutTab.first()).click({ force: true });
+				const adminSettingsLink = $body.find('a:contains("Admin Settings"), [href="/admin/settings"]');
+				if (adminSettingsLink.length > 0) {
+					cy.wrap(adminSettingsLink.first()).scrollIntoView().click({ force: true });
 				} else {
-					cy.contains('About', { timeout: 10000 }).click({ force: true });
+					cy.contains('Admin Settings', { timeout: 10000 }).scrollIntoView().click({ force: true });
 				}
 			});
 			cy.wait(1000);
-			cy.contains('Open WebUI', { timeout: 10000 }).should('be.visible').click({ force: true });
-			cy.wait(1000);
 			
-			// Should be back on home/chat page (not on settings)
-			cy.url({ timeout: 10000 }).should('not.include', '/settings');
+			// Verify we're on admin settings
+			cy.url({ timeout: 10000 }).should('include', '/admin/settings');
+			
+			// Then navigate back using Open WebUI button
+			cy.contains('button', 'Open WebUI', { timeout: 10000 }).should('be.visible').click({ force: true });
+			cy.wait(2000);
+			
+			// Should be back on home/chat page (not on admin settings)
+			cy.url({ timeout: 15000 }).should('not.include', '/admin/settings');
+			// Should be on a chat-accessible page
+			cy.url().should('satisfy', (url) => {
+				return url.includes('/parent') || url.includes('/c/') || url === 'http://localhost:5173/' || url.includes('?');
+			});
 		});
 	});
 });

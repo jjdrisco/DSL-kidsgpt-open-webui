@@ -19,7 +19,9 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Home from '$lib/components/icons/Home.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -810,12 +812,29 @@
 							/>
 						</div>
 					</div>
+
 				</div>
 			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex flex-col gap-3 pt-3">
+		<div class="border-t border-gray-100/30 dark:border-gray-850/30 pt-3">
+			<button
+				type="button"
+				class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium text-sm flex items-center justify-center gap-2 no-underline text-black dark:text-white block text-center"
+				on:click|stopPropagation={async (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					// Navigate to chat page - use window.location for reliable navigation from within form
+					window.location.href = '/parent';
+				}}
+			>
+				<Home className="size-5" strokeWidth="1.5" />
+				<span>Open WebUI</span>
+			</button>
+		</div>
+		<div class="flex justify-end text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
