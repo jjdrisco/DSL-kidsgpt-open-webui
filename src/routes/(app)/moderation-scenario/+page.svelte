@@ -6,6 +6,8 @@
 	import { get } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity, assignScenario, startScenario, completeScenario, skipScenario, abandonScenario, createHighlight, getHighlights, type ScenarioAssignResponse, getAssignmentsForChild, type AssignmentWithScenario } from '$lib/apis/moderation';
 	import { getChildProfileById, getChildProfilesForUser } from '$lib/apis/child-profiles';
 import { finalizeModeration } from '$lib/apis/workflow';
@@ -1186,12 +1188,18 @@ function clearModerationLocalKeys() {
 		return false;
 	}
 
+	// Highlight information interface
+	interface HighlightInfo {
+		text: string;
+		// Offsets removed - highlights now stored as HTML with <mark> elements
+	}
+
 	// Version management interfaces
 	interface ModerationVersion {
 		response: string;
 		strategies: string[];
 		customInstructions: Array<{id: string, text: string}>;
-		highlightedTexts: string[];
+		highlightedTexts: HighlightInfo[];
 		moderationResult: ModerationResponse;
 	}
 
@@ -1200,7 +1208,7 @@ function clearModerationLocalKeys() {
 		versions: ModerationVersion[];
 		currentVersionIndex: number;
 		confirmedVersionIndex: number | null;
-		highlightedTexts1: string[];
+		highlightedTexts1: HighlightInfo[];
 		selectedModerations: Set<string>;
 		customInstructions: Array<{id: string, text: string}>;
 		showOriginal1: boolean;
@@ -1227,6 +1235,9 @@ function clearModerationLocalKeys() {
 		assignment_id?: string; // Backend assignment ID for this scenario
 		scenario_id?: string; // Backend scenario ID
 		assignmentStarted?: boolean; // Whether /start endpoint has been called
+		// HTML storage for highlights (Approach 3)
+		responseHighlightedHTML?: string; // HTML with <mark> elements for response
+		promptHighlightedHTML?: string;   // HTML with <mark> elements for prompt
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -1328,8 +1339,15 @@ function clearModerationLocalKeys() {
 	// First pass data
 	let childPrompt1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][0] : '';
 	let originalResponse1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][1] : '';
-	let highlightedTexts1: string[] = [];
+	let highlightedTexts1: HighlightInfo[] = [];
 	let childPromptHTML: string = '';
+	
+	// HTML storage for highlights (Approach 3)
+	let responseHighlightedHTML: string = ''; // Store HTML with marks embedded for response
+	let promptHighlightedHTML: string = '';   // Store HTML with marks embedded for prompt
+
+	// Hydration guard to avoid DOM mutations before Svelte finishes hydrating
+	let hasHydrated = false;
 	
 	// Text selection UI state
 	let responseContainer1: HTMLElement;
@@ -1489,7 +1507,36 @@ let currentRequestId: number = 0;
 	 *    - NOT saved if user presses "Skip" (sets `highlighted_texts: []`)
 	 *    - Used for moderation session state and restoration
 	 *    - Table: `moderation_session` (backend model: `ModerationSession`)
-	 * 
+	 *
+	 * HIGHLIGHTING IMPLEMENTATION (IN-PLACE TEXT WRAPPING)
+	 *
+	 * Historical context:
+	 * - Earlier versions used offsets + string matching, which were brittle across markdown/rendering changes.
+	 * - Then we tried DOM extraction (`range.extractContents()`), anchors, and block merging for cross-block
+	 *   selections. This caused a long tail of bugs: duplicated highlights, reordered text, missing newlines,
+	 *   highlights mysteriously appearing at the top or bottom of the response, and hydration issues.
+	 *
+	 * Current approach (Approach 3B - in-place wrapping):
+	 * - We work directly on the rendered DOM and:
+	 *   - Walk all text nodes in the active container (prompt or response).
+	 *   - Find only those text nodes that intersect with the current selection range.
+	 *   - For each such node, split it so the selected portion becomes its own `Text` node.
+	 *   - Wrap that selected portion in a `<mark.selection-highlight>` element in-place.
+	 * - We **never**:
+	 *   - Call `extractContents()` or otherwise remove large fragments from the DOM.
+	 *   - Move or recreate block elements (`<p>`, `<li>`, `<h2>`, etc.).
+	 *   - Insert content relative to container roots.
+	 *
+	 * Benefits:
+	 * - Works the same for single-block and cross-block selections.
+	 * - Preserves exact visual order and whitespace/newlines.
+	 * - Eliminates the class of bugs where highlights are duplicated or re-ordered.
+	 *
+	 * Data flow:
+	 * - The DOM is treated as the source of truth for highlight placement.
+	 * - After each mutation, we snapshot just the content HTML (prompt or response) into
+	 *   `promptHighlightedHTML` / `responseHighlightedHTML`, which drives rendering and persistence.
+	 *
 	 * **IMPORTANT:** If user highlights text then presses "Skip":
 	 * - Highlights remain in `selection` table (already saved)
 	 * - `moderation_session.highlighted_texts` is set to empty array `[]`
@@ -1498,30 +1545,317 @@ let currentRequestId: number = 0;
 	function handleTextSelection(event: MouseEvent) {
 		// Only allow highlighting when explicitly enabled (step 1, not loading, not skipped)
 		// This prevents saving to `selection` table during state restoration, after skip, or in steps 2-3
-		if (!isHighlightingEnabled) return;
+		if (!isHighlightingEnabled || !hasHydrated) return;
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
+		// Capture the scenario index at the start to guard against navigation during async operations
+		// This prevents race conditions where highlighting from scenario A overwrites scenario B's state
+		const scenarioAtSelection = selectedScenarioIndex;
+		
 		setTimeout(() => {
+			// Guard: If user navigated to a different scenario, don't proceed with highlighting
+			if (selectedScenarioIndex !== scenarioAtSelection) {
+				console.log('Skipping highlight: scenario changed during selection');
+				return;
+			}
+			
 			const selection = window.getSelection();
 			const selectedText = selection?.toString().trim() || '';
 			
-			if (!selection || selectedText.length === 0) {
+			if (!selection || selectedText.length === 0 || selection.rangeCount === 0) {
 				selectionButtonsVisible1 = false;
 				currentSelection1 = '';
 				return;
 			}
 			
-			currentSelection1 = selectedText;
-			selectionInPrompt = !!promptContainer1 && container === promptContainer1;
+			const range = selection.getRangeAt(0);
 			
-			// Automatically highlight the selected text (no button required)
-			saveSelection();
+			/**
+			 * PROMPT HIGHLIGHTING FIX
+			 * 
+			 * Previously, activeContainer was set using: responseContainer1 || promptContainer1
+			 * This always defaulted to responseContainer1 if it existed, even when the selection
+			 * was in the prompt container. This caused prompt selections to fail the containment
+			 * check and return early without creating highlights.
+			 * 
+			 * Fix: Check which container actually contains the selection using contains() method,
+			 * checking promptContainer1 first, then responseContainer1. This ensures the correct
+			 * container is identified and highlighting works for both prompts and responses.
+			 */
+			// Determine which container actually contains the selection
+			let activeContainer: HTMLElement | null = null;
+			if (promptContainer1 && promptContainer1.contains(range.commonAncestorContainer)) {
+				activeContainer = promptContainer1;
+			} else if (responseContainer1 && responseContainer1.contains(range.commonAncestorContainer)) {
+				activeContainer = responseContainer1;
+			}
 			
-			// Clear the text selection after highlighting (visual cleanup)
-			setTimeout(() => {
+			if (!activeContainer || !activeContainer.contains(range.commonAncestorContainer)) {
+				selectionButtonsVisible1 = false;
+				currentSelection1 = '';
+				return;
+			}
+
+			// Guard: if the selection is entirely inside an existing highlight, skip
+			const startMark = range.startContainer.parentElement?.closest('mark.selection-highlight');
+			const endMark = range.endContainer.parentElement?.closest('mark.selection-highlight');
+			if (startMark && startMark === endMark) {
+				const markRange = document.createRange();
+				markRange.selectNodeContents(startMark);
+				if (
+					range.compareBoundaryPoints(Range.START_TO_START, markRange) >= 0 &&
+					range.compareBoundaryPoints(Range.END_TO_END, markRange) <= 0
+				) {
+					selection.removeAllRanges();
+					return;
+				}
+			}
+			
+			/**
+			 * PREVENT RE-HIGHLIGHTING GUARD (cross-block)
+			 * 
+			 * Clone the selection contents and check for existing marks. If any are present,
+			 * skip highlighting to avoid deleting/altering already-highlighted content.
+			 */
+			try {
+				const cloneRange = range.cloneRange();
+				const cloneFragment = cloneRange.cloneContents(); // non-destructive
+				const hasExistingMark = cloneFragment.querySelector('mark.selection-highlight');
+				if (hasExistingMark) {
+					selection.removeAllRanges();
+					return;
+				}
+			} catch (e) {
+				console.warn('Guard check failed when cloning selection:', e);
+			}
+			
+			// Find content element (same logic as later in the function)
+			let contentElement: HTMLElement | null = null;
+			if (activeContainer === responseContainer1) {
+				contentElement = activeContainer.querySelector('.response-text') as HTMLElement;
+			} else if (activeContainer === promptContainer1) {
+				contentElement = activeContainer.querySelector('p') as HTMLElement;
+			}
+			
+			// Find all existing marks in the content element and unwrap any that overlap with the new selection
+			if (contentElement) {
+				const existingMarks = Array.from(contentElement.querySelectorAll('mark.selection-highlight'));
+				const rangeClone = range.cloneRange();
+				
+				// Unwrap any marks that overlap with the new selection
+				existingMarks.forEach(mark => {
+					try {
+						if (rangeClone.intersectsNode(mark)) {
+							// Unwrap: replace mark with its children using document fragment
+							const parent = mark.parentNode;
+							if (parent) {
+								const fragment = document.createDocumentFragment();
+								while (mark.firstChild) {
+									fragment.appendChild(mark.firstChild);
+								}
+								parent.replaceChild(fragment, mark);
+								parent.normalize();
+							}
+						}
+					} catch (e) {
+						// If intersectsNode fails (e.g., detached node), skip this mark
+						console.warn('Error checking mark overlap:', e);
+					}
+				});
+			}
+			
+			/**
+			 * IN-PLACE TEXT NODE WRAPPING
+			 * 
+			 * Instead of extracting and re-inserting content (which caused position/ordering bugs),
+			 * we wrap text nodes IN PLACE without ever removing them from the DOM.
+			 * 
+			 * This approach:
+			 * - Never extracts content from the DOM
+			 * - Never moves block elements
+			 * - Works identically for single-block and cross-block selections
+			 * - Preserves exact positions and document structure
+			 */
+			try {
+				// The container to search within (use contentElement if available, else activeContainer)
+				const searchRoot = contentElement || activeContainer;
+				
+				// Collect all text nodes that intersect with the selection range
+				interface TextNodeInfo {
+					node: Text;
+					startOffset: number;
+					endOffset: number;
+				}
+				const textNodesInRange: TextNodeInfo[] = [];
+				
+				const walker = document.createTreeWalker(
+					searchRoot,
+					NodeFilter.SHOW_TEXT,
+					null
+				);
+				
+				let textNode: Text | null;
+				while ((textNode = walker.nextNode() as Text | null)) {
+					// Skip empty text nodes
+					if (!textNode.textContent || textNode.textContent.length === 0) {
+						continue;
+					}
+					
+					// Skip nodes inside existing marks
+					if (textNode.parentElement?.closest('mark.selection-highlight')) {
+						continue;
+					}
+					
+					// Create a range for this text node to compare with selection
+					const nodeRange = document.createRange();
+					nodeRange.selectNodeContents(textNode);
+					
+					// Check if this text node intersects with the selection range
+					// Node is entirely after selection - skip
+					if (range.compareBoundaryPoints(Range.END_TO_START, nodeRange) >= 0) {
+						continue;
+					}
+					// Node is entirely before selection - skip
+					if (range.compareBoundaryPoints(Range.START_TO_END, nodeRange) <= 0) {
+						continue;
+					}
+					
+					// This node intersects - calculate the selected portion
+					let startOffset = 0;
+					let endOffset = textNode.length;
+					
+					// If selection starts within this node
+					if (range.startContainer === textNode) {
+						startOffset = range.startOffset;
+					} else {
+						// Check if selection starts after this node begins
+						const startComparison = range.compareBoundaryPoints(Range.START_TO_START, nodeRange);
+						if (startComparison > 0) {
+							// Selection starts after node begins - but we need to find where
+							// Since selection doesn't start in this node, use 0
+							startOffset = 0;
+						}
+					}
+					
+					// If selection ends within this node
+					if (range.endContainer === textNode) {
+						endOffset = range.endOffset;
+					} else {
+						// Check if selection ends before this node ends
+						const endComparison = range.compareBoundaryPoints(Range.END_TO_END, nodeRange);
+						if (endComparison < 0) {
+							// Selection ends before node ends - use full length
+							endOffset = textNode.length;
+						}
+					}
+					
+					// Only include if there's actual content to highlight
+					const selectedPortion = textNode.textContent.substring(startOffset, endOffset);
+					if (startOffset < endOffset && selectedPortion.trim()) {
+						textNodesInRange.push({ node: textNode, startOffset, endOffset });
+					}
+				}
+				
+				// If no text nodes found, nothing to highlight
+				if (textNodesInRange.length === 0) {
+					selection.removeAllRanges();
+					return;
+				}
+				
+				// Wrap each text node portion IN PLACE (no extraction)
+				// Process in REVERSE order so that splitting earlier nodes doesn't
+				// invalidate the offsets of later nodes
+				for (let i = textNodesInRange.length - 1; i >= 0; i--) {
+					const info = textNodesInRange[i];
+					let targetNode: Text = info.node;
+					const nodeLength = targetNode.length;
+					
+					// Validate offsets are still valid (in case DOM changed)
+					if (info.startOffset >= nodeLength || info.endOffset > nodeLength) {
+						continue;
+					}
+					
+					// Split the text node to isolate the selected portion
+					// Split off the end first (if not selecting to end)
+					if (info.endOffset < nodeLength) {
+						targetNode.splitText(info.endOffset);
+						// targetNode now contains text from 0 to endOffset
+					}
+					
+					// Split off the beginning (if not selecting from start)
+					if (info.startOffset > 0) {
+						targetNode = targetNode.splitText(info.startOffset);
+						// targetNode now contains exactly the selected text
+					}
+					
+					// Now targetNode contains exactly the selected text - wrap it in a mark
+					const mark = document.createElement('mark');
+					mark.className = 'selection-highlight bg-yellow-200 dark:bg-yellow-600';
+					
+					// Insert mark before the text node, then move text node into mark
+					if (targetNode.parentNode) {
+						targetNode.parentNode.insertBefore(mark, targetNode);
+						mark.appendChild(targetNode);
+					}
+				}
+				
+				// Normalize the container to merge adjacent text nodes
+				// This cleans up the splits we made
+				if (searchRoot) {
+					searchRoot.normalize();
+				}
+			} catch (error) {
+				console.error('Error wrapping selection in mark:', error);
 				selection.removeAllRanges();
-			}, 100);
+				return;
+			}
+			
+			// Defer reactive updates to avoid hydration conflicts
+			// Use requestAnimationFrame to ensure DOM is stable before triggering Svelte updates
+			requestAnimationFrame(() => {
+				// Guard: If user navigated to a different scenario, don't save the highlight
+				// This prevents race conditions where old scenario's HTML overwrites new scenario's state
+				if (selectedScenarioIndex !== scenarioAtSelection) {
+					console.log('Skipping highlight save: scenario changed');
+					return;
+				}
+				
+				// Store container's innerHTML after wrapping
+				// Re-query the content element to ensure we have the latest DOM state after mark insertion
+				if (activeContainer === responseContainer1) {
+					// For response, find the div with class "response-text"
+					contentElement = activeContainer.querySelector('.response-text') as HTMLElement;
+				} else if (activeContainer === promptContainer1) {
+					// For prompt, find the <p> tag
+					contentElement = activeContainer.querySelector('p') as HTMLElement;
+				}
+				
+				// Fallback to activeContainer if content element not found
+				const elementToCapture = contentElement || activeContainer;
+				const containerHTML = elementToCapture.innerHTML;
+				
+				// Use activeContainer instead of container to determine which HTML to store
+				console.log('🟠 Saving HTML - scenarioAtSelection:', scenarioAtSelection, 'selectedScenarioIndex:', selectedScenarioIndex, 'containerHTML length:', containerHTML.length);
+				if (activeContainer === promptContainer1) {
+					console.log('🟠 Setting promptHighlightedHTML');
+					promptHighlightedHTML = containerHTML;
+				} else {
+					console.log('🟠 Setting responseHighlightedHTML');
+					responseHighlightedHTML = containerHTML;
+				}
+				
+				currentSelection1 = selectedText;
+				selectionInPrompt = activeContainer === promptContainer1;
+				
+				// Automatically save the selection (stores HTML and saves to backend)
+				saveSelection();
+				
+				// Clear the text selection after highlighting (visual cleanup)
+				setTimeout(() => {
+					selection.removeAllRanges();
+				}, 100);
+			});
 		}, 10);
 	}
 	
@@ -1546,11 +1880,14 @@ let currentRequestId: number = 0;
 		
 		if (!text) return;
 		
-		if (!highlightedTexts1.includes(text)) {
-			// Add to local state array
-			highlightedTexts1 = [...highlightedTexts1, text];
+		// Check if this highlight already exists (by text)
+		const exists = highlightedTexts1.some(h => h.text === text);
+		if (!exists) {
+			// Add to local state array (Approach 3: no offsets, just text)
+			const highlightInfo: HighlightInfo = { text };
+			highlightedTexts1 = [...highlightedTexts1, highlightInfo];
 
-			// Save to new `/moderation/highlights` API with assignment_id and offset tracking
+			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
 				const state = scenarioStates.get(selectedScenarioIndex);
 				const assignmentId = state?.assignment_id;
@@ -1583,21 +1920,14 @@ let currentRequestId: number = 0;
 					return;
 				}
 
-				// Calculate character offsets
-				const targetText = selectionInPrompt ? childPrompt1 : originalResponse1;
-				const startOffset = targetText.indexOf(text);
-				const endOffset = startOffset >= 0 ? startOffset + text.length : undefined;
-
-				// Save to new highlights API
-				await createHighlight(localStorage.token, {
+				// Save to new highlights API (no offsets in Approach 3)
+				const highlightPayload = {
 					assignment_id: assignmentId,
-					selected_text: text,
-					source: selectionInPrompt ? 'prompt' : 'response',
-					start_offset: startOffset >= 0 ? startOffset : undefined,
-					end_offset: endOffset,
-					context: null
-				});
-				console.log('✅ Highlight saved to new API:', { assignmentId, text, startOffset, endOffset });
+					selected_text: highlightInfo.text,
+					source: (selectionInPrompt ? 'prompt' : 'response') as 'prompt' | 'response'
+				};
+				await createHighlight(localStorage.token, highlightPayload);
+				console.log('✅ Highlight saved to new API:', { assignmentId, highlightInfo });
 			} catch (e) {
 				console.error('Failed to persist highlight to highlights API', e);
 				// Fallback to old API on error
@@ -1649,9 +1979,47 @@ let currentRequestId: number = 0;
 	 * saved to `moderation_session.highlighted_texts`, they remain there until
 	 * the session is updated via `completeStep1()` or other save operations.
 	 */
-	function removeHighlight(text: string) {
+	function removeHighlight(highlight: HighlightInfo | string) {
 		// Remove from local state array
-		highlightedTexts1 = highlightedTexts1.filter(t => t !== text);
+		// Support both old string format (for backward compatibility) and new HighlightInfo format
+		const textToRemove = typeof highlight === 'string' ? highlight : highlight.text;
+		highlightedTexts1 = highlightedTexts1.filter(h => h.text !== textToRemove);
+
+		// Determine which container(s) to update
+		// Since we don't know which container the highlight was in, update both if they have stored HTML
+		const updates: Array<{ htmlVar: 'response' | 'prompt'; originalText: string; currentHTML: string }> = [];
+		
+		if (responseHighlightedHTML && originalResponse1) {
+			updates.push({
+				htmlVar: 'response',
+				originalText: originalResponse1,
+				currentHTML: responseHighlightedHTML
+			});
+		}
+		
+		if (promptHighlightedHTML && childPrompt1) {
+			updates.push({
+				htmlVar: 'prompt',
+				originalText: childPrompt1,
+				currentHTML: promptHighlightedHTML
+			});
+		}
+		
+		// Rebuild HTML for each container
+		for (const { htmlVar, originalText } of updates) {
+			// Start with clean HTML (no marks)
+			const cleanHTML = renderMarkdown(originalText);
+			
+			// Re-apply all remaining highlights
+			const updatedHTML = applyHighlightsToHTML(cleanHTML, highlightedTexts1);
+			
+			// Update stored HTML
+			if (htmlVar === 'prompt') {
+				promptHighlightedHTML = updatedHTML;
+			} else {
+				responseHighlightedHTML = updatedHTML;
+			}
+		}
 
 		// Delete from `selection` table (debounced to batch rapid removals)
 		try {
@@ -1660,7 +2028,7 @@ let currentRequestId: number = 0;
 			if (!window.__removeSelectionDebounce) {
 				window.__removeSelectionDebounce = {};
 			}
-			const key = `${scenarioId}:${text}`;
+			const key = `${scenarioId}:${textToRemove}`;
 			clearTimeout(window.__removeSelectionDebounce[key]);
 			window.__removeSelectionDebounce[key] = setTimeout(() => {
 				// POST to `/api/v1/selections/delete_by_text` - deletes from `selection` table
@@ -1670,7 +2038,7 @@ let currentRequestId: number = 0;
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${localStorage.token}`
 					},
-					body: JSON.stringify({ chat_id: scenarioId, selected_text: text, role })
+					body: JSON.stringify({ chat_id: scenarioId, selected_text: textToRemove, role })
 				});
 			}, 250);
 		} catch (e) {
@@ -1678,50 +2046,310 @@ let currentRequestId: number = 0;
 		}
 	}
 	
-	function getHighlightedHTML(text: string, highlights: string[]): string {
-		if (highlights.length === 0) return text;
-		
-		const sortedHighlights = [...highlights].sort((a, b) => b.length - a.length);
-		let processedText = text;
-		const replacements: Array<{search: string, replace: string}> = [];
-		
-		sortedHighlights.forEach((highlight, index) => {
-			const placeholder = `__HIGHLIGHT_${index}__`;
-			const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			replacements.push({
-				search: placeholder,
-				replace: `<mark class="selection-highlight bg-yellow-200 dark:bg-yellow-600">${highlight}</mark>`
-			});
-			const regex = new RegExp(escapedHighlight);
-			processedText = processedText.replace(regex, placeholder);
+	/**
+	 * Extract text from outermost <mark> elements in HTML (for backend data storage only)
+	 * This function extracts text content from outermost marks, ignoring nested marks
+	 */
+	function extractTextFromHighlightedHTML(html: string): string[] {
+		if (!html) return [];
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = html;
+		const marks = Array.from(tempDiv.querySelectorAll('mark.selection-highlight'));
+		const texts: string[] = [];
+		marks.forEach(mark => {
+			// Ensure we only get text from outermost marks if there are nested ones
+			if (!mark.parentElement?.closest('mark.selection-highlight')) {
+				texts.push(mark.textContent || '');
+			}
 		});
+		return texts;
+	}
+
+	/**
+	 * Compute highlight offsets in original markdown text using multiple matching strategies
+	 * @deprecated This function is no longer used in Approach 3 (HTML storage)
+	 */
+	function computeHighlightOffsets(highlightText: string, originalText: string): { startOffset: number; endOffset: number } | null {
+		// Strategy 1: Exact match
+		let startOffset = originalText.indexOf(highlightText);
+		if (startOffset >= 0) {
+			return { startOffset, endOffset: startOffset + highlightText.length };
+		}
 		
-		replacements.forEach(({search, replace}) => {
-			processedText = processedText.replace(search, replace);
-		});
+		// Strategy 2: Normalize whitespace (collapse multiple spaces/newlines)
+		const normalizeWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
+		const normalizedText = normalizeWhitespace(highlightText);
+		const normalizedOriginal = normalizeWhitespace(originalText);
+		const normalizedStart = normalizedOriginal.indexOf(normalizedText);
 		
-		return processedText;
+		if (normalizedStart >= 0) {
+			// Map back to original positions
+			let originalPos = 0;
+			let normalizedPos = 0;
+			
+			// Find start position
+			while (originalPos < originalText.length && normalizedPos < normalizedStart) {
+				if (!/\s/.test(originalText[originalPos])) {
+					normalizedPos++;
+				} else if (originalPos === 0 || !/\s/.test(originalText[originalPos - 1])) {
+					normalizedPos++;
+				}
+				originalPos++;
+			}
+			const mappedStart = originalPos;
+			
+			// Find end position
+			const targetEnd = normalizedStart + normalizedText.length;
+			let endPos = originalPos;
+			while (endPos < originalText.length && normalizedPos < targetEnd) {
+				if (!/\s/.test(originalText[endPos])) {
+					normalizedPos++;
+				} else if (endPos === 0 || !/\s/.test(originalText[endPos - 1])) {
+					normalizedPos++;
+				}
+				endPos++;
+			}
+			
+			// Verify extracted text matches (allowing for whitespace differences)
+			const extracted = normalizeWhitespace(originalText.substring(mappedStart, endPos));
+			if (extracted === normalizedText) {
+				return { startOffset: mappedStart, endOffset: endPos };
+			}
+		}
+		
+		// Strategy 3: Remove all whitespace (fuzzy match)
+		const removeWhitespace = (str: string) => str.replace(/\s+/g, '');
+		const textNoWS = removeWhitespace(highlightText);
+		const originalNoWS = removeWhitespace(originalText);
+		const fuzzyStart = originalNoWS.indexOf(textNoWS);
+		
+		if (fuzzyStart >= 0) {
+			// Map back to original positions
+			let originalPos = 0;
+			let noWSPos = 0;
+			
+			// Find start
+			while (originalPos < originalText.length && noWSPos < fuzzyStart) {
+				if (!/\s/.test(originalText[originalPos])) {
+					noWSPos++;
+				}
+				originalPos++;
+			}
+			const mappedStart = originalPos;
+			
+			// Find end
+			const targetEnd = fuzzyStart + textNoWS.length;
+			while (originalPos < originalText.length && noWSPos < targetEnd) {
+				if (!/\s/.test(originalText[originalPos])) {
+					noWSPos++;
+				}
+				originalPos++;
+			}
+			
+			// Verify match is reasonable (not too long)
+			if (originalPos - mappedStart <= highlightText.length * 2) {
+				return { startOffset: mappedStart, endOffset: originalPos };
+			}
+		}
+		
+		return null;  // Could not find match
+	}
+
+	/**
+	 * Render markdown text to HTML (without highlights)
+	 * Used for displaying markdown-formatted text in moderation responses
+	 */
+	function renderMarkdown(text: string): string {
+		if (!text) return '';
+		try {
+			const html = marked.parse(text);
+			return DOMPurify.sanitize(html);
+		} catch (error) {
+			console.error('Error rendering markdown:', error);
+			return text; // Fallback to plain text on error
+		}
+	}
+
+	/**
+	 * Helper function to find text nodes containing a specific text using TreeWalker
+	 * Returns array of text nodes that contain parts of the target text
+	 */
+	function findTextNodesInRange(root: Node, targetText: string): Text[] {
+		const nodes: Text[] = [];
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+		let node: Text | null;
+		let plainText = '';
+
+		// First pass: collect all text nodes and build plain text map
+		while ((node = walker.nextNode() as Text | null)) {
+			if (node.parentElement?.closest('mark.selection-highlight')) {
+				continue; // Skip nodes already inside highlights
+			}
+			plainText += node.textContent || '';
+			nodes.push(node);
+		}
+
+		// Find target text in plain text
+		const targetIndex = plainText.indexOf(targetText);
+		if (targetIndex === -1) {
+			return []; // Text not found
+		}
+
+		// Second pass: identify nodes that contain the target text
+		const result: Text[] = [];
+		let currentPos = 0;
+		for (let i = 0; i < nodes.length; i++) {
+			const node = nodes[i];
+			const nodeText = node.textContent || '';
+			const nodeStart = currentPos;
+			const nodeEnd = currentPos + nodeText.length;
+			currentPos = nodeEnd;
+
+			// Check if this node overlaps with the target range
+			if (nodeEnd > targetIndex && nodeStart < targetIndex + targetText.length) {
+				result.push(node);
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Apply highlights to HTML by wrapping matching text in <mark> elements
+	 * Uses TreeWalker pattern similar to existing selection logic
+	 * @param html - HTML string to apply highlights to
+	 * @param highlights - Array of highlight info objects containing text to highlight
+	 * @returns HTML string with highlights applied
+	 */
+	function applyHighlightsToHTML(html: string, highlights: HighlightInfo[]): string {
+		if (!html || highlights.length === 0) return html;
+		
+		// Parse HTML into temporary DOM
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = html;
+		
+		// Sort highlights by length (longest first) to avoid nested replacements
+		const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
+		
+		// Apply each highlight
+		for (const highlight of sortedHighlights) {
+			const targetText = highlight.text.trim();
+			if (!targetText) continue;
+			
+			// Use TreeWalker to find text nodes (similar to findTextNodesInRange)
+			const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
+			let node: Text | null;
+			
+			while ((node = walker.nextNode() as Text | null)) {
+				// Skip nodes already inside marks
+				if (node.parentElement?.closest('mark.selection-highlight')) {
+					continue;
+				}
+				
+				const nodeText = node.textContent || '';
+				const idx = nodeText.indexOf(targetText);
+				
+				if (idx !== -1) {
+					// Split text node and wrap target text with <mark> element
+					// (similar to handleTextSelection logic)
+					const mark = document.createElement('mark');
+					mark.className = 'selection-highlight bg-yellow-200 dark:bg-yellow-600';
+					mark.textContent = targetText;
+					
+					const before = node.splitText(idx);
+					before.splitText(targetText.length);
+					before.parentNode?.replaceChild(mark, before);
+					
+					// Normalize after modification
+					tempDiv.normalize();
+					break; // Only wrap first occurrence of each highlight
+				}
+			}
+		}
+		
+		return tempDiv.innerHTML;
+	}
+
+	/**
+	 * Render markdown text to HTML (simplified - highlights are now stored as HTML directly)
+	 * @deprecated In Approach 3, highlights are stored as HTML directly, so this function just renders markdown.
+	 * Use stored HTML (responseHighlightedHTML/promptHighlightedHTML) directly for display.
+	 */
+	function renderMarkdownWithHighlights(text: string, highlights: HighlightInfo[]): string {
+		// Approach 3: Highlights are stored as HTML directly, so we just render markdown
+		// The stored HTML (responseHighlightedHTML/promptHighlightedHTML) should be used directly for display
+		return renderMarkdown(text);
+	}
+
+	/**
+	 * Get highlighted HTML - Approach 3: Use stored HTML directly if available, otherwise render markdown
+	 * @deprecated In Approach 3, use stored HTML (responseHighlightedHTML/promptHighlightedHTML) directly
+	 */
+	function getHighlightedHTML(text: string, highlights: HighlightInfo[]): string {
+		// Approach 3: Just render markdown - highlights are stored as HTML directly
+		return renderMarkdown(text);
 	}
 	
+	// Reactive statement for response HTML - Approach 3: Use stored HTML directly
 	$: response1HTML = (() => {
+		console.log('🔴 response1HTML computing:', {
+			selectedScenarioIndex,
+			hasResponseHighlightedHTML: !!responseHighlightedHTML,
+			responseHighlightedHTMLLength: responseHighlightedHTML?.length || 0,
+			responseHighlightedHTMLPreview: responseHighlightedHTML?.substring(0, 100) || '',
+			showInitialDecisionPane,
+			initialDecisionStep,
+			showOriginal1,
+			currentVersionIndex,
+			versionsLength: versions.length,
+			originalResponse1Preview: originalResponse1?.substring(0, 50) || ''
+		});
+		
+		// Use stored HTML if available (with marks already embedded)
+		if (responseHighlightedHTML) {
+			console.log('🔴 Using responseHighlightedHTML');
+			return responseHighlightedHTML;
+		}
+		// Fall back to rendered markdown if no stored HTML
 		// Always show original with highlights when in Step 1 of initial decision pane
 		if (showInitialDecisionPane && initialDecisionStep === 1) {
-			return getHighlightedHTML(originalResponse1, highlightedTexts1);
+			console.log('🔴 Using renderMarkdown (step 1)');
+			return renderMarkdown(originalResponse1);
 		}
 		if (showOriginal1) {
-			return getHighlightedHTML(originalResponse1, highlightedTexts1);
+			console.log('🔴 Using renderMarkdown (showOriginal1)');
+			return renderMarkdown(originalResponse1);
 		}
 		if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
+			console.log('🔴 Using versions[currentVersionIndex].response');
 			return versions[currentVersionIndex].response;
 		}
-		return getHighlightedHTML(originalResponse1, highlightedTexts1);
+		console.log('🔴 Using renderMarkdown (default fallback)');
+		return renderMarkdown(originalResponse1);
 	})();
 	
 	// Ensure original is shown during Step 1 for highlighting
 	// showOriginal1 is now derived via reactive statement above
 
-	// Highlighted Prompt HTML
-	$: childPromptHTML = getHighlightedHTML(childPrompt1, highlightedTexts1);
+	// Highlighted Prompt HTML - Approach 3: Use stored HTML directly
+	$: childPromptHTML = (() => {
+		console.log('🔵 childPromptHTML computing:', {
+			selectedScenarioIndex,
+			hasPromptHighlightedHTML: !!promptHighlightedHTML,
+			promptHighlightedHTMLLength: promptHighlightedHTML?.length || 0,
+			promptHighlightedHTMLPreview: promptHighlightedHTML?.substring(0, 100) || '',
+			childPrompt1Preview: childPrompt1?.substring(0, 50) || ''
+		});
+		
+		// Use stored HTML if available (with marks already embedded)
+		if (promptHighlightedHTML) {
+			console.log('🔵 Using promptHighlightedHTML');
+			return promptHighlightedHTML;
+		}
+		// Fall back to rendered markdown if no stored HTML
+		console.log('🔵 Using renderMarkdown (default fallback)');
+		return renderMarkdown(childPrompt1);
+	})();
 
 	// Timer management functions
 	function startTimer(scenarioIndex: number) {
@@ -1834,6 +2462,12 @@ let currentRequestId: number = 0;
 	}
 
 	function saveCurrentScenarioState() {
+		// Guard: Don't save during scenario transitions to prevent saving old state to new scenario index
+		if (isLoadingScenario) {
+			console.log('⚠️ saveCurrentScenarioState skipped - isLoadingScenario is true');
+			return;
+		}
+		
 		// Get existing customPrompt if we're saving state for a custom scenario
 		const existingState = scenarioStates.get(selectedScenarioIndex);
 		const currentState: ScenarioState = {
@@ -1849,6 +2483,8 @@ let currentRequestId: number = 0;
 			attentionCheckPassed,
 			markedNotApplicable,
 			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
+			responseHighlightedHTML: responseHighlightedHTML,
+			promptHighlightedHTML: promptHighlightedHTML,
 			// Unified initial decision flow state (3-step flow)
 			step1Completed,
 			step2Completed,
@@ -1909,10 +2545,21 @@ let currentRequestId: number = 0;
 		
 		console.log('🔍 Loading scenario:', index, 'Prompt:', prompt, 'Is custom:', prompt === CUSTOM_SCENARIO_PROMPT);
 		
+		// Set original content FIRST, before clearing HTML, so reactive statements have correct fallback values
+		// (Custom scenario handling will override these later if needed)
+		childPrompt1 = prompt;
+		originalResponse1 = response;
+		
 		// Reset content variables to defaults at the start to prevent persisting from previous scenario
 		// BUT: Don't reset completion flags yet - wait until after backend check to preserve skip/accept states
 		// This ensures clean content state before loading backend/localStorage data for THIS specific scenario
 		highlightedTexts1 = [];
+		console.log('🟢 Clearing HTML for scenario', index, '- previous values:', {
+			responseHighlightedHTMLLength: responseHighlightedHTML?.length || 0,
+			promptHighlightedHTMLLength: promptHighlightedHTML?.length || 0
+		});
+		responseHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
+		promptHighlightedHTML = '';   // Clear highlighted HTML from previous scenario
 		concernLevel = null;
 		concernReason = '';
 		satisfactionLevel = null;
@@ -2063,7 +2710,23 @@ let currentRequestId: number = 0;
 		if (backendSession) {
 			// Step 1: Restore highlights from backend
 			if (backendSession.highlighted_texts && Array.isArray(backendSession.highlighted_texts) && backendSession.highlighted_texts.length > 0) {
-				highlightedTexts1 = [...backendSession.highlighted_texts];
+			// Handle both legacy string[] format and new dict[] format
+			const firstItem = backendSession.highlighted_texts[0];
+			if (typeof firstItem === 'string') {
+				// Legacy format - convert to HighlightInfo
+				highlightedTexts1 = (backendSession.highlighted_texts as unknown as string[]).map(text => ({
+					text,
+					startOffset: -1,
+					endOffset: -1
+				}));
+			} else {
+				// New format - already objects
+				highlightedTexts1 = (backendSession.highlighted_texts as any[]).map(h => ({
+					text: h.text,
+					startOffset: h.start_offset ?? -1,
+					endOffset: h.end_offset ?? -1
+				}));
+			}
 				step1Completed = true;
 				console.log('✅ Restored highlights from backend:', highlightedTexts1.length);
 			}
@@ -2099,11 +2762,31 @@ let currentRequestId: number = 0;
 			let confirmedSession: any = null;
 			if (versionSessions && versionSessions.length > 0) {
 				const { versions: restoredVersions, confirmedIndex, confirmedSession: foundConfirmedSession } = versionSessions.reduce((acc: any, session: any) => {
+					// Handle both legacy string[] format and new dict[] format for highlighted_texts
+					let highlightedTexts: HighlightInfo[] = [];
+					if (session.highlighted_texts && Array.isArray(session.highlighted_texts) && session.highlighted_texts.length > 0) {
+						const firstItem = session.highlighted_texts[0];
+						if (typeof firstItem === 'string') {
+							// Legacy format - convert to HighlightInfo
+							highlightedTexts = (session.highlighted_texts as unknown as string[]).map(text => ({
+								text,
+								startOffset: -1,
+								endOffset: -1
+							}));
+						} else {
+							// New format - already objects
+							highlightedTexts = (session.highlighted_texts as any[]).map(h => ({
+								text: h.text,
+								startOffset: h.start_offset ?? -1,
+								endOffset: h.end_offset ?? -1
+							}));
+						}
+					}
 					const version = {
 						response: session.refactored_response || '',
 						strategies: session.strategies || [],
 						customInstructions: (session.custom_instructions || []).map((text: string, idx: number) => ({ id: `custom_${idx}`, text })),
-						highlightedTexts: session.highlighted_texts || [],
+						highlightedTexts,
 						moderationResult: {} as ModerationResponse // ModerationResult may need to be reconstructed if stored
 					};
 					acc.versions.push(version);
@@ -2203,8 +2886,27 @@ let currentRequestId: number = 0;
 		const restoreFromLocalStorageIfMissing = (savedState: ScenarioState | undefined, backendProvided: Set<string>) => {
 			if (!savedState) return;
 			
-			// Restore fields only if backend didn't provide them
-			if (!backendProvided.has('highlightedTexts1') && savedState.highlightedTexts1?.length > 0) {
+			// Restore HTML fields only if backend didn't provide them
+			if (!backendProvided.has('responseHighlightedHTML') && savedState.responseHighlightedHTML) {
+				console.log('🟡 Restoring responseHighlightedHTML from savedState for scenario', index, '- length:', savedState.responseHighlightedHTML.length);
+				responseHighlightedHTML = savedState.responseHighlightedHTML;
+			} else {
+				console.log('🟡 NOT restoring responseHighlightedHTML - backendProvided:', backendProvided.has('responseHighlightedHTML'), 'savedState has HTML:', !!savedState.responseHighlightedHTML);
+			}
+			if (!backendProvided.has('promptHighlightedHTML') && savedState.promptHighlightedHTML) {
+				console.log('🟡 Restoring promptHighlightedHTML from savedState for scenario', index, '- length:', savedState.promptHighlightedHTML.length);
+				promptHighlightedHTML = savedState.promptHighlightedHTML;
+			} else {
+				console.log('🟡 NOT restoring promptHighlightedHTML - backendProvided:', backendProvided.has('promptHighlightedHTML'), 'savedState has HTML:', !!savedState.promptHighlightedHTML);
+			}
+			
+			// Extract highlighted texts from HTML if HTML was restored
+			if ((responseHighlightedHTML || promptHighlightedHTML) && (!backendProvided.has('responseHighlightedHTML') || !backendProvided.has('promptHighlightedHTML'))) {
+				const responseTexts = extractTextFromHighlightedHTML(responseHighlightedHTML);
+				const promptTexts = extractTextFromHighlightedHTML(promptHighlightedHTML);
+				highlightedTexts1 = [...responseTexts, ...promptTexts].map(t => ({ text: t }));
+			} else if (!backendProvided.has('highlightedTexts1') && savedState.highlightedTexts1?.length > 0) {
+				// Fallback: restore from highlightedTexts1 if HTML not available
 				highlightedTexts1 = [...savedState.highlightedTexts1];
 			}
 			
@@ -2300,11 +3002,13 @@ let currentRequestId: number = 0;
 			markedNotApplicable = false;
 		}
 		
-		// Only set childPrompt1 if it wasn't already set for a custom scenario
-		if (!(prompt === CUSTOM_SCENARIO_PROMPT && customScenarioGenerated && customScenarioPrompt)) {
-			childPrompt1 = prompt;
+		// Only override childPrompt1/originalResponse1 for custom scenarios (regular scenarios were set at start)
+		// Custom scenarios need special handling because they use customScenarioPrompt instead of the marker
+		if (prompt === CUSTOM_SCENARIO_PROMPT && customScenarioGenerated && customScenarioPrompt) {
+			childPrompt1 = customScenarioPrompt;
 			originalResponse1 = response;
 		}
+		// Otherwise, childPrompt1 and originalResponse1 were already set at the start of loadScenario
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
 		
@@ -2539,7 +3243,7 @@ function cancelReset() {}
 					concern_level: stepData.concern_level,
 					strategies: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].strategies : [],
 					custom_instructions: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].customInstructions.map(c => c.text) : [],
-					highlighted_texts: [...highlightedTexts1],
+					highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 					refactored_response: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].response : undefined,
 					is_final_version: true,
 						decided_at: Date.now(),
@@ -2632,7 +3336,7 @@ function cancelReset() {}
 							initial_decision: undefined,
 							strategies: [],
 							custom_instructions: [],
-							highlighted_texts: [...highlightedTexts1],
+							highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 							refactored_response: undefined,
 							is_final_version: false,
 							is_attention_check: true,
@@ -2641,7 +3345,7 @@ function cancelReset() {}
 						});
 						
 						// Show success message
-						toast.success('✓ Passed attention check! Moving to next scenario...');
+						toast.success('✓ Passed attention check!');
 						
 						// Mark scenario as completed with all necessary flags
 						// Scenario completion is now tracked via confirmedVersionIndex
@@ -2651,15 +3355,6 @@ function cancelReset() {}
 						
 						// Save state to localStorage so it persists when navigating back
 						saveCurrentScenarioState();
-						
-						// Navigate to next scenario after a brief delay
-						setTimeout(() => {
-							if (selectedScenarioIndex < scenarioList.length - 1) {
-								loadScenario(selectedScenarioIndex + 1, false);
-							} else {
-								toast.info('You have completed all scenarios!');
-							}
-						}, 1000);
 					} catch (e) {
 						console.error('Failed to save attention check status:', e);
 						toast.error('Failed to save attention check status');
@@ -2885,7 +3580,7 @@ function cancelReset() {}
 	 * 
 	 * **When skipped=false:**
 	 *   - **VALIDATES**: Requires at least one highlight (highlightedTexts1.length > 0)
-	 *   - Saves highlighted_texts: [...highlightedTexts1] (all highlights as JSON array)
+	 *   - Saves highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })) (all highlights as JSON array)
 	 *   - No step 2-3 data saved yet
 	 * 
 	 * @param {boolean} skipped - If true, marks scenario as not applicable and skips all remaining steps
@@ -2976,7 +3671,7 @@ function cancelReset() {}
 					initial_decision: undefined, // No decision yet, just saving highlights
 					strategies: [],
 					custom_instructions: [],
-					highlighted_texts: [...highlightedTexts1], // Save all highlights as JSON array to `moderation_session` table
+					highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })), // Save all highlights as JSON array to `moderation_session` table
 					refactored_response: undefined,
 					is_final_version: false,
 					highlights_saved_at: Date.now(),
@@ -3069,7 +3764,7 @@ function cancelReset() {}
 				decided_at: Date.now(),
 				strategies: [],
 				custom_instructions: [],
-				highlighted_texts: [...highlightedTexts1],
+				highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 				refactored_response: undefined,
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
@@ -3080,15 +3775,6 @@ function cancelReset() {}
 		} catch (e) {
 			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
-		}
-		
-		// Navigate to next scenario if available
-		if (selectedScenarioIndex < scenarioList.length - 1) {
-			setTimeout(() => {
-				loadScenario(selectedScenarioIndex + 1, false);
-			}, 500);
-		} else {
-			toast.success('All scenarios completed!');
 		}
 	}
 	
@@ -3159,7 +3845,7 @@ function cancelReset() {}
 				custom_instructions: currentVersionIndex >= 0 && versions[currentVersionIndex]
 					? versions[currentVersionIndex].customInstructions.map(c => c.text)
 					: [],
-				highlighted_texts: [...highlightedTexts1],
+				highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 				refactored_response: currentVersionIndex >= 0 && versions[currentVersionIndex]
 					? versions[currentVersionIndex].response
 					: undefined,
@@ -3177,15 +3863,6 @@ function cancelReset() {}
 				step3Completed = true;
 				// UI visibility is now derived, no need to set directly
 				saveCurrentScenarioState();
-				
-				// Navigate to next scenario if available
-				if (selectedScenarioIndex < scenarioList.length - 1) {
-					setTimeout(() => {
-						loadScenario(selectedScenarioIndex + 1, false);
-					}, 500);
-				} else {
-					toast.success('All scenarios completed!');
-				}
 			}
 		} catch (e) {
 			console.error('Failed to save satisfaction check', e);
@@ -3409,7 +4086,7 @@ function cancelReset() {}
 				childPrompt1,
 				customTexts,
 				originalResponse1,  // Pass original response for refactoring
-				highlightedTexts1,  // Pass highlighted texts
+				highlightedTexts1.map(h => h.text),  // Pass highlighted texts
 				childAge  // Pass child's age for age-appropriate moderation
 			);
 			
@@ -3463,7 +4140,7 @@ function cancelReset() {}
 						concern_level: stepData.concern_level,
 						strategies: [...standardStrategies],
 						custom_instructions: usedCustomInstructions.map(c => c.text), // Convert to string array
-						highlighted_texts: [...highlightedTexts1],
+						highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 						refactored_response: result.refactored_response,
 						is_final_version: false,
 							decided_at: Date.now(),
@@ -3637,6 +4314,7 @@ function cancelReset() {}
 // =================================================================================================
 
 onMount(async () => {
+	hasHydrated = true;
     // Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
     showSidebar.set(false);
     
@@ -4685,7 +5363,7 @@ onMount(async () => {
 											on:click={() => removeHighlight(highlight)}
 											title="Click to remove"
 										>
-											{highlight.length > 30 ? highlight.substring(0, 30) + '...' : highlight}
+											{highlight.text.length > 30 ? highlight.text.substring(0, 30) + '...' : highlight.text}
 											<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 											</svg>
@@ -4788,7 +5466,7 @@ onMount(async () => {
 														on:click={() => removeHighlight(highlight)}
 														title="Click to remove"
 													>
-														{highlight.length > 40 ? highlight.substring(0, 40) + '...' : highlight}
+														{highlight.text.length > 40 ? highlight.text.substring(0, 40) + '...' : highlight.text}
 														<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 														</svg>
