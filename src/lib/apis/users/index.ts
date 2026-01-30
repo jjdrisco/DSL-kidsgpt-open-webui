@@ -559,7 +559,9 @@ export interface IntervieweeWhitelistUpdateForm {
 	study_ids: string[];
 }
 
-export const getIntervieweeWhitelist = async (token: string): Promise<IntervieweeWhitelistResponse> => {
+export const getIntervieweeWhitelist = async (
+	token: string
+): Promise<IntervieweeWhitelistResponse> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/admin/interviewee-whitelist`, {
@@ -623,10 +625,7 @@ export interface CreateChildAccountForm {
 	password?: string;
 }
 
-export const createChildAccount = async (
-	token: string,
-	formData: CreateChildAccountForm
-) => {
+export const createChildAccount = async (token: string, formData: CreateChildAccountForm) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/child`, {

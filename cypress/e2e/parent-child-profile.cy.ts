@@ -24,9 +24,14 @@ describe('Parent /parent/child-profile', () => {
 			}
 		});
 		// Wait for auth form (loaded + config); email field when not in LDAP mode
-		cy.get('input#email, input[autocomplete="email"]', { timeout: 15000 }).first().clear().type(EMAIL);
+		cy.get('input#email, input[autocomplete="email"]', { timeout: 15000 })
+			.first()
+			.clear()
+			.type(EMAIL);
 		cy.get('input[type="password"]').first().clear().type(PASSWORD);
-		cy.get('button').contains(/sign in/i).click();
+		cy.get('button')
+			.contains(/sign in/i)
+			.click();
 		cy.url({ timeout: 15000 }).should('satisfy', (u: string) =>
 			['/parent', '/', '/kids/profile', '/auth'].some((p) => u.includes(p))
 		);
@@ -58,7 +63,10 @@ describe('Parent /parent/child-profile', () => {
 		cy.get('input#childName').type('ParentTest');
 		cy.get('select#childAge').select('12 years old');
 		cy.get('select#childGender').select('Male');
-		cy.get('form').contains(/save|create|add/i).first().click();
+		cy.get('form')
+			.contains(/save|create|add/i)
+			.first()
+			.click();
 
 		cy.url({ timeout: 6000 }).should('include', '/parent');
 	});

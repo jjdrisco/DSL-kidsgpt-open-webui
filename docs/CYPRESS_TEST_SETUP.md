@@ -18,6 +18,7 @@ This document provides instructions for setting up and running Cypress end-to-en
 ## Installation
 
 1. **Install Node Dependencies**:
+
    ```bash
    npm install --legacy-peer-deps
    ```
@@ -44,6 +45,7 @@ PORT=8080 python -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8080
 ```
 
 Verify backend is running:
+
 ```bash
 curl http://localhost:8080/health
 ```
@@ -59,6 +61,7 @@ npm run dev
 Note the port Vite prints (often `http://localhost:5173` or `5174` if 5173 is in use).
 
 Verify frontend is running:
+
 ```bash
 curl http://localhost:5173
 ```
@@ -66,10 +69,12 @@ curl http://localhost:5173
 ## Test Account Setup
 
 The tests require a test account in the backend. Default credentials:
+
 - **Email**: `jjdrisco@ucsd.edu`
 - **Password**: `0000`
 
 You can override these with environment variables:
+
 - `INTERVIEWEE_EMAIL` / `INTERVIEWEE_PASSWORD`
 - `TEST_EMAIL` / `TEST_PASSWORD`
 
@@ -122,7 +127,8 @@ The `workflow.cy.ts` test suite covers:
 
 **Error**: `Missing X server or $DISPLAY`
 
-**Solution**: 
+**Solution**:
+
 - Install system dependencies (see Prerequisites)
 - Use `xvfb-run -a` wrapper for headless execution
 - Or set `DISPLAY=:99` and start a virtual display
@@ -131,7 +137,8 @@ The `workflow.cy.ts` test suite covers:
 
 **Error**: `Expected to find element: input#email, but never found it`
 
-**Solution**: 
+**Solution**:
+
 - Ensure frontend is running on the port specified in `CYPRESS_baseUrl`
 - Ensure backend is running on port 8080
 - Check that Vite proxy is correctly forwarding `/api` requests to backend
@@ -141,6 +148,7 @@ The `workflow.cy.ts` test suite covers:
 **Error**: `401 Unauthorized` or `403 Forbidden`
 
 **Solution**:
+
 - Verify test account exists in backend
 - Check that credentials match `INTERVIEWEE_EMAIL`/`INTERVIEWEE_PASSWORD` or defaults
 - Ensure token is being retrieved from localStorage after login
@@ -149,7 +157,8 @@ The `workflow.cy.ts` test suite covers:
 
 **Error**: `ERESOLVE could not resolve` during `npm install`
 
-**Solution**: 
+**Solution**:
+
 - Use `npm install --legacy-peer-deps` as documented
 - This is expected due to @tiptap version conflicts
 - Ensure you're using Node.js v20.x for best compatibility
@@ -159,6 +168,7 @@ The `workflow.cy.ts` test suite covers:
 **Error**: Cypress crashes with `node:internal/modules/run_main` errors on Node.js v22
 
 **Solution**:
+
 - **Use Node.js v20.x instead** - Cypress has better compatibility with Node.js v20
 - Install Node.js v20 using nvm: `nvm install 20 && nvm use 20`
 - Then reinstall dependencies: `npm install --legacy-peer-deps`
@@ -173,6 +183,7 @@ For CI/CD pipelines, ensure:
 4. Use `xvfb-run -a` for headless execution on Linux
 
 Example CI script:
+
 ```bash
 #!/bin/bash
 set -e
@@ -185,7 +196,7 @@ cd backend && ./start.sh &
 BACKEND_PID=$!
 cd ..
 
-# Start frontend in background  
+# Start frontend in background
 npm run dev &
 FRONTEND_PID=$!
 

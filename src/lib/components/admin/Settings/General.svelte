@@ -100,7 +100,7 @@
 			// Try to get the most recent chat and navigate directly to it
 			// This works for all user types including admins
 			const chatList = await getChatList(localStorage.token, 1);
-			
+
 			if (chatList && chatList.length > 0) {
 				// Navigate directly to the most recent chat
 				window.location.href = `/c/${chatList[0].id}`;
@@ -834,7 +834,6 @@
 							/>
 						</div>
 					</div>
-
 				</div>
 			</div>
 		{/if}
@@ -857,11 +856,12 @@
 			</button>
 		</div>
 		<div class="flex justify-end text-sm font-medium">
-		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+			<button
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				type="submit"
+			>
+				{$i18n.t('Save')}
+			</button>
+		</div>
 	</div>
 </form>

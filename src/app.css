@@ -654,10 +654,10 @@ input[type='number'] {
 
 /* KidsGPT Gradient Background Styles */
 :root {
-	--columbia-blue: #D2E9FA;
-	--columbia-blue-2: #CFE1FA;
-	--mimi-pink: #FED4DC;
-	--mimi-pink-2: #FEDEE4;
+	--columbia-blue: #d2e9fa;
+	--columbia-blue-2: #cfe1fa;
+	--mimi-pink: #fed4dc;
+	--mimi-pink-2: #fedee4;
 
 	/* Theme tokens aligned with system prompt accents */
 	--color-primary: 56 189 248; /* sky-400 */
@@ -669,14 +669,20 @@ input[type='number'] {
 
 /* Enhanced drop shadow for message input box */
 .message-input-container {
-	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 6px 20px rgba(0, 0, 0, 0.1), 0 3px 12px rgba(0, 0, 0, 0.08) !important;
+	box-shadow:
+		0 12px 40px rgba(0, 0, 0, 0.15),
+		0 6px 20px rgba(0, 0, 0, 0.1),
+		0 3px 12px rgba(0, 0, 0, 0.08) !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	z-index: 10;
 	position: relative;
 }
 
 .dark .message-input-container {
-	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3), 0 3px 12px rgba(0, 0, 0, 0.2) !important;
+	box-shadow:
+		0 12px 40px rgba(0, 0, 0, 0.4),
+		0 6px 20px rgba(0, 0, 0, 0.3),
+		0 3px 12px rgba(0, 0, 0, 0.2) !important;
 	border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -697,7 +703,7 @@ input[type='number'] {
 
 /* Selection recording highlight */
 mark.selection-highlight {
-    @apply bg-yellow-200 dark:bg-yellow-800 text-black dark:text-white rounded px-0.5;
+	@apply bg-yellow-200 dark:bg-yellow-800 text-black dark:text-white rounded px-0.5;
 }
 
 .chat-side-bar {
@@ -756,7 +762,7 @@ mark.selection-highlight {
 	right: 0;
 	bottom: 0;
 	z-index: 0;
-	background: 
+	background:
 		radial-gradient(circle at 10% 20%, rgba(255, 99, 132, 0.3) 0%, transparent 50%),
 		radial-gradient(circle at 90% 30%, rgba(54, 162, 235, 0.3) 0%, transparent 50%),
 		radial-gradient(circle at 50% 80%, rgba(153, 102, 255, 0.3) 0%, transparent 50%),
@@ -787,7 +793,7 @@ mark.selection-highlight {
 }
 
 .dark .gradient-background {
-	background: 
+	background:
 		radial-gradient(circle at 10% 20%, rgba(255, 99, 132, 0.18) 0%, transparent 30%),
 		radial-gradient(circle at 90% 30%, rgba(54, 162, 235, 0.18) 0%, transparent 30%),
 		radial-gradient(circle at 50% 80%, rgba(153, 102, 255, 0.22) 0%, transparent 30%),
@@ -801,7 +807,9 @@ mark.selection-highlight {
 	padding: 12px 16px;
 	border-radius: 20px;
 	position: relative;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+	box-shadow:
+		0 4px 12px rgba(0, 0, 0, 0.15),
+		0 2px 8px rgba(0, 0, 0, 0.1);
 	word-break: break-word;
 	z-index: 10;
 	p {
@@ -815,7 +823,10 @@ mark.selection-highlight {
 	border-bottom-right-radius: 4px;
 	margin-left: auto;
 	max-width: 70vw;
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+	box-shadow:
+		0 6px 20px rgba(0, 0, 0, 0.15),
+		0 3px 12px rgba(0, 0, 0, 0.1),
+		0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	* {
 		color: #000000 !important;
@@ -828,7 +839,10 @@ mark.selection-highlight {
 	border-bottom-left-radius: 4px;
 	margin-right: auto;
 	max-width: 70vw;
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+	box-shadow:
+		0 6px 20px rgba(0, 0, 0, 0.15),
+		0 3px 12px rgba(0, 0, 0, 0.1),
+		0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	* {
 		color: #000000 !important;
@@ -836,7 +850,7 @@ mark.selection-highlight {
 }
 
 .dark .assistant-bubble {
-	background-color: #3A246B;
+	background-color: #3a246b;
 	color: white;
 	* {
 		color: white !important;
@@ -844,7 +858,7 @@ mark.selection-highlight {
 }
 
 .dark .user-bubble {
-	background-color: #10498C;
+	background-color: #10498c;
 	color: white;
 	* {
 		color: white !important;
@@ -858,7 +872,9 @@ mark.selection-highlight {
 	border-radius: 20px;
 	padding: 12px 16px;
 	margin-bottom: 8px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1.5px 6px rgba(0,0,0,0.12);
+	box-shadow:
+		0 2px 8px rgba(0, 0, 0, 0.18),
+		0 1.5px 6px rgba(0, 0, 0, 0.12);
 	border-bottom-left-radius: 4px;
 	max-width: 90%;
 	* {
@@ -867,7 +883,7 @@ mark.selection-highlight {
 }
 
 .dark .chat-assistant {
-	background-color: #3A246B;
+	background-color: #3a246b;
 	color: white;
 	* {
 		color: white !important;

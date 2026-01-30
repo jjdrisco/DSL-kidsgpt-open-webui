@@ -1,6 +1,7 @@
 # GitHub Token Permissions Guide for PR Creation
 
 ## Current Token Type
+
 Your token is a **GitHub App Installation Token** (starts with `ghs_`). This type of token has permissions controlled by the GitHub App configuration.
 
 ## Required Permissions for PR Creation
@@ -10,17 +11,18 @@ Your token is a **GitHub App Installation Token** (starts with `ghs_`). This typ
 To allow PR creation, you need to enable the following permissions in your GitHub App:
 
 #### Repository Permissions (Required):
+
 1. **Pull requests: Read and write** ✅ (Currently likely missing or read-only)
    - This is the critical permission needed to create PRs
    - Location: GitHub App Settings → Permissions & events → Repository permissions
 
 2. **Contents: Read and write** (Recommended)
    - Needed for accessing repository content
-   
 3. **Metadata: Read-only** (Always enabled)
    - Basic repository metadata access
 
 #### Account Permissions:
+
 - None required for PR creation
 
 ## Steps to Enable PR Creation
@@ -28,6 +30,7 @@ To allow PR creation, you need to enable the following permissions in your GitHu
 ### Option 1: Update GitHub App Permissions (Recommended)
 
 1. **Go to GitHub App Settings:**
+
    ```
    https://github.com/settings/apps
    ```
@@ -54,6 +57,7 @@ To allow PR creation, you need to enable the following permissions in your GitHu
 If you prefer more control, create a Personal Access Token:
 
 1. **Create a new PAT:**
+
    ```
    https://github.com/settings/tokens/new
    ```
@@ -91,6 +95,7 @@ gh api repos/jjdrisco/DSL-kidsgpt-open-webui/pulls -X POST \
 ## Current Token Status
 
 Your current token (`ghs_ygCHXHzYvz...`) is a GitHub App token that:
+
 - ✅ Can read repository data
 - ✅ Can read PRs
 - ✅ Can check CI status
@@ -100,12 +105,14 @@ Your current token (`ghs_ygCHXHzYvz...`) is a GitHub App token that:
 ## Quick Fix Summary
 
 **For GitHub App:**
+
 1. Go to: https://github.com/settings/apps
 2. Edit your app → Permissions & events
 3. Set "Pull requests" to **"Read and write"**
 4. Reinstall app on repository
 
 **For PAT:**
+
 1. Create token at: https://github.com/settings/tokens/new
 2. Select `repo` scope (classic) or "Pull requests: Read and write" (fine-grained)
 3. Set `GITHUB_TOKEN` environment variable
@@ -113,6 +120,7 @@ Your current token (`ghs_ygCHXHzYvz...`) is a GitHub App token that:
 ## After Enabling Permissions
 
 Once permissions are updated:
+
 1. The token will automatically have new permissions (for GitHub Apps)
 2. You can create PRs using:
    ```bash

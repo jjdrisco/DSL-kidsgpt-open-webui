@@ -12,7 +12,7 @@
    - `INTERVIEWEE_EMAIL` / `INTERVIEWEE_PASSWORD` (kids spec), or
    - `PARENT_EMAIL` / `PARENT_PASSWORD` (parent spec), or
    - `TEST_EMAIL` / `TEST_PASSWORD` (both).  
-   Cypress reads `CYPRESS_*` automatically; for `RUN_CHILD_PROFILE_TESTS` and the above, the project’s `cypress.config.ts` also forwards `RUN_CHILD_PROFILE_TESTS`, `INTERVIEWEE_EMAIL`, etc. from `process.env` when not set via `CYPRESS_*`.
+     Cypress reads `CYPRESS_*` automatically; for `RUN_CHILD_PROFILE_TESTS` and the above, the project’s `cypress.config.ts` also forwards `RUN_CHILD_PROFILE_TESTS`, `INTERVIEWEE_EMAIL`, etc. from `process.env` when not set via `CYPRESS_*`.
 
 ## Run
 
@@ -29,14 +29,14 @@ RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 npx cypress run 
 
 ## Common failures
 
-- **`Expected to find element: input#email, input[autocomplete="email"]`, but never found it**  
-  - Frontend not running on the URL in `CYPRESS_baseUrl`, or  
-  - Backend not running / not reachable: layout’s `getBackendConfig()` can block or fail, and the auth form depends on the app loading.  
+- **`Expected to find element: input#email, input[autocomplete="email"]`, but never found it**
+  - Frontend not running on the URL in `CYPRESS_baseUrl`, or
+  - Backend not running / not reachable: layout’s `getBackendConfig()` can block or fail, and the auth form depends on the app loading.
   - Fix: ensure `npm run dev` and the backend are running, and `CYPRESS_baseUrl` matches the dev server (e.g. `http://localhost:5174` if Vite is on 5174).
 
-- **`expected 500 to be one of [ 200, 400 ]` in `before` (signup)**  
-  - `RUN_CHILD_PROFILE_TESTS` was not passed through, so `registerAdmin` ran and signup returned 500.  
+- **`expected 500 to be one of [ 200, 400 ]` in `before` (signup)**
+  - `RUN_CHILD_PROFILE_TESTS` was not passed through, so `registerAdmin` ran and signup returned 500.
   - Fix: run with `RUN_CHILD_PROFILE_TESTS=1` (or `CYPRESS_RUN_CHILD_PROFILE_TESTS=1`). The repo’s `cypress.config.ts` maps `RUN_CHILD_PROFILE_TESTS` from `process.env` if `CYPRESS_RUN_CHILD_PROFILE_TESTS` is not set.
 
-- **`Cannot read properties of null (reading 'default_locale')`**  
+- **`Cannot read properties of null (reading 'default_locale')`**
   - Addressed in `+layout.svelte` by using `backendConfig?.default_locale` when `getBackendConfig()` fails and `backendConfig` is null.

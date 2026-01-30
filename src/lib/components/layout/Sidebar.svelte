@@ -535,14 +535,14 @@
 		// Check if we're already on a chat page
 		const currentPath = $page.url.pathname;
 		const isOnChatPage = currentPath.startsWith('/c/');
-		
+
 		// If not on a chat page, try to navigate to an existing chat
 		if (!isOnChatPage) {
 			try {
 				// Try to get the most recent chat and navigate directly to it
 				// This works for all user types including admins
 				const chatList = await getChatList(localStorage.token, 1);
-				
+
 				if (chatList && chatList.length > 0) {
 					// Navigate directly to the most recent chat
 					await goto(`/c/${chatList[0].id}`);

@@ -988,23 +988,19 @@ export const getPromptVariables = (user_name, user_location) => {
 };
 
 // Replace known placeholders in a template with runtime values (user, time, locale)
-export const promptTemplate = (
-    template: string,
-    user_name?: string,
-    user_location?: string
-) => {
-    if (!template || typeof template !== 'string') return '';
-    const vars = getPromptVariables(user_name ?? '', user_location ?? '');
-    let out = template;
-    for (const [key, value] of Object.entries(vars)) {
-        try {
-            out = out.replaceAll(key, String(value ?? ''));
-        } catch {
-            // Fallback for older environments without replaceAll
-            out = out.split(key).join(String(value ?? ''));
-        }
-    }
-    return out;
+export const promptTemplate = (template: string, user_name?: string, user_location?: string) => {
+	if (!template || typeof template !== 'string') return '';
+	const vars = getPromptVariables(user_name ?? '', user_location ?? '');
+	let out = template;
+	for (const [key, value] of Object.entries(vars)) {
+		try {
+			out = out.replaceAll(key, String(value ?? ''));
+		} catch {
+			// Fallback for older environments without replaceAll
+			out = out.split(key).join(String(value ?? ''));
+		}
+	}
+	return out;
 };
 
 /**
@@ -1489,9 +1485,9 @@ export const parseJsonValue = (value: string): any => {
 
 async function ensurePDFjsLoaded() {
 	if (!window.pdfjsLib) {
-        const pdfjs = await import('pdfjs-dist');
-        // Vite resolves ?url to an asset URL; use it directly
-        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+		const pdfjs = await import('pdfjs-dist');
+		// Vite resolves ?url to an asset URL; use it directly
+		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 		if (!window.pdfjsLib) {
 			throw new Error('pdfjsLib is required for PDF extraction');
 		}
@@ -1712,20 +1708,23 @@ export const getCodeBlockContents = (content: string): object => {
  * Determine user type based on role and STUDY_ID whitelist.
  * Returns: "interviewee", "parent", "child", "admin", or "user"
  */
-export async function getUserType(user: SessionUser | null, studyIdWhitelist: string[] = []): Promise<string> {
-	if (!user) return "user";
-	
-	if (user.role === "admin") return "admin";
-	if (user.role === "child") return "child";
-	if (user.role === "parent") return "parent";
-	if (user.role === "interviewee") return "interviewee";
-	
+export async function getUserType(
+	user: SessionUser | null,
+	studyIdWhitelist: string[] = []
+): Promise<string> {
+	if (!user) return 'user';
+
+	if (user.role === 'admin') return 'admin';
+	if (user.role === 'child') return 'child';
+	if (user.role === 'parent') return 'parent';
+	if (user.role === 'interviewee') return 'interviewee';
+
 	// For users with role "user", check STUDY_ID against whitelist
 	// Check if user has parent_id (child account)
 	if ((user as any).parent_id) {
-		return "child";
+		return 'child';
 	}
-	
+
 	// If whitelist not provided, try to fetch it (for admin users viewing other users)
 	let whitelist = studyIdWhitelist;
 	if (whitelist.length === 0 && typeof window !== 'undefined' && localStorage.getItem('token')) {
@@ -1738,13 +1737,13 @@ export async function getUserType(user: SessionUser | null, studyIdWhitelist: st
 			console.warn('Failed to fetch whitelist:', e);
 		}
 	}
-	
+
 	// Check STUDY_ID against whitelist
 	const studyId = (user as any).study_id;
 	if (studyId && whitelist.includes(studyId.trim())) {
-		return "interviewee";
+		return 'interviewee';
 	}
-	
+
 	// Default to parent for regular users
-	return "parent";
+	return 'parent';
 }

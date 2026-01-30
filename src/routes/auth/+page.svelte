@@ -22,7 +22,7 @@
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
-import { childProfileSync } from '$lib/services/childProfileSync';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
@@ -48,7 +48,7 @@ import { childProfileSync } from '$lib/services/childProfileSync';
 	// Debug helpers
 	let showFormUI = true; // computed gate for form visibility
 	let showSignupToggle = true; // computed gate for signup toggle visibility
-let signupServerDisabled = false; // when backend rejects signup by policy
+	let signupServerDisabled = false; // when backend rejects signup by policy
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		console.log('[SET SESSION USER] Called with:', { sessionUser, redirectPath });
@@ -73,7 +73,7 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 			// Determine redirect path based on user type
 			if (!redirectPath) {
 				const userType = await getUserType(sessionUser);
-				
+
 				// Route based on user type
 				if (userType === 'parent') {
 					redirectPath = '/parent';
@@ -131,7 +131,9 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 
 			goto(redirectPath);
 			localStorage.removeItem('redirectPath');
-			try { localStorage.setItem('lastUserId', sessionUser.id); } catch {}
+			try {
+				localStorage.setItem('lastUserId', sessionUser.id);
+			} catch {}
 		}
 	};
 
@@ -152,19 +154,23 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 			}
 		}
 
-	const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
-		(error) => {
-			const msg = `${error}`;
-			console.log('[AUTH] signup failed:', msg);
-			if (msg?.toLowerCase().includes('access') || msg?.toLowerCase().includes('prohibited') || msg?.toLowerCase().includes('permission')) {
-				signupServerDisabled = true;
-				toast.error('Sign up is disabled by the server. Please contact your administrator.');
-			} else {
-				toast.error(msg);
+		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
+			(error) => {
+				const msg = `${error}`;
+				console.log('[AUTH] signup failed:', msg);
+				if (
+					msg?.toLowerCase().includes('access') ||
+					msg?.toLowerCase().includes('prohibited') ||
+					msg?.toLowerCase().includes('permission')
+				) {
+					signupServerDisabled = true;
+					toast.error('Sign up is disabled by the server. Please contact your administrator.');
+				} else {
+					toast.error(msg);
+				}
+				return null;
 			}
-			return null;
-		}
-	);
+		);
 
 		await setSessionUser(sessionUser);
 	};
@@ -187,12 +193,12 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 		}
 	};
 
-const prolificAuthHandler = async () => {
+	const prolificAuthHandler = async () => {
 		// Check current URL params first
 		let prolificPid = $page.url.searchParams.get('PROLIFIC_PID');
 		let studyId = $page.url.searchParams.get('STUDY_ID');
 		let sessionId = $page.url.searchParams.get('SESSION_ID');
-		
+
 		// If not in current URL, check the redirect parameter
 		if (!prolificPid || !studyId || !sessionId) {
 			const redirectParam = $page.url.searchParams.get('redirect');
@@ -207,78 +213,78 @@ const prolificAuthHandler = async () => {
 				}
 			}
 		}
-		
+
 		console.log('[PROLIFIC AUTH] Checking params:', { prolificPid, studyId, sessionId });
 		console.log('[PROLIFIC AUTH] Full URL:', $page.url.href);
 		console.log('[PROLIFIC AUTH] Search params:', $page.url.searchParams.toString());
-		
+
 		if (!prolificPid || !studyId || !sessionId) {
 			console.log('[PROLIFIC AUTH] Missing required params, returning false');
 			return false; // Not a Prolific user
 		}
 
 		try {
-		console.log('[PROLIFIC AUTH] Attempting authentication...');
-        const authResponse = await authenticateWithProlific(prolificPid, studyId, sessionId);
-		console.log('[PROLIFIC AUTH] Response:', authResponse);
-			
+			console.log('[PROLIFIC AUTH] Attempting authentication...');
+			const authResponse = await authenticateWithProlific(prolificPid, studyId, sessionId);
+			console.log('[PROLIFIC AUTH] Response:', authResponse);
+
 			if (authResponse) {
-                // Determine if this is a different user or a new session for same user
-                const lastUserId = localStorage.getItem('lastUserId');
-                const lastSessionId = localStorage.getItem('lastProlificSessionId');
+				// Determine if this is a different user or a new session for same user
+				const lastUserId = localStorage.getItem('lastUserId');
+				const lastSessionId = localStorage.getItem('lastProlificSessionId');
 
-                // If brand new user (or switching users), clear ALL workflow keys
-                if (authResponse.is_new_user || !lastUserId || lastUserId !== authResponse.user.id) {
-                    clearAllWorkflowKeysForNewUser();
-                    // Clear old Prolific IDs to prevent conflicts
-                    localStorage.removeItem('prolificPid');
-                    localStorage.removeItem('prolificStudyId');
-                    localStorage.removeItem('prolificSessionId');
-                } else if (lastSessionId !== sessionId) {
-                    // Same user but new SESSION_ID ⇒ reset moderation-only keys
-                    resetModerationKeysForNewSession();
-                }
+				// If brand new user (or switching users), clear ALL workflow keys
+				if (authResponse.is_new_user || !lastUserId || lastUserId !== authResponse.user.id) {
+					clearAllWorkflowKeysForNewUser();
+					// Clear old Prolific IDs to prevent conflicts
+					localStorage.removeItem('prolificPid');
+					localStorage.removeItem('prolificStudyId');
+					localStorage.removeItem('prolificSessionId');
+				} else if (lastSessionId !== sessionId) {
+					// Same user but new SESSION_ID ⇒ reset moderation-only keys
+					resetModerationKeysForNewSession();
+				}
 
-                // Persist token and hydrate full session user
-                localStorage.token = authResponse.token;
-                const sessionUser = await getSessionUser(authResponse.token).catch((error) => {
-                    toast.error(`${error}`);
-                    return null;
-                });
-                if (!sessionUser) {
-                    return false;
-                }
+				// Persist token and hydrate full session user
+				localStorage.token = authResponse.token;
+				const sessionUser = await getSessionUser(authResponse.token).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+				if (!sessionUser) {
+					return false;
+				}
 
-                // Determine redirect path based on Prolific response
-                let prolificRedirectPath = '/';
-                if (authResponse.new_child_id) {
-                    prolificRedirectPath = '/kids/profile';
-                } else {
-                    prolificRedirectPath = $page.url.searchParams.get('redirect') || '/';
-                }
+				// Determine redirect path based on Prolific response
+				let prolificRedirectPath = '/';
+				if (authResponse.new_child_id) {
+					prolificRedirectPath = '/kids/profile';
+				} else {
+					prolificRedirectPath = $page.url.searchParams.get('redirect') || '/';
+				}
 
-                // Store Prolific metadata BEFORE setSessionUser (which clears localStorage)
+				// Store Prolific metadata BEFORE setSessionUser (which clears localStorage)
 				localStorage.setItem('prolificPid', prolificPid);
 				localStorage.setItem('prolificSessionId', sessionId);
 				localStorage.setItem('prolificStudyId', studyId);
 				localStorage.setItem('prolificSessionNumber', authResponse.session_number.toString());
-                localStorage.setItem('lastProlificSessionId', sessionId);
-                localStorage.setItem('lastUserId', authResponse.user.id);
-                
-                // Pass the redirect path to setSessionUser
-                await setSessionUser(sessionUser, prolificRedirectPath);
-                if (authResponse.new_child_id) {
-                    await childProfileSync.setCurrentChildId(authResponse.new_child_id);
-                }
-                if (authResponse.has_exit_quiz) {
-                    localStorage.setItem('unlock_exit', 'true');
-                }
+				localStorage.setItem('lastProlificSessionId', sessionId);
+				localStorage.setItem('lastUserId', authResponse.user.id);
+
+				// Pass the redirect path to setSessionUser
+				await setSessionUser(sessionUser, prolificRedirectPath);
+				if (authResponse.new_child_id) {
+					await childProfileSync.setCurrentChildId(authResponse.new_child_id);
+				}
+				if (authResponse.has_exit_quiz) {
+					localStorage.setItem('unlock_exit', 'true');
+				}
 				return true;
 			}
 		} catch (error) {
 			toast.error(`Prolific authentication failed: ${error}`);
 		}
-		
+
 		return false;
 	};
 
@@ -309,86 +315,87 @@ const prolificAuthHandler = async () => {
 		await setSessionUser(sessionUser, localStorage.getItem('redirectPath') || null);
 	};
 
-function clearIndexedDBSafely() {
-    try {
-        // Common store used by some libs (optional best-effort)
-        indexedDB.deleteDatabase('keyval-store');
-    } catch {}
-}
+	function clearIndexedDBSafely() {
+		try {
+			// Common store used by some libs (optional best-effort)
+			indexedDB.deleteDatabase('keyval-store');
+		} catch {}
+	}
 
-const clearAllWorkflowKeysForNewUser = () => {
-    // Core workflow gating
-    localStorage.removeItem('assignmentStep');
-    localStorage.removeItem('assignmentCompleted');
-    localStorage.removeItem('instructionsCompleted');
-    localStorage.removeItem('moderationScenariosAccessed');
-    localStorage.removeItem('unlock_exit');
-    localStorage.removeItem('unlock_kids');
-    localStorage.removeItem('unlock_moderation');
-    localStorage.removeItem('unlock_completion');
+	const clearAllWorkflowKeysForNewUser = () => {
+		// Core workflow gating
+		localStorage.removeItem('assignmentStep');
+		localStorage.removeItem('assignmentCompleted');
+		localStorage.removeItem('instructionsCompleted');
+		localStorage.removeItem('moderationScenariosAccessed');
+		localStorage.removeItem('unlock_exit');
+		localStorage.removeItem('unlock_kids');
+		localStorage.removeItem('unlock_moderation');
+		localStorage.removeItem('unlock_completion');
 
-    // Selection and per-scenario local state
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i) || '';
-        if (
-            k.startsWith('scenario_') ||
-            k.startsWith('chat-input') ||
-            k.startsWith('selection-') ||
-            k.startsWith('input-panel-state-') ||
-            k.startsWith('selection-dismissed-')
-        ) {
-            keysToRemove.push(k);
-        }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
+		// Selection and per-scenario local state
+		const keysToRemove: string[] = [];
+		for (let i = 0; i < localStorage.length; i++) {
+			const k = localStorage.key(i) || '';
+			if (
+				k.startsWith('scenario_') ||
+				k.startsWith('chat-input') ||
+				k.startsWith('selection-') ||
+				k.startsWith('input-panel-state-') ||
+				k.startsWith('selection-dismissed-')
+			) {
+				keysToRemove.push(k);
+			}
+		}
+		keysToRemove.forEach((k) => localStorage.removeItem(k));
 
-    // Prolific bookkeeping
-    localStorage.removeItem('lastProlificSessionId');
-    localStorage.removeItem('lastUserId');
-    localStorage.removeItem('prolificSessionId');
-    localStorage.removeItem('prolificStudyId');
-    localStorage.removeItem('prolificSessionNumber');
-};
+		// Prolific bookkeeping
+		localStorage.removeItem('lastProlificSessionId');
+		localStorage.removeItem('lastUserId');
+		localStorage.removeItem('prolificSessionId');
+		localStorage.removeItem('prolificStudyId');
+		localStorage.removeItem('prolificSessionNumber');
+	};
 
-const resetModerationKeysForNewSession = () => {
-    // Reset moderation progress only, preserve instructions/child profile
-    localStorage.removeItem('assignmentStep');
-    localStorage.removeItem('assignmentCompleted');
-    localStorage.removeItem('moderationScenariosAccessed');
-    localStorage.removeItem('unlock_exit');
+	const resetModerationKeysForNewSession = () => {
+		// Reset moderation progress only, preserve instructions/child profile
+		localStorage.removeItem('assignmentStep');
+		localStorage.removeItem('assignmentCompleted');
+		localStorage.removeItem('moderationScenariosAccessed');
+		localStorage.removeItem('unlock_exit');
 
-    // Clear per-scenario UI state
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i) || '';
-        if (
-            k.startsWith('scenario_') ||
-            k.startsWith('selection-') ||
-            k.startsWith('input-panel-state-') ||
-            k.startsWith('selection-dismissed-')
-        ) {
-            keysToRemove.push(k);
-        }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
-};
+		// Clear per-scenario UI state
+		const keysToRemove: string[] = [];
+		for (let i = 0; i < localStorage.length; i++) {
+			const k = localStorage.key(i) || '';
+			if (
+				k.startsWith('scenario_') ||
+				k.startsWith('selection-') ||
+				k.startsWith('input-panel-state-') ||
+				k.startsWith('selection-dismissed-')
+			) {
+				keysToRemove.push(k);
+			}
+		}
+		keysToRemove.forEach((k) => localStorage.removeItem(k));
+	};
 
-function clearAllAppStoragePreserveRedirect() {
-    const redirectPath = localStorage.getItem('redirectPath');
-    // Preserve Prolific IDs needed for consent flow
-    const prolificPid = localStorage.getItem('prolificPid');
-    const prolificStudyId = localStorage.getItem('prolificStudyId');
-    const prolificSessionId = localStorage.getItem('prolificSessionId');
-    try { localStorage.clear(); } catch {}
-    clearIndexedDBSafely();
-    if (redirectPath) localStorage.setItem('redirectPath', redirectPath);
-    // Restore Prolific IDs after clear
-    if (prolificPid) localStorage.setItem('prolificPid', prolificPid);
-    if (prolificStudyId) localStorage.setItem('prolificStudyId', prolificStudyId);
-    if (prolificSessionId) localStorage.setItem('prolificSessionId', prolificSessionId);
-}
-
+	function clearAllAppStoragePreserveRedirect() {
+		const redirectPath = localStorage.getItem('redirectPath');
+		// Preserve Prolific IDs needed for consent flow
+		const prolificPid = localStorage.getItem('prolificPid');
+		const prolificStudyId = localStorage.getItem('prolificStudyId');
+		const prolificSessionId = localStorage.getItem('prolificSessionId');
+		try {
+			localStorage.clear();
+		} catch {}
+		clearIndexedDBSafely();
+		if (redirectPath) localStorage.setItem('redirectPath', redirectPath);
+		// Restore Prolific IDs after clear
+		if (prolificPid) localStorage.setItem('prolificPid', prolificPid);
+		if (prolificStudyId) localStorage.setItem('prolificStudyId', prolificStudyId);
+		if (prolificSessionId) localStorage.setItem('prolificSessionId', prolificSessionId);
+	}
 
 	async function setLogoImage() {
 		await tick();
@@ -430,12 +437,12 @@ function clearAllAppStoragePreserveRedirect() {
 
 		// Try Prolific authentication first
 		const prolificSuccess = await prolificAuthHandler();
-		
+
 		if (!prolificSuccess) {
 			// Only proceed with OAuth if Prolific auth didn't succeed
 			await oauthCallbackHandler();
 		}
-		
+
 		form = $page.url.searchParams.get('form');
 		if (form === 'signup') {
 			mode = 'signup';
@@ -446,13 +453,16 @@ function clearAllAppStoragePreserveRedirect() {
 
 		// Compute gates and log for debugging
 		try {
-			showFormUI = ($config?.features?.enable_login_form ?? true) || ($config?.features?.enable_ldap ?? false) || !!form;
-			showSignupToggle = ($config?.features?.enable_signup ?? true);
+			showFormUI =
+				($config?.features?.enable_login_form ?? true) ||
+				($config?.features?.enable_ldap ?? false) ||
+				!!form;
+			showSignupToggle = $config?.features?.enable_signup ?? true;
 			console.log('[AUTH] loaded:', {
 				features: $config?.features,
 				formParam: form,
 				computed: { showFormUI, showSignupToggle },
-				mode,
+				mode
 			});
 		} catch (e) {
 			console.log('[AUTH] debug compute error', e);
@@ -460,7 +470,7 @@ function clearAllAppStoragePreserveRedirect() {
 
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
-				}
+		}
 	});
 
 	$: console.log('[AUTH] mode changed:', mode);
@@ -471,7 +481,6 @@ function clearAllAppStoragePreserveRedirect() {
 		{`${$WEBUI_NAME}`}
 	</title>
 </svelte:head>
-
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative" id="auth-page">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
@@ -521,19 +530,17 @@ function clearAllAppStoragePreserveRedirect() {
 							>
 								<div class="mb-1">
 									<div class=" text-2xl font-medium">
-											{#if mode === 'ldap'}
-												Sign in with LDAP
-											{:else if mode === 'signin'}
-												Sign in
-											{:else}
-												Sign up
-											{/if}
+										{#if mode === 'ldap'}
+											Sign in with LDAP
+										{:else if mode === 'signin'}
+											Sign in
+										{:else}
+											Sign up
+										{/if}
 									</div>
-
-
 								</div>
 
-							{#if (showFormUI)}
+								{#if showFormUI}
 									<div class="flex flex-col mt-4">
 										{#if mode === 'signup'}
 											<div class="mb-2">
@@ -623,31 +630,31 @@ function clearAllAppStoragePreserveRedirect() {
 										{/if}
 									</div>
 								{/if}
-                                <!-- Always show the sign-in/sign-up toggle row so user can switch modes, even if form gating fails -->
-                                <div class="mt-5">
-                                    {#if (mode !== 'ldap')}
-                                        {#if (showSignupToggle)}
-                                            <div class=" mt-0 text-sm text-center">
-                                                {mode === 'signin'
-                                                    ? $i18n.t("Don't have an account?")
-                                                    : $i18n.t('Already have an account?')}
+								<!-- Always show the sign-in/sign-up toggle row so user can switch modes, even if form gating fails -->
+								<div class="mt-5">
+									{#if mode !== 'ldap'}
+										{#if showSignupToggle}
+											<div class=" mt-0 text-sm text-center">
+												{mode === 'signin'
+													? $i18n.t("Don't have an account?")
+													: $i18n.t('Already have an account?')}
 
-                                                <button
-                                                    class=" font-medium underline"
-                                                    type="button"
-                                                    on:click={() => {
-                                                        mode = mode === 'signin' ? 'signup' : 'signin';
-                                                    }}
-                                                >
-                                                    {mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
-                                                </button>
-                                            </div>
-                                        {/if}
-                                    {/if}
-                                </div>
+												<button
+													class=" font-medium underline"
+													type="button"
+													on:click={() => {
+														mode = mode === 'signin' ? 'signup' : 'signin';
+													}}
+												>
+													{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+												</button>
+											</div>
+										{/if}
+									{/if}
+								</div>
 
-                                <div class="mt-3">
-                                    {#if (showFormUI)}
+								<div class="mt-3">
+									{#if showFormUI}
 										{#if mode === 'ldap'}
 											<button
 												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
@@ -660,9 +667,7 @@ function clearAllAppStoragePreserveRedirect() {
 												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 												type="submit"
 											>
-											{mode === 'signin'
-												? $i18n.t('Sign in')
-												: $i18n.t('Create Account')}
+												{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 											</button>
 										{/if}
 									{/if}
@@ -809,9 +814,8 @@ function clearAllAppStoragePreserveRedirect() {
 										class="flex justify-center items-center text-xs w-full text-center underline"
 										type="button"
 										on:click={() => {
-										if (mode === 'ldap')
-											mode = 'signin';
-										else mode = 'ldap';
+											if (mode === 'ldap') mode = 'signin';
+											else mode = 'ldap';
 										}}
 									>
 										<span
@@ -830,7 +834,7 @@ function clearAllAppStoragePreserveRedirect() {
 								</div>
 							</div>
 						{/if}
-						
+
 						<!-- Survey Information -->
 						<div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
 							<p>This is a survey for a Child-AI Conversations interview</p>

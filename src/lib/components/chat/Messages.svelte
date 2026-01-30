@@ -438,48 +438,52 @@
 							</div>
 						</Loader>
 					{/if}
-				<!-- Always render all messages in the same structure to prevent scroll jumping -->
-				<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
-					{#each messages as message, messageIdx (message.id)}
-						<!-- Determine if this message is in the selection area -->
-						{@const isInSelectionArea = $selectionModeEnabled && messages.length >= 2 && messageIdx >= messages.length - 2}
-						{@const isFirstInSelection = isInSelectionArea && messageIdx === messages.length - 2}
-						{@const isLastInSelection = isInSelectionArea && messageIdx === messages.length - 1}
-						{@const selectionBoxClass = isFirstInSelection ? 'selection-area-start' : isLastInSelection ? 'selection-area-end' : ''}
-						
-						<!-- Render Message with conditional styling classes passed as props -->
-						<Message
-							{chatId}
-							bind:history
-							{selectedModels}
-							messageId={message.id}
-							idx={messageIdx}
-							{user}
-							{setInputText}
-							{gotoMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{updateChat}
-							{editMessage}
-							{deleteMessage}
-							{rateMessage}
-							{actionMessage}
-							{saveMessage}
-							{submitMessage}
-							{regenerateResponse}
-							{continueResponse}
-							{mergeResponses}
-							{addMessages}
-							{triggerScroll}
-							{readOnly}
-							{editCodeBlock}
-							{topPadding}
-							allowTextSelection={isInSelectionArea}
-							{selectionBoxClass}
-						/>
-					{/each}
-				</ul>
-					
+					<!-- Always render all messages in the same structure to prevent scroll jumping -->
+					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+						{#each messages as message, messageIdx (message.id)}
+							<!-- Determine if this message is in the selection area -->
+							{@const isInSelectionArea =
+								$selectionModeEnabled && messages.length >= 2 && messageIdx >= messages.length - 2}
+							{@const isFirstInSelection = isInSelectionArea && messageIdx === messages.length - 2}
+							{@const isLastInSelection = isInSelectionArea && messageIdx === messages.length - 1}
+							{@const selectionBoxClass = isFirstInSelection
+								? 'selection-area-start'
+								: isLastInSelection
+									? 'selection-area-end'
+									: ''}
+
+							<!-- Render Message with conditional styling classes passed as props -->
+							<Message
+								{chatId}
+								bind:history
+								{selectedModels}
+								messageId={message.id}
+								idx={messageIdx}
+								{user}
+								{setInputText}
+								{gotoMessage}
+								{showPreviousMessage}
+								{showNextMessage}
+								{updateChat}
+								{editMessage}
+								{deleteMessage}
+								{rateMessage}
+								{actionMessage}
+								{saveMessage}
+								{submitMessage}
+								{regenerateResponse}
+								{continueResponse}
+								{mergeResponses}
+								{addMessages}
+								{triggerScroll}
+								{readOnly}
+								{editCodeBlock}
+								{topPadding}
+								allowTextSelection={isInSelectionArea}
+								{selectionBoxClass}
+							/>
+						{/each}
+					</ul>
 				</section>
 				<div class="pb-18" />
 				{#if bottomPadding}
@@ -500,12 +504,12 @@
 		padding: 1.25rem 1.25rem 0 1.25rem !important; /* px-5 pt-5 - preserve original horizontal padding */
 		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
 	}
-	
+
 	:global(.dark .selection-area-start) {
 		border-color: #3b82f6 !important; /* Blue dashed border */
 		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
 	}
-	
+
 	:global(.selection-area-end) {
 		border: 2px dashed #3b82f6 !important; /* Blue dashed border */
 		border-top: none !important;
@@ -514,7 +518,7 @@
 		padding: 0 1.25rem 1.25rem 1.25rem !important; /* px-5 pb-5 - preserve original horizontal padding */
 		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
 	}
-	
+
 	:global(.dark .selection-area-end) {
 		border-color: #3b82f6 !important; /* Blue dashed border */
 		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */

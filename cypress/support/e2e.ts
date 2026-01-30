@@ -15,7 +15,7 @@ const login = (email: string, password: string) => {
 			// Make sure to test against us english to have stable tests,
 			// regardless on local language preferences
 			localStorage.setItem('locale', 'en-US');
-			
+
 			// Try API-based login first (more reliable)
 			cy.request({
 				method: 'POST',
@@ -50,7 +50,9 @@ const login = (email: string, password: string) => {
 						if (win.localStorage.getItem('version') === null) {
 							// Try to find and click the changelog button, but don't fail if it doesn't exist
 							cy.get('body').then(($body) => {
-								const changelogBtn = $body.find('button:contains("Okay"), button:contains("Let\'s Go"), button:contains("Go")');
+								const changelogBtn = $body.find(
+									'button:contains("Okay"), button:contains("Let\'s Go"), button:contains("Go")'
+								);
 								if (changelogBtn.length > 0) {
 									cy.wrap(changelogBtn.first()).click();
 								}
@@ -63,7 +65,7 @@ const login = (email: string, password: string) => {
 					// Wait for page to load - check for any visible input
 					cy.get('body').should('exist');
 					cy.wait(1000); // Give Svelte time to render
-					
+
 					// Try to find email input with multiple strategies
 					cy.get('body').then(($body) => {
 						if ($body.find('input[autocomplete="email"]').length > 0) {
@@ -81,7 +83,7 @@ const login = (email: string, password: string) => {
 							throw new Error('Email input not found on auth page');
 						}
 					});
-					
+
 					cy.get('input[type="password"], input#password').first().type(password);
 					cy.get('button[type="submit"]').click();
 					// Wait until the user is redirected - admin users go to /admin/users
@@ -91,7 +93,9 @@ const login = (email: string, password: string) => {
 						if (win.localStorage.getItem('version') === null) {
 							// Try to find and click the changelog button, but don't fail if it doesn't exist
 							cy.get('body').then(($body) => {
-								const changelogBtn = $body.find('button:contains("Okay"), button:contains("Let\'s Go"), button:contains("Go")');
+								const changelogBtn = $body.find(
+									'button:contains("Okay"), button:contains("Let\'s Go"), button:contains("Go")'
+								);
 								if (changelogBtn.length > 0) {
 									cy.wrap(changelogBtn.first()).click();
 								}

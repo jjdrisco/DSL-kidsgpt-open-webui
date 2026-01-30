@@ -27,7 +27,6 @@
 
 	let loaded = false;
 
-
 	let selectedModelId = '';
 	let loading = false;
 	let stopResponseFlag = false;
@@ -142,7 +141,7 @@
 			// Handle the response content
 			if (res.choices && res.choices[0] && res.choices[0].message) {
 				const content = res.choices[0].message.content || '';
-				
+
 				if (textareaElement) {
 					textareaElement.style.height = textareaElement.scrollHeight + 'px';
 				}

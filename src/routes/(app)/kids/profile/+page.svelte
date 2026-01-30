@@ -744,7 +744,9 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+	<nav
+		class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
+	>
 		<div class="flex items-center justify-between">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -763,9 +765,7 @@
 				</div>
 
 				<div class="flex w-full">
-					<div class="flex items-center text-xl font-semibold">
-						Child Profile
-					</div>
+					<div class="flex items-center text-xl font-semibold">Child Profile</div>
 				</div>
 			</div>
 
@@ -773,7 +773,7 @@
 			<div class="flex items-center space-x-2">
 				<!-- Help Button -->
 				<button
-					on:click={() => showHelpVideo = true}
+					on:click={() => (showHelpVideo = true)}
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
 					aria-label="Show help video"
 				>
@@ -784,7 +784,12 @@
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						></path>
 					</svg>
 					<span>Previous Task</span>
 				</button>
@@ -794,15 +799,15 @@
 						goto('/moderation-scenario');
 					}}
 					disabled={childSelectedForQuestions === -1}
-					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 {
-						childSelectedForQuestions !== -1
-							? 'bg-blue-500 hover:bg-blue-600 text-white'
-							: 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-					}"
+					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 {childSelectedForQuestions !==
+					-1
+						? 'bg-blue-500 hover:bg-blue-600 text-white'
+						: 'text-gray-400 dark:text-gray-500 cursor-not-allowed'}"
 				>
 					<span>Next Task</span>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+						></path>
 					</svg>
 				</button>
 			</div>
@@ -821,18 +826,29 @@
 	<!-- Confirmation Modal for Workflow Progression -->
 	{#if showConfirmationModal}
 		<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showConfirmationModal = false}>
+		<div
+			class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			on:click={() => (showConfirmationModal = false)}
+		>
 			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" on:click|stopPropagation>
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl"
+				on:click|stopPropagation
+			>
 				<div class="text-center mb-6">
-					<div class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+					<div
+						class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"
+					>
 						<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M5 13l4 4L19 7"
+							></path>
 						</svg>
 					</div>
-					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-						Task 1 Complete
-					</h3>
+					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Task 1 Complete</h3>
 					<p class="text-gray-600 dark:text-gray-400">
 						Would you like to proceed to the next step?
 					</p>
@@ -858,20 +874,28 @@
 
 	<!-- Scroll Indicator -->
 	{#if showScrollIndicator}
-		<div class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce">
+		<div
+			class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce"
+		>
 			<span class="text-sm text-gray-400 dark:text-gray-500 mb-1">Scroll down</span>
-			<svg class="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+			<svg
+				class="w-6 h-6 text-gray-400 dark:text-gray-500"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M19 14l-7 7m0 0l-7-7m7 7V3"
+				></path>
 			</svg>
 		</div>
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-	<AssignmentTimeTracker 
-		userId={get(user)?.id || ''} 
-		sessionNumber={sessionNumber}
-		enabled={true}
-	/>
+	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
 
 	<!-- Help Video Modal -->
 	<VideoModal

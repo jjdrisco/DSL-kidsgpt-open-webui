@@ -24,11 +24,18 @@ describe('Quiz /kids/profile', () => {
 			}
 		});
 		// Wait for auth form (loaded + config); email field when not in LDAP mode
-		cy.get('input#email, input[autocomplete="email"]', { timeout: 15000 }).first().clear().type(EMAIL);
+		cy.get('input#email, input[autocomplete="email"]', { timeout: 15000 })
+			.first()
+			.clear()
+			.type(EMAIL);
 		cy.get('input[type="password"]').first().clear().type(PASSWORD);
-		cy.get('button').contains(/sign in/i).click();
+		cy.get('button')
+			.contains(/sign in/i)
+			.click();
 		cy.url({ timeout: 15000 }).should('satisfy', (u: string) =>
-			['/kids/profile', '/', '/moderation-scenario', '/assignment-instructions', '/parent'].some((p) => u.includes(p))
+			['/kids/profile', '/', '/moderation-scenario', '/assignment-instructions', '/parent'].some(
+				(p) => u.includes(p)
+			)
 		);
 		// So /kids/profile does not redirect to instructions
 		cy.window().then((w) => w.localStorage.setItem('instructionsCompleted', 'true'));
@@ -55,7 +62,10 @@ describe('Quiz /kids/profile', () => {
 		cy.get('select#childAge').select('10 years old');
 		cy.get('select#childGender').select('Male');
 		// Do not fill Only Child, Child Has Used AI, Parent LLM Monitoring
-		cy.get('form').contains(/save|create|add/i).first().click();
+		cy.get('form')
+			.contains(/save|create|add/i)
+			.first()
+			.click();
 		// Expect validation: toast or button stays / no navigation
 		cy.get('body').then(($b) => {
 			const t = $b.find('[data-sonner-toast], [role=alert], .toast, .error').length;
@@ -80,8 +90,14 @@ describe('Quiz /kids/profile', () => {
 		// Research fields (required in quiz)
 		cy.contains('Only Child').parent().find('input[value=yes]').check({ force: true });
 		cy.contains('Child Has Used AI Tools').parent().find('input[value=no]').check({ force: true });
-		cy.contains('Parent LLM Monitoring').parent().find('input[value=no_monitoring]').check({ force: true });
-		cy.get('form').contains(/save|create|add/i).first().click();
+		cy.contains('Parent LLM Monitoring')
+			.parent()
+			.find('input[value=no_monitoring]')
+			.check({ force: true });
+		cy.get('form')
+			.contains(/save|create|add/i)
+			.first()
+			.click();
 
 		cy.contains('Task 1 Complete', { timeout: 10000 }).should('be.visible');
 		cy.contains('Would you like to proceed to the next step?').should('be.visible');

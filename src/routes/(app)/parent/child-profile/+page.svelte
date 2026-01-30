@@ -45,7 +45,9 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+	<nav
+		class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
+	>
 		<div class="flex items-center justify-between">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -64,9 +66,7 @@
 				</div>
 
 				<div class="flex w-full">
-					<div class="flex items-center text-xl font-semibold">
-						Child Profile Setup
-					</div>
+					<div class="flex items-center text-xl font-semibold">Child Profile Setup</div>
 				</div>
 			</div>
 
@@ -77,7 +77,12 @@
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						></path>
 					</svg>
 					<span>Back to Dashboard</span>
 				</button>
@@ -88,7 +93,8 @@
 					>
 						<span>Continue</span>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+							></path>
 						</svg>
 					</button>
 				{/if}

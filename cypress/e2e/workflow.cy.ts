@@ -38,51 +38,59 @@ describe('Workflow API Endpoints', () => {
 			() => {
 				cy.log(`Authenticating user: ${credentials.email}`);
 				// First, try to register the user (tolerates 403 if signup is disabled)
-				return cy.request({
-					method: 'POST',
-					url: `${API_BASE_URL}/auths/signup`,
-					body: {
-						name: 'Test User',
-						email: credentials.email,
-						password: credentials.password
-					},
-					failOnStatusCode: false
-				}).then((signupResponse) => {
-					// Accept 200 (success), 400 (bad request), or 403 (signup disabled)
-					cy.log(`Signup response: ${signupResponse.status}`);
-					// Wait a bit after signup before signin
-					cy.wait(2000);
-					// Now login via API with retry logic for rate limiting
-					const attemptSignin = (retryCount = 0): Cypress.Chainable<string> => {
-						return cy.request({
-							method: 'POST',
-							url: `${API_BASE_URL}/auths/signin`,
-							body: {
-								email: credentials.email,
-								password: credentials.password
-							},
-							failOnStatusCode: false
-						}).then((signinResponse) => {
-							if (signinResponse.status === 200 && signinResponse.body && signinResponse.body.token) {
-								const token = signinResponse.body.token;
-								cy.log(`Signin successful, token length: ${token.length}`);
-								// Persist token for the remainder of the spec run.
-								// NOTE: cy.session() does not persist aliases across restores, so we use Cypress.env().
-								Cypress.env(TOKEN_ENV_KEY, token);
-								return cy.wrap(token);
-							} else if (signinResponse.status === 429 && retryCount < 8) {
-								// Rate limited, wait and retry (up to 8 times with increasing delays)
-								const waitTime = Math.min((retryCount + 1) * 10000, 60000);
-								cy.log(`Rate limited (attempt ${retryCount + 1}/8), waiting ${waitTime}ms...`);
-								return cy.wait(waitTime).then(() => attemptSignin(retryCount + 1));
-							} else {
-								cy.log(`Signin failed: ${signinResponse.status} after ${retryCount} retries`);
-								throw new Error(`Authentication failed: ${signinResponse.status}`);
-							}
-						});
-					};
-					return attemptSignin();
-				});
+				return cy
+					.request({
+						method: 'POST',
+						url: `${API_BASE_URL}/auths/signup`,
+						body: {
+							name: 'Test User',
+							email: credentials.email,
+							password: credentials.password
+						},
+						failOnStatusCode: false
+					})
+					.then((signupResponse) => {
+						// Accept 200 (success), 400 (bad request), or 403 (signup disabled)
+						cy.log(`Signup response: ${signupResponse.status}`);
+						// Wait a bit after signup before signin
+						cy.wait(2000);
+						// Now login via API with retry logic for rate limiting
+						const attemptSignin = (retryCount = 0): Cypress.Chainable<string> => {
+							return cy
+								.request({
+									method: 'POST',
+									url: `${API_BASE_URL}/auths/signin`,
+									body: {
+										email: credentials.email,
+										password: credentials.password
+									},
+									failOnStatusCode: false
+								})
+								.then((signinResponse) => {
+									if (
+										signinResponse.status === 200 &&
+										signinResponse.body &&
+										signinResponse.body.token
+									) {
+										const token = signinResponse.body.token;
+										cy.log(`Signin successful, token length: ${token.length}`);
+										// Persist token for the remainder of the spec run.
+										// NOTE: cy.session() does not persist aliases across restores, so we use Cypress.env().
+										Cypress.env(TOKEN_ENV_KEY, token);
+										return cy.wrap(token);
+									} else if (signinResponse.status === 429 && retryCount < 8) {
+										// Rate limited, wait and retry (up to 8 times with increasing delays)
+										const waitTime = Math.min((retryCount + 1) * 10000, 60000);
+										cy.log(`Rate limited (attempt ${retryCount + 1}/8), waiting ${waitTime}ms...`);
+										return cy.wait(waitTime).then(() => attemptSignin(retryCount + 1));
+									} else {
+										cy.log(`Signin failed: ${signinResponse.status} after ${retryCount} retries`);
+										throw new Error(`Authentication failed: ${signinResponse.status}`);
+									}
+								});
+						};
+						return attemptSignin();
+					});
 			},
 			{
 				validate: () => {
@@ -159,7 +167,8 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should return workflow state for new user (no child profile)', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -185,7 +194,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/current-attempt', () => {
 		it('should return current attempt number', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -216,7 +226,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/session-info', () => {
 		it('should return session information', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -244,7 +255,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/completed-scenarios', () => {
 		it('should return completed scenario indices', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -277,7 +289,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('GET /workflow/study-status', () => {
 		it('should return study completion status', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -311,7 +324,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('POST /workflow/reset', () => {
 		it('should reset entire user workflow and increment attempt number', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -350,7 +364,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('POST /workflow/reset-moderation', () => {
 		it('should reset only moderation workflow and increment attempt', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -391,7 +406,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('POST /workflow/moderation/finalize', () => {
 		it('should finalize moderation without filters', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -415,7 +431,8 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should finalize moderation with child_id filter', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -431,7 +448,11 @@ describe('Workflow API Endpoints', () => {
 					},
 					failOnStatusCode: false
 				}).then((childResponse) => {
-					if (childResponse.status === 200 && Array.isArray(childResponse.body) && childResponse.body.length > 0) {
+					if (
+						childResponse.status === 200 &&
+						Array.isArray(childResponse.body) &&
+						childResponse.body.length > 0
+					) {
 						const childId = childResponse.body[0].id;
 						cy.request({
 							method: 'POST',
@@ -469,7 +490,8 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should finalize moderation with session_number filter', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -496,7 +518,8 @@ describe('Workflow API Endpoints', () => {
 
 	describe('Workflow State Transitions', () => {
 		it('should progress through workflow states correctly', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}
@@ -535,7 +558,8 @@ describe('Workflow API Endpoints', () => {
 		});
 
 		it('should maintain consistent state across multiple requests', function () {
-			const credentials = getCredentials(); if (!credentials.email || !credentials.password) {
+			const credentials = getCredentials();
+			if (!credentials.email || !credentials.password) {
 				this.skip();
 				return;
 			}

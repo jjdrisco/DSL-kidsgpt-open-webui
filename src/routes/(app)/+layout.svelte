@@ -317,82 +317,84 @@
 		const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '0'); // Start with 0 for new users
 		const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
 		const instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-		
+
 		// Check if this is a Prolific user
 		const isProlificUser = $user?.prolific_pid !== undefined && $user?.prolific_pid !== null;
 		const prolificSessionId = localStorage.getItem('prolificSessionId');
 		const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
-		
-	// For Prolific users on new sessions, reset workflow to instructions
-	if (isProlificUser) {
-		// Check both URL parameter and localStorage for session ID
-		const urlSessionId = $page.url.searchParams.get('SESSION_ID');
-		const storageSessionId = localStorage.getItem('prolificSessionId');
-		const sessionIdToCheck = urlSessionId || storageSessionId;
-		
-		if (sessionIdToCheck) {
-			const lastSessionId = localStorage.getItem('lastProlificSessionId');
-			const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
-			
-		if (isNewSession) {
-			console.log('🔄 New Prolific session detected in layout, resetting workflow');
-			// New session - reset workflow state but preserve child profile
-			localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
-			localStorage.removeItem('assignmentStep');
-			localStorage.removeItem('assignmentCompleted');
-			localStorage.removeItem('moderationScenariosAccessed');
-			localStorage.removeItem('unlock_exit');
-			localStorage.removeItem('instructionsCompleted');
-			// Keep child profile data
-			
-		// Increment session number for all children
-		try {
-			// Get child profiles from cache (using the correct key from childProfileSync service)
-			const cached = localStorage.getItem('child-profiles-cache');
-			if (cached) {
-				const profiles = JSON.parse(cached);
-				if (Array.isArray(profiles) && profiles.length > 0) {
-					profiles.forEach((profile: any) => {
-						const childId = profile.id;
-						const sessionKey = `moderationSessionNumber_${childId}`;
-						const currentSession = parseInt(localStorage.getItem(sessionKey) || '1');
-						const newSession = currentSession + 1;
-						localStorage.setItem(sessionKey, String(newSession));
-						console.log(`Incremented session for child ${childId}: ${currentSession} -> ${newSession}`);
-					});
-				} else {
-					console.warn('No child profiles found in cache or cache is not an array');
+
+		// For Prolific users on new sessions, reset workflow to instructions
+		if (isProlificUser) {
+			// Check both URL parameter and localStorage for session ID
+			const urlSessionId = $page.url.searchParams.get('SESSION_ID');
+			const storageSessionId = localStorage.getItem('prolificSessionId');
+			const sessionIdToCheck = urlSessionId || storageSessionId;
+
+			if (sessionIdToCheck) {
+				const lastSessionId = localStorage.getItem('lastProlificSessionId');
+				const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
+
+				if (isNewSession) {
+					console.log('🔄 New Prolific session detected in layout, resetting workflow');
+					// New session - reset workflow state but preserve child profile
+					localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
+					localStorage.removeItem('assignmentStep');
+					localStorage.removeItem('assignmentCompleted');
+					localStorage.removeItem('moderationScenariosAccessed');
+					localStorage.removeItem('unlock_exit');
+					localStorage.removeItem('instructionsCompleted');
+					// Keep child profile data
+
+					// Increment session number for all children
+					try {
+						// Get child profiles from cache (using the correct key from childProfileSync service)
+						const cached = localStorage.getItem('child-profiles-cache');
+						if (cached) {
+							const profiles = JSON.parse(cached);
+							if (Array.isArray(profiles) && profiles.length > 0) {
+								profiles.forEach((profile: any) => {
+									const childId = profile.id;
+									const sessionKey = `moderationSessionNumber_${childId}`;
+									const currentSession = parseInt(localStorage.getItem(sessionKey) || '1');
+									const newSession = currentSession + 1;
+									localStorage.setItem(sessionKey, String(newSession));
+									console.log(
+										`Incremented session for child ${childId}: ${currentSession} -> ${newSession}`
+									);
+								});
+							} else {
+								console.warn('No child profiles found in cache or cache is not an array');
+							}
+						} else {
+							console.warn('child-profiles-cache not found in localStorage');
+						}
+					} catch (e) {
+						console.error('Error incrementing session numbers:', e);
+					}
+
+					// Redirect to instructions for new session
+					if (currentPath !== '/assignment-instructions') {
+						await goto('/assignment-instructions');
+						return;
+					}
+				} else if (!lastSessionId && sessionIdToCheck) {
+					// First time seeing a session ID, store it
+					localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 				}
-			} else {
-				console.warn('child-profiles-cache not found in localStorage');
-			}
-		} catch (e) {
-			console.error('Error incrementing session numbers:', e);
-		}
-			
-			// Redirect to instructions for new session
-			if (currentPath !== '/assignment-instructions') {
-				await goto('/assignment-instructions');
-				return;
-			}
-		} else if (!lastSessionId && sessionIdToCheck) {
-				// First time seeing a session ID, store it
-				localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 			}
 		}
-	}
-		
+
 		// Prevent access to main chat page after assignment completion (except for admins)
 		if (currentPath === '/' && assignmentCompleted && $user?.role !== 'admin') {
 			await goto('/completion');
 			return;
 		}
-		
+
 		// Allow navigation to home/intro page for non-completed users
 		if (currentPath === '/') {
 			return;
 		}
-		
+
 		// Allow access to assignment instructions page
 		if (currentPath === '/assignment-instructions') {
 			return;
@@ -403,25 +405,28 @@
 			await goto('/assignment-instructions');
 			return;
 		}
-		
+
 		// Allow access to admin and workspace routes for admins
-		if ($user?.role === 'admin' && (currentPath.startsWith('/admin') || currentPath.startsWith('/workspace'))) {
+		if (
+			$user?.role === 'admin' &&
+			(currentPath.startsWith('/admin') || currentPath.startsWith('/workspace'))
+		) {
 			return;
 		}
 
 		// Determine user type
 		const userType = await getUserType($user);
-		
+
 		// Allow parent users to access /parent freely
 		if (userType === 'parent' && currentPath.startsWith('/parent')) {
 			return;
 		}
-		
+
 		// Allow child users to access / freely
 		if (userType === 'child' && currentPath === '/') {
 			return;
 		}
-		
+
 		// Only enforce workflow steps for interviewee users
 		if (userType !== 'interviewee') {
 			// For parent/child users, don't enforce workflow steps
@@ -446,8 +451,8 @@
 		}
 
 		// Check if current route is allowed
-		const isAllowed = allowedRoutes.some(route => currentPath.startsWith(route));
-		
+		const isAllowed = allowedRoutes.some((route) => currentPath.startsWith(route));
+
 		// If not allowed, redirect to current step
 		if (!isAllowed && stepRoutes[assignmentStep]) {
 			await goto(stepRoutes[assignmentStep]);
