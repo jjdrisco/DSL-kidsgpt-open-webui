@@ -670,43 +670,41 @@
 	}
 
 	onMount(async () => {
-		(async () => {
-			// Redirect if instructions not confirmed
-			if (localStorage.getItem('instructionsCompleted') !== 'true') {
-				goto('/assignment-instructions');
-				return;
-			}
-			
-			// Wait for user store to be loaded
-			const waitForUser = () => {
-				return new Promise<void>((resolve) => {
-					const currentUser = get(user);
-					if (currentUser && currentUser.id) {
-						resolve();
-						return;
-					}
-					const unsubscribe = user.subscribe((userData) => {
-						if (userData && userData.id) {
-							unsubscribe();
-							resolve();
-						}
-					});
-				});
-			};
-			
-			await waitForUser();
-			
-			// Load profiles and set selected child for questions
-			const profiles = await childProfileSync.getChildProfiles();
-			const currentChildId = childProfileSync.getCurrentChildId();
-			if (currentChildId && profiles.length > 0) {
-				const index = profiles.findIndex(p => p.id === currentChildId);
-				if (index !== -1) {
-					childSelectedForQuestions = index;
+		// Redirect if instructions not confirmed
+		if (localStorage.getItem('instructionsCompleted') !== 'true') {
+			goto('/assignment-instructions');
+			return;
+		}
+
+		// Wait for user store to be loaded
+		const waitForUser = () => {
+			return new Promise<void>((resolve) => {
+				const currentUser = get(user);
+				if (currentUser && currentUser.id) {
+					resolve();
+					return;
 				}
+				const unsubscribe = user.subscribe((userData) => {
+					if (userData && userData.id) {
+						unsubscribe();
+						resolve();
+					}
+				});
+			});
+		};
+
+		await waitForUser();
+
+		// Load profiles and set selected child for questions
+		const profiles = await childProfileSync.getChildProfiles();
+		const currentChildId = childProfileSync.getCurrentChildId();
+		if (currentChildId && profiles.length > 0) {
+			const index = profiles.findIndex((p) => p.id === currentChildId);
+			if (index !== -1) {
+				childSelectedForQuestions = index;
 			}
-		})();
-		
+		}
+
 		// Set up scroll indicator
 		const timer = setTimeout(() => {
 			if (!hasScrolled) {
@@ -724,7 +722,7 @@
 			scrollContainer.addEventListener('scroll', handleScroll);
 		}
 		window.addEventListener('scroll', handleScroll);
-		
+
 		return () => {
 			clearTimeout(timer);
 			if (scrollContainer) {
