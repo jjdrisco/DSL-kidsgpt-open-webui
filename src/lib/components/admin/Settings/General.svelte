@@ -96,48 +96,9 @@
 	};
 
 	const navigateToChat = async () => {
-		try {
-			// Try to get the most recent chat
-			const chatList = await getChatList(localStorage.token, 1);
-			
-			if (chatList && chatList.length > 0) {
-				// Navigate to the most recent chat
-				window.location.href = `/c/${chatList[0].id}`;
-				return;
-			}
-			
-			// If no chats exist and we have models available, create a new one
-			if ($models && $models.length > 0) {
-				const selectedModels = [$models[0].id];
-				const newChat = await createNewChat(
-					localStorage.token,
-					{
-						id: `temp-${Date.now()}`,
-						title: $i18n.t('New Chat'),
-						models: selectedModels,
-						system: $settings?.system ?? undefined,
-						params: {},
-						history: { currentId: null, messages: [] },
-						messages: [],
-						tags: [],
-						timestamp: Date.now()
-					},
-					null
-				);
-				
-				if (newChat && newChat.id) {
-					window.location.href = `/c/${newChat.id}`;
-					return;
-				}
-			}
-			
-			// Fallback: navigate to root and let the app handle chat creation naturally
-			window.location.href = '/';
-		} catch (error) {
-			console.error('Error navigating to chat:', error);
-			// Fallback: navigate to root
-			window.location.href = '/';
-		}
+		// Navigate to root - the app will handle routing to the appropriate chat interface
+		// This avoids issues with chat creation and ensures proper initialization
+		window.location.href = '/';
 	};
 
 	onMount(async () => {

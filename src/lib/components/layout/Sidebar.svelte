@@ -536,51 +536,9 @@
 		const currentPath = $page.url.pathname;
 		const isOnChatPage = currentPath.startsWith('/c/');
 		
-		// If not on a chat page, navigate to a chat
+		// If not on a chat page, navigate to root - the app will handle routing appropriately
 		if (!isOnChatPage) {
-			try {
-				// Try to get the most recent chat
-				const chatList = await getChatList(localStorage.token, 1);
-				
-				if (chatList && chatList.length > 0) {
-					// Navigate to the most recent chat
-					await goto(`/c/${chatList[0].id}`);
-				} else {
-					// If no chats exist and we have models available, create a new one
-					if ($models && $models.length > 0) {
-						const selectedModels = [$models[0].id];
-						const newChat = await createNewChat(
-							localStorage.token,
-							{
-								id: `temp-${Date.now()}`,
-								title: $i18n.t('New Chat'),
-								models: selectedModels,
-								system: $settings?.system ?? undefined,
-								params: {},
-								history: { currentId: null, messages: [] },
-								messages: [],
-								tags: [],
-								timestamp: Date.now()
-							},
-							null
-						);
-						
-						if (newChat && newChat.id) {
-							await goto(`/c/${newChat.id}`);
-						} else {
-							// Fallback: navigate to root
-							await goto('/');
-						}
-					} else {
-						// No models available, navigate to root and let app handle it
-						await goto('/');
-					}
-				}
-			} catch (error) {
-				console.error('Error navigating to chat:', error);
-				// Fallback: navigate to root
-				await goto('/');
-			}
+			await goto('/');
 		}
 
 		setTimeout(() => {
