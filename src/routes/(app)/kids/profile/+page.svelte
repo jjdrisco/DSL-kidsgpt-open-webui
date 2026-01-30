@@ -50,35 +50,35 @@
 		// Trigger scenario assignment for quiz workflow
 		const userId = ($user as any)?.id;
 		const token = localStorage.getItem('token') || '';
-		
+
 		if (userId && token) {
 			const sessionNumber = await determineSessionNumberForUser(userId, token);
 			assignScenariosForChild(profile.id, userId, sessionNumber, token, 6)
-				.then(result => {
+				.then((result) => {
 					console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${profile.id}`);
 					if (result.assignmentCount < 6) {
 						console.warn(`⚠️ Only ${result.assignmentCount}/6 scenarios assigned`);
 					}
 				})
-				.catch(error => {
+				.catch((error) => {
 					console.error('❌ Failed to assign scenarios:', error);
 				});
 		}
 
 		// Set child as selected for questions
 		const profiles = await childProfileSync.getChildProfiles();
-		const index = profiles.findIndex(p => p.id === profile.id);
+		const index = profiles.findIndex((p) => p.id === profile.id);
 		if (index !== -1) {
 			childSelectedForQuestions = index;
 			await childProfileSync.setCurrentChildId(profile.id);
-			
+
 			// Unlock Step 2
 			localStorage.setItem('assignmentStep', '2');
 			localStorage.setItem('moderationScenariosAccessed', 'true');
 			localStorage.setItem('unlock_moderation', 'true');
 			window.dispatchEvent(new Event('storage'));
 			window.dispatchEvent(new Event('workflow-updated'));
-			
+
 			// Show confirmation modal
 			showConfirmationModal = true;
 		}
@@ -105,36 +105,36 @@
 
 	function getSelectedSubCharacteristics(): SubCharacteristic[] {
 		const selected: SubCharacteristic[] = [];
-		
+
 		// Go through all traits and find selected characteristics
 		for (const trait of personalityTraits) {
-			const matchingChars = trait.subCharacteristics.filter(sub => 
+			const matchingChars = trait.subCharacteristics.filter((sub) =>
 				selectedSubCharacteristics.includes(sub.id)
 			);
 			selected.push(...matchingChars);
 		}
-		
+
 		return selected;
 	}
 
 	function getSelectedSubCharacteristicNames(): string[] {
-		return getSelectedSubCharacteristics().map(sub => sub.name);
+		return getSelectedSubCharacteristics().map((sub) => sub.name);
 	}
 
 	function getPersonalityDescription(): string {
 		const subChars = getSelectedSubCharacteristics();
-		
+
 		if (subChars.length === 0) return '';
-		
+
 		// Group characteristics by trait
 		const traitGroups = new Map<string, string[]>();
-		
+
 		for (const subChar of subChars) {
 			// Find which trait this belongs to
-			const trait = personalityTraits.find(t => 
-				t.subCharacteristics.some(sc => sc.id === subChar.id)
+			const trait = personalityTraits.find((t) =>
+				t.subCharacteristics.some((sc) => sc.id === subChar.id)
 			);
-			
+
 			if (trait) {
 				if (!traitGroups.has(trait.name)) {
 					traitGroups.set(trait.name, []);
@@ -142,13 +142,13 @@
 				traitGroups.get(trait.name)!.push(subChar.name);
 			}
 		}
-		
+
 		// Format as "Trait: char1, char2\nTrait2: char3, char4"
 		const descriptions: string[] = [];
 		for (const [traitName, chars] of traitGroups.entries()) {
 			descriptions.push(`${traitName}: ${chars.join(', ')}`);
 		}
-		
+
 		return descriptions.join('\n');
 	}
 
@@ -159,7 +159,7 @@
 	function hydrateFormFromSelectedChild() {
 		ensureAtLeastOneChild();
 		const sel = childProfiles[selectedChildIndex];
-		
+
 		// Debug: Log the selected child data to verify survey fields are present
 		console.log('Hydrating form from child profile:', {
 			id: sel?.id,
@@ -169,10 +169,10 @@
 			parent_llm_monitoring_level: (sel as any)?.parent_llm_monitoring_level,
 			child_ai_use_contexts: (sel as any)?.child_ai_use_contexts
 		});
-		
+
 		childName = sel?.name || '';
 		childAge = sel?.child_age || '';
-		
+
 		// Handle gender - check if it's stored as "Other: [text]" format (legacy) or separate field
 		const genderValue = sel?.child_gender || '';
 		if (genderValue.startsWith('Other: ')) {
@@ -188,72 +188,77 @@
 			childGenderOther = (sel as any)?.child_gender_other || '';
 		}
 
-	// Research fields (optional if older profiles lack them)
-	// Handle is_only_child - convert boolean to string for radio buttons
-	if (typeof (sel as any)?.is_only_child === 'boolean') {
-		isOnlyChild = (sel as any).is_only_child ? 'yes' : 'no';
-	} else {
-		isOnlyChild = '';
-	}
-	
-	// Handle child_has_ai_use
-	childHasAIUse = (sel as any)?.child_has_ai_use || '';
-	
-	// Handle child_ai_use_contexts - ensure it's an array
-	const contexts = (sel as any)?.child_ai_use_contexts;
-	if (Array.isArray(contexts)) {
-		childAIUseContexts = contexts;
-	} else if (contexts) {
-		// If it's a string or other type, try to parse it
-		childAIUseContexts = [];
-	} else {
-		childAIUseContexts = [];
-	}
-	
-	// Handle monitoring level
-	const monitoringValue = (sel as any)?.parent_llm_monitoring_level;
-	if (monitoringValue) {
-		parentLLMMonitoringLevel = monitoringValue;
-	} else {
-		parentLLMMonitoringLevel = '';
-	}
-	
-	// Load "Other" text fields
-	childAIUseContextsOther = (sel as any)?.child_ai_use_contexts_other || '';
-	parentLLMMonitoringOther = (sel as any)?.parent_llm_monitoring_other || '';
-		
+		// Research fields (optional if older profiles lack them)
+		// Handle is_only_child - convert boolean to string for radio buttons
+		if (typeof (sel as any)?.is_only_child === 'boolean') {
+			isOnlyChild = (sel as any).is_only_child ? 'yes' : 'no';
+		} else {
+			isOnlyChild = '';
+		}
+
+		// Handle child_has_ai_use
+		childHasAIUse = (sel as any)?.child_has_ai_use || '';
+
+		// Handle child_ai_use_contexts - ensure it's an array
+		const contexts = (sel as any)?.child_ai_use_contexts;
+		if (Array.isArray(contexts)) {
+			childAIUseContexts = contexts;
+		} else if (contexts) {
+			// If it's a string or other type, try to parse it
+			childAIUseContexts = [];
+		} else {
+			childAIUseContexts = [];
+		}
+
+		// Handle monitoring level
+		const monitoringValue = (sel as any)?.parent_llm_monitoring_level;
+		if (monitoringValue) {
+			parentLLMMonitoringLevel = monitoringValue;
+		} else {
+			parentLLMMonitoringLevel = '';
+		}
+
+		// Load "Other" text fields
+		childAIUseContextsOther = (sel as any)?.child_ai_use_contexts_other || '';
+		parentLLMMonitoringOther = (sel as any)?.parent_llm_monitoring_other || '';
+
 		// Parse personality traits from stored characteristics
 		if (sel?.child_characteristics) {
 			const characteristics = sel.child_characteristics;
-			
+
 			// Check if this contains our format: "Trait: char1, char2\n\nAdditional characteristics:\ntext"
 			if (characteristics.includes('Additional characteristics:')) {
 				// Extract the additional characteristics part (after "Additional characteristics:")
 				const additionalStart = characteristics.indexOf('Additional characteristics:');
 				if (additionalStart !== -1) {
-					childCharacteristics = characteristics.substring(additionalStart + 'Additional characteristics:'.length).trim();
-					
+					childCharacteristics = characteristics
+						.substring(additionalStart + 'Additional characteristics:'.length)
+						.trim();
+
 					// Extract personality traits part (before "Additional characteristics:")
 					const personalityPart = characteristics.substring(0, additionalStart).trim();
-					
+
 					// Parse trait lines: "Trait: char1, char2\nTrait2: char3, char4"
 					if (personalityPart) {
 						const traitLines = personalityPart.split('\n');
 						const restoredIds: string[] = [];
-						
+
 						for (const line of traitLines) {
 							// Format: "Trait: char1, char2"
 							const match = line.match(/^([^:]+):\s*(.+)$/);
 							if (match) {
 								const traitName = match[1].trim();
-								const charNames = match[2].split(',').map(c => c.trim()).filter(c => c);
-								
+								const charNames = match[2]
+									.split(',')
+									.map((c) => c.trim())
+									.filter((c) => c);
+
 								// Find the trait by name
-								const trait = personalityTraits.find(t => t.name === traitName);
+								const trait = personalityTraits.find((t) => t.name === traitName);
 								if (trait) {
 									// Match characteristic names to IDs
 									for (const charName of charNames) {
-										const subChar = trait.subCharacteristics.find(sc => sc.name === charName);
+										const subChar = trait.subCharacteristics.find((sc) => sc.name === charName);
 										if (subChar) {
 											restoredIds.push(subChar.id);
 										}
@@ -261,13 +266,13 @@
 								}
 							}
 						}
-						
+
 						// Restore selected characteristics
 						selectedSubCharacteristics = restoredIds;
-						
+
 						// Expand traits that have selected characteristics
 						for (const trait of personalityTraits) {
-							if (trait.subCharacteristics.some(sc => restoredIds.includes(sc.id))) {
+							if (trait.subCharacteristics.some((sc) => restoredIds.includes(sc.id))) {
 								expandedTraits.add(trait.id);
 							}
 						}
@@ -304,23 +309,23 @@
 		sel.child_gender = childGender;
 		// Combine personality traits with characteristics
 		const personalityDesc = getPersonalityDescription();
-		const combinedCharacteristics = personalityDesc 
-			? (childCharacteristics.trim() 
+		const combinedCharacteristics = personalityDesc
+			? childCharacteristics.trim()
 				? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
-				: personalityDesc)
+				: personalityDesc
 			: childCharacteristics;
-		
+
 		sel.child_characteristics = combinedCharacteristics;
-	// Attach research fields to selected child for local view
-	(sel as any).is_only_child = isOnlyChild === 'yes';
-	(sel as any).child_has_ai_use = childHasAIUse || null;
-	(sel as any).child_ai_use_contexts = childAIUseContexts || [];
-	(sel as any).parent_llm_monitoring_level = parentLLMMonitoringLevel || null;
-	
-	// Attach "Other" text fields
-	(sel as any).child_gender_other = childGenderOther || null;
-	(sel as any).child_ai_use_contexts_other = childAIUseContextsOther || null;
-	(sel as any).parent_llm_monitoring_other = parentLLMMonitoringOther || null;
+		// Attach research fields to selected child for local view
+		(sel as any).is_only_child = isOnlyChild === 'yes';
+		(sel as any).child_has_ai_use = childHasAIUse || null;
+		(sel as any).child_ai_use_contexts = childAIUseContexts || [];
+		(sel as any).parent_llm_monitoring_level = parentLLMMonitoringLevel || null;
+
+		// Attach "Other" text fields
+		(sel as any).child_gender_other = childGenderOther || null;
+		(sel as any).child_ai_use_contexts_other = childAIUseContextsOther || null;
+		(sel as any).parent_llm_monitoring_other = parentLLMMonitoringOther || null;
 	}
 
 	async function deleteChild(index: number) {
@@ -330,7 +335,7 @@
 		try {
 			await childProfileSync.deleteChildProfile(childToDelete.id);
 			childProfiles = childProfiles.filter((_, i) => i !== index);
-			
+
 			// Adjust selectedChildIndex if needed
 			if (childProfiles.length === 0) {
 				selectedChildIndex = 0;
@@ -344,10 +349,10 @@
 				}
 				hydrateFormFromSelectedChild();
 			}
-			
+
 			// Dispatch event to notify sidebar of child profile changes
 			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
-			
+
 			toast.success('Child profile deleted successfully!');
 		} catch (error) {
 			console.error('Failed to delete child profile:', error);
@@ -360,24 +365,24 @@
 		if (selectedChildIndex === -1 && showForm && isEditing) {
 			return;
 		}
-		
+
 		// Reset form fields
 		childName = '';
 		childAge = '';
 		childGender = '';
 		childCharacteristics = '';
-		
+
 		// Reset personality traits
 		selectedSubCharacteristics = [];
 		expandedTraits = new Set();
-	// Reset research fields
-	isOnlyChild = '';
-	childHasAIUse = '';
-	childAIUseContexts = [];
-	parentLLMMonitoringLevel = '';
-	childGenderOther = '';
-	childAIUseContextsOther = '';
-	parentLLMMonitoringOther = '';
+		// Reset research fields
+		isOnlyChild = '';
+		childHasAIUse = '';
+		childAIUseContexts = [];
+		parentLLMMonitoringLevel = '';
+		childGenderOther = '';
+		childAIUseContextsOther = '';
+		parentLLMMonitoringOther = '';
 		showForm = true;
 		isEditing = true; // Set editing mode
 		// Set selected index to -1 to indicate we're creating a new profile
@@ -398,7 +403,7 @@
 			childAge = '';
 			childGender = '';
 			childCharacteristics = '';
-			
+
 			// Reset personality traits
 			selectedSubCharacteristics = [];
 			expandedTraits = new Set();
@@ -410,23 +415,23 @@
 		hydrateFormFromSelectedChild();
 		showForm = false;
 		isEditing = false;
-		
+
 		// Update the current child ID in the service
 		const childId = childProfiles[index]?.id;
 		if (childId) {
 			await childProfileSync.setCurrentChildId(childId);
 			console.log('Selected child profile:', childId);
-			
-		// Set this child as selected for questions (same as selectChildForQuestions)
-		childSelectedForQuestions = index;
-		
-		// Unlock Step 2 (but don't show modal yet - that happens after save)
-		localStorage.setItem('assignmentStep', '2');
-		localStorage.setItem('moderationScenariosAccessed', 'true');
-		localStorage.setItem('unlock_moderation', 'true');
-		window.dispatchEvent(new Event('storage'));
-		window.dispatchEvent(new Event('workflow-updated'));
-		// Don't show modal here - it will be shown after save
+
+			// Set this child as selected for questions (same as selectChildForQuestions)
+			childSelectedForQuestions = index;
+
+			// Unlock Step 2 (but don't show modal yet - that happens after save)
+			localStorage.setItem('assignmentStep', '2');
+			localStorage.setItem('moderationScenariosAccessed', 'true');
+			localStorage.setItem('unlock_moderation', 'true');
+			window.dispatchEvent(new Event('storage'));
+			window.dispatchEvent(new Event('workflow-updated'));
+			// Don't show modal here - it will be shown after save
 		}
 	}
 
@@ -459,14 +464,18 @@
 				return;
 			}
 			if (!childHasAIUse) {
-				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
+				toast.error('Please answer whether this child has used ChatGPT or similar AI tools');
 				return;
 			}
 			if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
 				toast.error('Please select at least one context of AI use');
 				return;
 			}
-			if (childHasAIUse === 'yes' && childAIUseContexts.includes('other') && !childAIUseContextsOther.trim()) {
+			if (
+				childHasAIUse === 'yes' &&
+				childAIUseContexts.includes('other') &&
+				!childAIUseContextsOther.trim()
+			) {
 				toast.error('Please specify the context of AI use');
 				return;
 			}
@@ -475,7 +484,7 @@
 				return;
 			}
 			if (parentLLMMonitoringLevel === 'other' && !parentLLMMonitoringOther.trim()) {
-				toast.error('Please specify how you have monitored or adjusted your child\'s AI use');
+				toast.error("Please specify how you have monitored or adjusted your child's AI use");
 				return;
 			}
 
@@ -486,32 +495,32 @@
 			if (childProfiles.length === 0 || selectedChildIndex === -1) {
 				// Combine personality traits with characteristics
 				const personalityDesc = getPersonalityDescription();
-				const combinedCharacteristics = personalityDesc 
-					? (childCharacteristics.trim() 
+				const combinedCharacteristics = personalityDesc
+					? childCharacteristics.trim()
 						? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
-						: personalityDesc)
+						: personalityDesc
 					: childCharacteristics;
-				
+
 				// Determine session number before creating child profile
 				const userId = get(user)?.id;
 				const token = localStorage.getItem('token') || '';
 				let sessionNumber = 1;
-				
+
 				if (userId && token) {
 					sessionNumber = await determineSessionNumberForUser(userId, token);
 				}
-				
-			const newChild = await childProfileSync.createChildProfile({
+
+				const newChild = await childProfileSync.createChildProfile({
 					name: childName,
 					child_age: childAge,
 					child_gender: childGender === 'Other' ? 'Other' : childGender,
 					child_characteristics: combinedCharacteristics,
-				is_only_child: isOnlyChild === 'yes',
-				child_has_ai_use: childHasAIUse as any,
-				child_ai_use_contexts: childAIUseContexts,
-				parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
-				child_gender_other: childGenderOther || undefined,
-				child_ai_use_contexts_other: childAIUseContextsOther || undefined,
+					is_only_child: isOnlyChild === 'yes',
+					child_has_ai_use: childHasAIUse as any,
+					child_ai_use_contexts: childAIUseContexts,
+					parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
+					child_gender_other: childGenderOther || undefined,
+					child_ai_use_contexts_other: childAIUseContextsOther || undefined,
 					parent_llm_monitoring_other: parentLLMMonitoringOther || undefined,
 					session_number: sessionNumber
 				} as any);
@@ -522,27 +531,29 @@
 					childProfiles = [...childProfiles, newChild];
 					selectedChildIndex = childProfiles.length - 1;
 				}
-				
+
 				// Set the new profile as the current selected profile
 				await childProfileSync.setCurrentChildId(newChild.id);
-				
+
 				// Trigger async scenario assignment (don't await - runs in background)
 				if (userId && token) {
 					assignScenariosForChild(newChild.id, userId, sessionNumber, token, 6)
-						.then(result => {
-							console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${newChild.id}`);
+						.then((result) => {
+							console.log(
+								`✅ Assigned ${result.assignmentCount} scenarios for child ${newChild.id}`
+							);
 							if (result.assignmentCount < 6) {
 								console.warn(`⚠️ Only ${result.assignmentCount}/6 scenarios assigned`);
 							}
 						})
-						.catch(error => {
+						.catch((error) => {
 							console.error('❌ Failed to assign scenarios:', error);
 						});
 				}
-				
+
 				// Automatically select the newly created child for questions
 				childSelectedForQuestions = selectedChildIndex;
-				
+
 				// Unlock Step 2
 				localStorage.setItem('assignmentStep', '2');
 				localStorage.setItem('moderationScenariosAccessed', 'true');
@@ -552,22 +563,22 @@
 			} else {
 				// Apply current form to selected child
 				applyFormToSelectedChild();
-				
+
 				const selectedChild = childProfiles[selectedChildIndex];
 				if (selectedChild) {
 					// Combine personality traits with characteristics
 					const personalityDesc = getPersonalityDescription();
-					const combinedCharacteristics = personalityDesc 
-						? (childCharacteristics.trim() 
+					const combinedCharacteristics = personalityDesc
+						? childCharacteristics.trim()
 							? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
-							: personalityDesc)
+							: personalityDesc
 						: childCharacteristics;
-					
+
 					// Clear moderation state for this child (scenarios are now stored in backend)
 					localStorage.removeItem(`moderationScenarioStates_${selectedChild.id}`);
 					localStorage.removeItem(`moderationScenarioTimers_${selectedChild.id}`);
 					localStorage.removeItem(`moderationCurrentScenario_${selectedChild.id}`);
-					
+
 					// Update the child profile via API
 					await childProfileSync.updateChildProfile(selectedChild.id, {
 						name: childName,
@@ -582,56 +593,60 @@
 						child_ai_use_contexts_other: childAIUseContextsOther || undefined,
 						parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
 					} as any);
-					
+
 					// Update childSelectedForQuestions to show the green checkmark on the saved profile
 					childSelectedForQuestions = selectedChildIndex;
-					
+
 					// Keep backend in sync by setting the current child ID
 					await childProfileSync.setCurrentChildId(selectedChild.id);
 				}
 			}
-			
-		// Dispatch event to notify sidebar of child profile changes
-		window.dispatchEvent(new CustomEvent('child-profiles-updated'));
-		
-		// Show appropriate success message
-		if (isEditingExisting) {
-			toast.success('Profile updated! New moderation scenarios have been generated.');
-		} else {
-			toast.success('Child profile saved successfully!');
-		}
-		
-		// Scroll to top to see the saved profile
-		if (mainPageContainer) {
-			mainPageContainer.scrollTo({ top: 0, behavior: 'smooth' });
-		}
-		
-		// Exit edit mode after saving and mark as completed
-		isEditing = false;
-		showForm = false;
-		isProfileCompleted = true;
-		
-		// If a child is selected for questions, show confirmation modal
-		if (childSelectedForQuestions >= 0 && childSelectedForQuestions < childProfiles.length) {
-			showConfirmationModal = true;
+
+			// Dispatch event to notify sidebar of child profile changes
+			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
+
+			// Show appropriate success message
+			if (isEditingExisting) {
+				toast.success('Profile updated! New moderation scenarios have been generated.');
+			} else {
+				toast.success('Child profile saved successfully!');
+			}
+
+			// Scroll to top to see the saved profile
+			if (mainPageContainer) {
+				mainPageContainer.scrollTo({ top: 0, behavior: 'smooth' });
+			}
+
+			// Exit edit mode after saving and mark as completed
+			isEditing = false;
+			showForm = false;
+			isProfileCompleted = true;
+
+			// If a child is selected for questions, show confirmation modal
+			if (childSelectedForQuestions >= 0 && childSelectedForQuestions < childProfiles.length) {
+				showConfirmationModal = true;
+			}
+		} catch (error) {
+			console.error('Failed to save child profile:', error);
+			toast.error('Failed to save child profile. Please try again.');
 		}
 	}
 
 	async function handleProfileSaved(profile: ChildProfile) {
 		// Set child as selected for questions if not already
 		const profiles = await childProfileSync.getChildProfiles();
-		const index = profiles.findIndex(p => p.id === profile.id);
+		const index = profiles.findIndex((p) => p.id === profile.id);
 		if (index !== -1) {
 			childSelectedForQuestions = index;
 			await childProfileSync.setCurrentChildId(profile.id);
-			
+
 			// Unlock Step 2
 			localStorage.setItem('assignmentStep', '2');
 			localStorage.setItem('moderationScenariosAccessed', 'true');
 			localStorage.setItem('unlock_moderation', 'true');
 			window.dispatchEvent(new Event('storage'));
 			window.dispatchEvent(new Event('workflow-updated'));
-			
+
 			// Show confirmation modal
 			showConfirmationModal = true;
 		}
@@ -640,21 +655,21 @@
 	async function handleChildSelected(profile: ChildProfile, index: number) {
 		childSelectedForQuestions = index;
 		await childProfileSync.setCurrentChildId(profile.id);
-		
+
 		// Unlock Step 2
 		localStorage.setItem('assignmentStep', '2');
 		localStorage.setItem('moderationScenariosAccessed', 'true');
 		localStorage.setItem('unlock_moderation', 'true');
 		window.dispatchEvent(new Event('storage'));
 		window.dispatchEvent(new Event('workflow-updated'));
-		
+
 		// Show confirmation modal (as in original workflow)
 		showConfirmationModal = true;
 	}
 
 	async function proceedToNextStep() {
 		const userType = await getUserType($user);
-		
+
 		if (userType === 'interviewee') {
 			localStorage.setItem('assignmentStep', '2');
 			goto('/moderation-scenario');
