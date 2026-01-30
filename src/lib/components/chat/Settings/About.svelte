@@ -5,10 +5,8 @@
 	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
-	import { goto } from '$app/navigation';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Home from '$lib/components/icons/Home.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -173,20 +171,6 @@
 				href="https://github.com/tjbck"
 				target="_blank">Timothy J. Baek</a
 			>
-		</div>
-
-		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
-
-		<div class="mt-2">
-			<button
-				class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium text-sm flex items-center justify-center gap-2"
-				on:click={async () => {
-					await goto('/');
-				}}
-			>
-				<Home className="size-5" strokeWidth="1.5" />
-				<span>Open WebUI</span>
-			</button>
 		</div>
 	</div>
 </div>

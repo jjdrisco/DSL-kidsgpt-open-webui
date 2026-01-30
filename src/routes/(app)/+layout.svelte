@@ -538,7 +538,9 @@
 					</div>
 				{/if}
 
-				<Sidebar />
+				{#if !$page.url.pathname.includes('/exit-survey') && !$page.url.pathname.includes('/moderation-scenario') && !$page.url.pathname.includes('/kids/profile') && !$page.url.pathname.includes('/assignment-instructions')}
+					<Sidebar />
+				{/if}
 
 				{#if loaded}
 					<slot />

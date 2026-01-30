@@ -27,11 +27,26 @@
 	import UserStatusModal from './UserStatusModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
 	import { updateUserStatus } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
+	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import { getUserType } from '$lib/utils';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
+	
+	let userType = 'user';
+	let isProlific = false;
+	
+	$: if ($user) {
+		getUserType($user).then(type => {
+			userType = type;
+			isProlific = type === 'interviewee';
+		});
+	}
+	
+	$: isSurveyPage = $page.url.pathname.includes('/exit-survey') || $page.url.pathname.includes('/moderation-scenario') || $page.url.pathname.includes('/kids/profile');
 
 	export let show = false;
 	export let role = '';
@@ -243,25 +258,6 @@
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				as="a"
-				href="/exit-survey"
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-				on:click={async () => {
-					show = false;
-					await goto('/exit-survey');
-					if ($mobile) {
-						await tick();
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center mr-3">
-					<DocumentChartBar className="size-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Survey View')}</div>
-			</DropdownMenu.Item>
-
 			{#if role === 'admin'}
 				<DropdownMenu.Item
 					as="a"
@@ -354,6 +350,48 @@
 			{/if}
 
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+
+			{#if isProlific && !isSurveyPage}
+				<!-- Survey View button for prolific users when not in survey mode -->
+				<DropdownMenu.Item
+					as="a"
+					href="/exit-survey"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
+						show = false;
+						await goto('/exit-survey');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<DocumentChartBar className="size-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Survey View')}</div>
+				</DropdownMenu.Item>
+			{:else if !isProlific && isSurveyPage}
+				<!-- Chat View button for non-prolific users when in survey mode -->
+				<DropdownMenu.Item
+					as="a"
+					href="/"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
+						show = false;
+						await goto('/');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<ChatBubble className="size-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Chat View')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<DropdownMenu.Item
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"

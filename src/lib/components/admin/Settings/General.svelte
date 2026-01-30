@@ -19,11 +19,8 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Home from '$lib/components/icons/Home.svelte';
-	import { createNewChat, getChatList } from '$lib/apis/chats';
-	import { user, settings, models } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -92,26 +89,6 @@
 			saveHandler();
 		} else {
 			toast.error($i18n.t('Failed to update settings'));
-		}
-	};
-
-	const navigateToChat = async () => {
-		try {
-			// Try to get the most recent chat and navigate directly to it
-			// This works for all user types including admins
-			const chatList = await getChatList(localStorage.token, 1);
-			
-			if (chatList && chatList.length > 0) {
-				// Navigate directly to the most recent chat
-				window.location.href = `/c/${chatList[0].id}`;
-			} else {
-				// No chats exist, navigate to /parent and let the app handle it
-				window.location.href = '/parent';
-			}
-		} catch (error) {
-			console.error('Error navigating to chat:', error);
-			// Fallback: navigate to /parent
-			window.location.href = '/parent';
 		}
 	};
 
@@ -834,7 +811,6 @@
 							/>
 						</div>
 					</div>
-
 				</div>
 			</div>
 		{/if}
@@ -848,8 +824,8 @@
 				on:click|stopPropagation={async (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					// Navigate to chat interface - get existing chat or create new one
-					await navigateToChat();
+					// Navigate to home page which shows the chat interface
+					window.location.href = '/';
 				}}
 			>
 				<Home className="size-5" strokeWidth="1.5" />
@@ -857,11 +833,12 @@
 			</button>
 		</div>
 		<div class="flex justify-end text-sm font-medium">
-		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+			<button
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				type="submit"
+			>
+				{$i18n.t('Save')}
+			</button>
+		</div>
 	</div>
 </form>
