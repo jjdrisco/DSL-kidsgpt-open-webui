@@ -43,10 +43,16 @@
 		getUserType($user).then(type => {
 			userType = type;
 			isProlific = type === 'interviewee';
+		}).catch(() => {
+			userType = 'user';
+			isProlific = false;
 		});
 	}
 	
-	$: isSurveyPage = $page.url.pathname.includes('/exit-survey') || $page.url.pathname.includes('/moderation-scenario') || $page.url.pathname.includes('/kids/profile');
+	$: isSurveyPage = $page.url.pathname.includes('/exit-survey') || 
+		$page.url.pathname.includes('/moderation-scenario') || 
+		$page.url.pathname.includes('/kids/profile') ||
+		$page.url.pathname.includes('/assignment-instructions');
 
 	export let show = false;
 	export let role = '';
