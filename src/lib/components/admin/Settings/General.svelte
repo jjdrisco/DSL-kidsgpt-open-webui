@@ -22,6 +22,8 @@
 	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Home from '$lib/components/icons/Home.svelte';
+	import { createNewChat, getChatList } from '$lib/apis/chats';
+	import { user, settings, models } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -90,6 +92,48 @@
 			saveHandler();
 		} else {
 			toast.error($i18n.t('Failed to update settings'));
+		}
+	};
+
+	const navigateToChat = async () => {
+		try {
+			// Try to get the most recent chat
+			const chatList = await getChatList(localStorage.token, 1);
+			
+			if (chatList && chatList.length > 0) {
+				// Navigate to the most recent chat
+				window.location.href = `/c/${chatList[0].id}`;
+				return;
+			}
+			
+			// If no chats exist, create a new one
+			const selectedModels = $models && $models.length > 0 ? [$models[0].id] : [];
+			const newChat = await createNewChat(
+				localStorage.token,
+				{
+					id: `temp-${Date.now()}`,
+					title: $i18n.t('New Chat'),
+					models: selectedModels,
+					system: $settings?.system ?? undefined,
+					params: {},
+					history: { currentId: null, messages: [] },
+					messages: [],
+					tags: [],
+					timestamp: Date.now()
+				},
+				null
+			);
+			
+			if (newChat && newChat.id) {
+				window.location.href = `/c/${newChat.id}`;
+			} else {
+				// Fallback: navigate to root and let routing handle it
+				window.location.href = '/';
+			}
+		} catch (error) {
+			console.error('Error navigating to chat:', error);
+			// Fallback: navigate to root
+			window.location.href = '/';
 		}
 	};
 
@@ -826,8 +870,8 @@
 				on:click|stopPropagation={async (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					// Navigate to chat page - use window.location for reliable navigation from within form
-					window.location.href = '/parent';
+					// Navigate to chat interface - get existing chat or create new one
+					await navigateToChat();
 				}}
 			>
 				<Home className="size-5" strokeWidth="1.5" />
