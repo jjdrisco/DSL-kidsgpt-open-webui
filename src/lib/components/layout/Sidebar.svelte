@@ -546,29 +546,33 @@
 					// Navigate to the most recent chat
 					await goto(`/c/${chatList[0].id}`);
 				} else {
-					// If no chats exist, create a new one
-					// Use default model selection - empty string means no model selected yet (will use default)
-					const selectedModels = $models && $models.length > 0 ? [$models[0].id] : [''];
-					const newChat = await createNewChat(
-						localStorage.token,
-						{
-							id: `temp-${Date.now()}`,
-							title: $i18n.t('New Chat'),
-							models: selectedModels,
-							system: $settings?.system ?? undefined,
-							params: {},
-							history: { currentId: null, messages: [] },
-							messages: [],
-							tags: [],
-							timestamp: Date.now()
-						},
-						null
-					);
-					
-					if (newChat && newChat.id) {
-						await goto(`/c/${newChat.id}`);
+					// If no chats exist and we have models available, create a new one
+					if ($models && $models.length > 0) {
+						const selectedModels = [$models[0].id];
+						const newChat = await createNewChat(
+							localStorage.token,
+							{
+								id: `temp-${Date.now()}`,
+								title: $i18n.t('New Chat'),
+								models: selectedModels,
+								system: $settings?.system ?? undefined,
+								params: {},
+								history: { currentId: null, messages: [] },
+								messages: [],
+								tags: [],
+								timestamp: Date.now()
+							},
+							null
+						);
+						
+						if (newChat && newChat.id) {
+							await goto(`/c/${newChat.id}`);
+						} else {
+							// Fallback: navigate to root
+							await goto('/');
+						}
 					} else {
-						// Fallback: navigate to root
+						// No models available, navigate to root and let app handle it
 						await goto('/');
 					}
 				}
