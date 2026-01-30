@@ -83,13 +83,11 @@ describe('Navigation', () => {
 			// Wait for navigation - give it more time
 			cy.wait(2000);
 			
-			// Verify navigation away from admin settings (should go to chat/parent page or admin overview)
+			// Verify navigation away from admin settings
 			cy.url({ timeout: 15000 }).should('not.include', '/admin/settings');
 			cy.url().should('not.include', '/exit-survey');
-			// Should be on a chat-accessible page (parent, chat route, or admin overview for admin users)
-			cy.url().should('satisfy', (url) => {
-				return url.includes('/parent') || url.includes('/c/') || url.includes('/admin/users/overview') || url === 'http://localhost:5173/' || url.includes('?');
-			});
+			// Should be on a chat page (main chat interface)
+			cy.url({ timeout: 15000 }).should('include', '/c/');
 		});
 	});
 
@@ -123,12 +121,10 @@ describe('Navigation', () => {
 			cy.contains('button', 'Open WebUI', { timeout: 10000 }).should('be.visible').click({ force: true });
 			cy.wait(2000);
 			
-			// Should be back on home/chat page (not on admin settings)
+			// Should be back on chat page (not on admin settings)
 			cy.url({ timeout: 15000 }).should('not.include', '/admin/settings');
-			// Should be on a chat-accessible page (or admin overview for admin users)
-			cy.url().should('satisfy', (url) => {
-				return url.includes('/parent') || url.includes('/c/') || url.includes('/admin/users/overview') || url === 'http://localhost:5173/' || url.includes('?');
-			});
+			// Should be on a chat page (main chat interface)
+			cy.url({ timeout: 15000 }).should('include', '/c/');
 		});
 	});
 });

@@ -547,7 +547,8 @@
 					await goto(`/c/${chatList[0].id}`);
 				} else {
 					// If no chats exist, create a new one
-					const selectedModels = $models && $models.length > 0 ? [$models[0].id] : [];
+					// Use default model selection - empty string means no model selected yet (will use default)
+					const selectedModels = $models && $models.length > 0 ? [$models[0].id] : [''];
 					const newChat = await createNewChat(
 						localStorage.token,
 						{
