@@ -24,7 +24,6 @@ from sqlalchemy import (
     or_,
 )
 
-
 log = logging.getLogger(__name__)
 
 ####################

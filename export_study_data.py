@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-
 APP_NAME = "contextquiz-openwebui-kidsgpt"
 
 

@@ -8,7 +8,6 @@ from open_webui.utils.auth import get_verified_user
 from open_webui.models.exit_quiz import ExitQuizzes, ExitQuizModel, ExitQuizForm
 from open_webui.models.users import UserModel
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()
