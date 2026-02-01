@@ -1,6 +1,6 @@
 # Project Continuation Guide
 
-**Last Updated**: 2026-01-30  
+**Last Updated**: 2026-01-31  
 **Project**: DSL KidsGPT Open WebUI  
 **Repository**: https://github.com/jjdrisco/DSL-kidsgpt-open-webui
 
@@ -180,70 +180,202 @@ npm install --legacy-peer-deps
 
 # Install backend dependencies
 cd backend
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
-### Running Tests
+### Complete Testing Setup Process
 
-#### 1. Start Services
+#### Step 1: Prepare Database
 
-**Backend** (port 8080):
+**Critical**: The database must exist and be migrated before running tests.
+
+```bash
+# Create data directory
+mkdir -p data
+chmod 777 data
+
+# Database will be created on first backend startup
+# But you can verify it exists:
+ls -la data/webui.db
+```
+
+#### Step 2: Start Backend (Required First)
+
+**Backend must be running before starting frontend or tests.**
 
 ```bash
 cd backend
-./start.sh
-# Or: PORT=8080 python -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8080
+
+# Set all required environment variables
+export WEBUI_SECRET_KEY="mdiQCC4718rQbe3G"
+export WHISPER_MODEL_AUTO_UPDATE="false"
+export WHISPER_MODEL=""
+export DATABASE_URL="sqlite:///$(pwd)/../data/webui.db"
+export CORS_ALLOW_ORIGIN="http://localhost:5173;http://localhost:5174;http://localhost:8080"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+# Set Python path
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
+# Start backend
+python3 -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8080 --forwarded-allow-ips '*'
 ```
 
-**Frontend** (port 5173 or 5174):
+**Verify backend is running**:
+```bash
+# In another terminal
+curl http://localhost:8080/health
+# Should return: {"status":"ok"} or similar JSON
+
+# Check if database was created
+ls -la data/webui.db
+```
+
+**Common Backend Startup Issues**:
+- If you see "unable to open database file": Create `data/` directory and ensure it's writable
+- If you see "no such table: config": Database migrations haven't run. Backend should auto-run migrations on startup
+- If you see "Multiple heads": See [Database Migration Issues](#database-migration-issues) above
+
+#### Step 3: Start Frontend
+
+**In a separate terminal**:
 
 ```bash
+# From project root
 npm run dev
-# Note the port Vite prints
+# Note the port (usually 5173 or 5174)
 ```
 
-#### 2. Run Tests
+**Verify frontend is running**:
+```bash
+curl http://localhost:5173
+# Should return HTML
+```
 
-**Workflow API Tests**:
+#### Step 4: Run Tests
 
+**Important**: Both backend and frontend must be running before tests.
+
+**Set test environment variables**:
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1
-export CYPRESS_baseUrl=http://localhost:5173  # Use actual port
+export CYPRESS_baseUrl=http://localhost:5173  # Use actual frontend port
+```
+
+**Workflow API Tests**:
+```bash
 xvfb-run -a npx cypress run --headless --spec cypress/e2e/workflow.cy.ts
 ```
 
 **Child Profile Tests**:
-
 ```bash
 RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 \
   npx cypress run --headless --spec "cypress/e2e/kids-profile.cy.ts,cypress/e2e/parent-child-profile.cy.ts"
 ```
 
-**All Tests**:
+**Survey Sidebar Tests**:
+```bash
+CYPRESS_baseUrl=http://localhost:5173 \
+  npx cypress run --headless --spec cypress/e2e/survey-sidebar.cy.ts
+```
 
+**All Tests**:
 ```bash
 RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 \
   xvfb-run -a npx cypress run --headless
 ```
 
 **Interactive Mode** (requires display):
-
 ```bash
 npx cypress open
 ```
 
-### Test Account
+### Test Execution Order
 
-**Default Credentials**:
+**Recommended order**:
+1. ✅ Backend started and healthy (`curl http://localhost:8080/health`)
+2. ✅ Frontend started and accessible (`curl http://localhost:5173`)
+3. ✅ Database exists and migrated (`ls -la data/webui.db`)
+4. ✅ Run tests
 
-- Email: `jjdrisco@ucsd.edu`
-- Password: `0000`
+### Common Cypress Test Issues
+
+**Problem**: `Cannot find module 'cypress'`
+- **Solution**: Run `npm install --legacy-peer-deps` to install Cypress
+
+**Problem**: `AssertionError: expected 500 to be one of [ 200, 400, 403 ]`
+- **Cause**: Backend error during signup/login
+- **Solution**: 
+  1. Check backend logs for errors
+  2. Verify database is initialized and migrated
+  3. Check `WEBUI_SECRET_KEY` is set
+  4. Verify backend is accessible: `curl http://localhost:8080/health`
+
+**Problem**: `Error: Email input not found on auth page`
+- **Cause**: Frontend not loaded or redirect occurred
+- **Solution**: 
+  1. Verify frontend is running on correct port
+  2. Check `CYPRESS_baseUrl` matches actual frontend port
+  3. Add `cy.wait(1000)` before interacting with UI elements
+
+**Problem**: `CypressError: cy.click() failed because this element is being covered`
+- **Cause**: Modal or overlay covering element
+- **Solution**: 
+  1. Use `{ force: true }` option: `cy.get('button').click({ force: true })`
+  2. Wait for overlays to disappear: `cy.wait(1000)`
+  3. Close modals before interaction
+
+**Problem**: `Timed out retrying: Expected to find element: #survey-sidebar-nav`
+- **Cause**: Sidebar not visible (hidden by default on some pages)
+- **Solution**: 
+  1. Check if sidebar toggle button exists
+  2. Click toggle to show sidebar: `cy.get('button[aria-label*="Sidebar"]').click()`
+  3. Wait for sidebar to appear: `cy.wait(500)`
+
+**Problem**: Tests pass locally but fail in CI
+- **Solution**: 
+  1. Ensure all environment variables are set in CI
+  2. Verify database is initialized in CI
+  3. Check backend startup logs in CI
+  4. Ensure `CYPRESS_baseUrl` is set correctly in CI
+
+### Test Accounts & Credentials
+
+**Default Test Credentials**:
+
+- **Admin/Test User**:
+  - Email: `jjdrisco@ucsd.edu`
+  - Password: `0000`
 
 **Override with Environment Variables**:
 
 - `INTERVIEWEE_EMAIL` / `INTERVIEWEE_PASSWORD` (kids spec)
 - `PARENT_EMAIL` / `PARENT_PASSWORD` (parent spec)
 - `TEST_EMAIL` / `TEST_PASSWORD` (both)
+
+**Creating Test Accounts**:
+
+Test accounts are created automatically by Cypress during test execution via the `cy.loginAdmin()` command in `cypress/support/e2e.ts`. The command:
+1. Attempts to register a new admin user via API
+2. If user exists (400 response), proceeds to login
+3. If registration succeeds (200), user is created and logged in
+
+**Manual Account Creation** (if needed):
+
+```bash
+# Via API (if backend is running)
+curl -X POST http://localhost:8080/api/v1/auths/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123",
+    "name": "Test User",
+    "role": "admin"
+  }'
+```
+
+**Note**: Ensure backend is running and database is initialized before creating accounts.
 
 ### Available Test Suites
 
@@ -258,13 +390,42 @@ npx cypress open
 | `settings.cy.ts`             | Settings page tests                         |
 | `documents.cy.ts`            | Document management tests                   |
 
-### Common Issues
+### Debugging Test Failures
 
-- **Missing X server**: Use `xvfb-run -a` wrapper for headless execution
-- **Frontend/Backend not running**: Verify services on correct ports
-- **Authentication failures**: Check test account exists and credentials match
-- **Dependency conflicts**: Always use `npm install --legacy-peer-deps`
-- **Node.js v22 crashes**: Use Node.js v20.x instead
+**Step-by-step debugging**:
+
+1. **Verify services are running**:
+   ```bash
+   # Backend health check
+   curl http://localhost:8080/health
+   
+   # Frontend accessibility
+   curl http://localhost:5173
+   
+   # Database exists
+   ls -la data/webui.db
+   ```
+
+2. **Check backend logs** for errors:
+   - Look for database errors
+   - Check for missing tables/columns
+   - Verify migration status
+
+3. **Check Cypress logs**:
+   - Run with `--headed` flag to see browser
+   - Check console for JavaScript errors
+   - Verify network requests in Cypress UI
+
+4. **Verify test account**:
+   - Check if account exists in database
+   - Verify credentials match test expectations
+   - Check if account has correct role/permissions
+
+5. **Common failure patterns**:
+   - **500 errors**: Usually backend/database issues
+   - **404 errors**: Frontend routing or API endpoint issues
+   - **Timeout errors**: Services not running or slow response
+   - **Element not found**: UI changes or timing issues
 
 **Full Documentation**: See `docs/CYPRESS_TEST_SETUP.md` and `cypress/README_CHILD_PROFILE_TESTS.md`
 
@@ -272,22 +433,158 @@ npx cypress open
 
 ## Development Setup
 
-### Environment Variables
+### Backend Setup & Credentials
+
+#### Required Environment Variables
+
+The backend requires specific environment variables to run. Create a `.env` file or export them before starting:
+
+```bash
+# Required for backend startup
+export WEBUI_SECRET_KEY="mdiQCC4718rQbe3G"  # Or generate your own secret key
+export DATABASE_URL="sqlite:///$(pwd)/data/webui.db"  # SQLite database path
+export CORS_ALLOW_ORIGIN="http://localhost:5173;http://localhost:5174;http://localhost:8080"
+
+# Optional but recommended
+export WHISPER_MODEL_AUTO_UPDATE="false"
+export WHISPER_MODEL=""
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+# For production/remote deployments
+export FORWARDED_ALLOW_IPS='*'
+```
+
+**Important Notes**:
+- `WEBUI_SECRET_KEY`: Must be set for session management. Use a secure random string.
+- `DATABASE_URL`: Points to SQLite database. Ensure `data/` directory exists and is writable.
+- `CORS_ALLOW_ORIGIN`: Must include all frontend ports you'll use (5173, 5174, etc.).
+
+#### Database Setup
+
+**1. Create data directory**:
+```bash
+mkdir -p data
+chmod 777 data  # Ensure writable
+```
+
+**2. Database will be auto-created** on first backend startup if it doesn't exist.
+
+**3. Database migrations**:
+- Migrations run automatically on backend startup via `backend/open_webui/config.py`
+- If you encounter "multiple heads" migration errors, see [Database Migration Issues](#database-migration-issues)
+
+#### Backend Startup Command
+
+**Full command with all required variables**:
+```bash
+cd backend
+export WEBUI_SECRET_KEY="mdiQCC4718rQbe3G"
+export WHISPER_MODEL_AUTO_UPDATE="false"
+export WHISPER_MODEL=""
+export DATABASE_URL="sqlite:///$(pwd)/../data/webui.db"
+export CORS_ALLOW_ORIGIN="http://localhost:5173;http://localhost:5174;http://localhost:8080"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+# Set Python path (required if running from backend directory)
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
+# Start backend
+python3 -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8080 --forwarded-allow-ips '*'
+```
+
+**Or use the startup script** (if available):
+```bash
+cd backend
+./start.sh
+```
+
+**Verify backend is running**:
+```bash
+curl http://localhost:8080/health
+# Should return: {"status":"ok"} or similar
+```
+
+#### Common Backend Issues
+
+**Problem**: `python: command not found`
+- **Solution**: Use `python3` instead of `python`
+- **Check**: `which python3` and `python3 --version` (need 3.12+)
+
+**Problem**: `ModuleNotFoundError: No module named 'uvicorn'`
+- **Solution**: Install dependencies: `pip3 install -r requirements.txt`
+- **Or**: `pip3 install uvicorn fastapi`
+
+**Problem**: `ModuleNotFoundError: No module named 'open_webui'`
+- **Solution**: Set `PYTHONPATH`:
+  ```bash
+  export PYTHONPATH="$(pwd):$PYTHONPATH"  # From backend directory
+  # Or run from project root
+  ```
+
+**Problem**: `sqlalchemy.exc.OperationalError: unable to open database file`
+- **Solution**: 
+  1. Create `data` directory: `mkdir -p data && chmod 777 data`
+  2. Verify `DATABASE_URL` path is correct
+  3. Check write permissions on `data/` directory
+
+**Problem**: `sqlalchemy.exc.OperationalError: no such table: config`
+- **Solution**: Database migrations haven't run. See [Database Migration Issues](#database-migration-issues)
+
+#### Database Migration Issues
+
+**Problem**: Multiple migration heads detected
+- **Error**: `alembic.util.exc.CommandError: Multiple heads are present`
+- **Solution**: 
+  1. Check current heads: `cd backend && alembic heads`
+  2. If multiple heads exist, create a merge migration:
+     ```bash
+     cd backend
+     alembic merge -m "merge_all_heads" <head1> <head2> <head3>
+     ```
+  3. Update database: `alembic upgrade head`
+  4. Verify single head: `alembic heads` (should show one)
+
+**Problem**: Missing tables or columns after migration
+- **Solution**: 
+  1. Check migration status: `alembic current`
+  2. Verify all migrations applied: `alembic upgrade head`
+  3. If issues persist, may need to manually create missing tables (see `backend/open_webui/models/`)
+
+**Note**: The project includes a merge migration (`df887c71f080_merge_all_heads.py`) that combines multiple heads. If you see migration errors, ensure this migration is applied.
+
+### Frontend Setup
+
+#### Environment Variables
 
 Copy `.env.example` to `.env` and configure:
 
 ```bash
-# Backend
-OLLAMA_BASE_URL='http://localhost:11434'
-OPENAI_API_BASE_URL=''
-OPENAI_API_KEY=''
-CORS_ALLOW_ORIGIN='*'
-FORWARDED_ALLOW_IPS='*'
+# Backend API URL (usually localhost:8080)
+VITE_API_BASE_URL=http://localhost:8080
 
-# Analytics
+# Analytics (optional)
 SCARF_NO_ANALYTICS=true
 DO_NOT_TRACK=true
 ANONYMIZED_TELEMETRY=false
+```
+
+#### Frontend Startup
+
+```bash
+# Install dependencies (use --legacy-peer-deps for Node v20 compatibility)
+npm install --legacy-peer-deps
+
+# Start development server
+npm run dev
+# Note the port (usually 5173 or 5174)
+```
+
+**Verify frontend is running**:
+```bash
+curl http://localhost:5173
+# Should return HTML
 ```
 
 ### Development Commands
@@ -561,14 +858,25 @@ npm install --legacy-peer-deps
 
 ```bash
 # Check Python version (need 3.12+)
-python --version
+python3 --version  # Use python3, not python
 
 # Install dependencies
 cd backend
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 # Check port availability
 lsof -i :8080
+
+# Verify environment variables are set
+echo $WEBUI_SECRET_KEY
+echo $DATABASE_URL
+echo $CORS_ALLOW_ORIGIN
+
+# Check database directory exists
+ls -la data/
+
+# Set Python path if running from backend directory
+export PYTHONPATH="$(pwd):$PYTHONPATH"
 ```
 
 **Problem**: Cypress tests fail
@@ -581,8 +889,40 @@ node --version
 curl http://localhost:8080/health
 curl http://localhost:5173
 
-# Check test account exists
+# Check database exists and is accessible
+ls -la data/webui.db
+
+# Verify backend can access database
+# Check backend logs for database errors
+
+# Check test account exists (may need to create manually)
 # Verify credentials match environment variables
+
+# Check Cypress can find modules
+npm list cypress
+
+# Reinstall if needed
+npm install --legacy-peer-deps
+```
+
+**Problem**: Database migration errors
+
+```bash
+# Check current migration status
+cd backend
+alembic current
+
+# Check for multiple heads
+alembic heads
+
+# If multiple heads, create merge migration
+alembic merge -m "merge_heads" <head1> <head2>
+
+# Upgrade to head
+alembic upgrade head
+
+# Verify single head
+alembic heads
 ```
 
 ### PR Issues
@@ -640,5 +980,42 @@ When starting work on this project:
 
 ---
 
-**Last Updated**: 2026-01-30  
+**Last Updated**: 2026-01-31  
 **Maintained By**: Project Contributors
+
+---
+
+## Quick Reference: Getting the Webapp Running
+
+### Complete Startup Sequence
+
+**Terminal 1 - Backend**:
+```bash
+cd backend
+export WEBUI_SECRET_KEY="mdiQCC4718rQbe3G"
+export DATABASE_URL="sqlite:///$(pwd)/../data/webui.db"
+export CORS_ALLOW_ORIGIN="http://localhost:5173;http://localhost:5174;http://localhost:8080"
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+python3 -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8080 --forwarded-allow-ips '*'
+```
+
+**Terminal 2 - Frontend**:
+```bash
+npm run dev
+# Note the port (usually 5173)
+```
+
+**Terminal 3 - Tests** (optional):
+```bash
+export CYPRESS_baseUrl=http://localhost:5173
+npx cypress run --headless
+```
+
+### Verification Checklist
+
+- [ ] `data/` directory exists and is writable
+- [ ] Backend responds: `curl http://localhost:8080/health`
+- [ ] Frontend accessible: `curl http://localhost:5173`
+- [ ] Database file exists: `ls -la data/webui.db`
+- [ ] No migration errors in backend logs
+- [ ] Environment variables set correctly
