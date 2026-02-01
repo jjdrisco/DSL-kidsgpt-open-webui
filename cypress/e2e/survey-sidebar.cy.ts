@@ -192,4 +192,98 @@ describe('Survey Sidebar and Navigation', () => {
 			});
 		});
 	});
+
+	context('Assignment Progress Display', () => {
+		it('should display assignment progress in survey sidebar', () => {
+			// Navigate to exit-survey page
+			cy.visit('/exit-survey', { failOnStatusCode: false });
+			cy.wait(2000);
+
+			// Toggle sidebar if it's hidden
+			cy.get('body').then(($body) => {
+				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
+					cy.get(
+						'#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]'
+					)
+						.first()
+						.click({ force: true });
+					cy.wait(500);
+				}
+			});
+
+			// Wait for sidebar to be visible
+			cy.get('#survey-sidebar-nav, [id*="survey-sidebar"]', { timeout: 10000 }).should('exist');
+
+			// Check for Assignment Progress section
+			cy.contains('Assignment Progress', { timeout: 10000 }).should('be.visible');
+
+			// Check for progress items (Child Profile, Moderation, Exit Survey)
+			cy.contains('Child Profile', { timeout: 5000 }).should('exist');
+			cy.contains('Moderation', { timeout: 5000 }).should('exist');
+			cy.contains('Exit Survey', { timeout: 5000 }).should('exist');
+		});
+	});
+
+	context('Chat View Button in Sidebar', () => {
+		it('should show Chat View button in survey sidebar', () => {
+			// Navigate to exit-survey page
+			cy.visit('/exit-survey', { failOnStatusCode: false });
+			cy.wait(2000);
+
+			// Toggle sidebar if it's hidden
+			cy.get('body').then(($body) => {
+				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
+					cy.get(
+						'#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]'
+					)
+						.first()
+						.click({ force: true });
+					cy.wait(500);
+				}
+			});
+
+			// Wait for sidebar to be visible
+			cy.get('#survey-sidebar-nav, [id*="survey-sidebar"]', { timeout: 10000 }).should('exist');
+
+			// Check for Chat View button (should be visible in sidebar, not just in user menu)
+			cy.contains('Chat View', { timeout: 10000 }).should('be.visible');
+		});
+
+		it('should navigate to main chat page when clicking Chat View button', () => {
+			// Navigate to exit-survey page
+			cy.visit('/exit-survey', { failOnStatusCode: false });
+			cy.wait(2000);
+
+			// Toggle sidebar if it's hidden
+			cy.get('body').then(($body) => {
+				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
+					cy.get(
+						'#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]'
+					)
+						.first()
+						.click({ force: true });
+					cy.wait(500);
+				}
+			});
+
+			// Wait for sidebar to be visible
+			cy.get('#survey-sidebar-nav, [id*="survey-sidebar"]', { timeout: 10000 }).should('exist');
+
+			// Click on Chat View button (find button containing "Chat View" text)
+			cy.contains('button', 'Chat View', { timeout: 10000 })
+				.should('be.visible')
+				.click({ force: true });
+			cy.wait(2000);
+
+			// Should navigate away from exit-survey
+			cy.url({ timeout: 10000 }).should('not.include', '/exit-survey');
+
+			// Should be on main chat page (either / or /c/[id])
+			cy.url().then((url) => {
+				expect(url).to.satisfy((u: string) => {
+					return u === Cypress.config().baseUrl + '/' || u.includes('/c/');
+				});
+			});
+		});
+	});
 });
