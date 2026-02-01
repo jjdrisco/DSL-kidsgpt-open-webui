@@ -177,8 +177,7 @@
 												? 'bg-yellow-500'
 												: 'bg-gray-300 dark:bg-gray-600'}"
 									>
-										{#if workflowProgress.moderation_completed_count >=
-										workflowProgress.moderation_total}
+										{#if workflowProgress.moderation_completed_count >= workflowProgress.moderation_total}
 											<svg
 												class="size-3 text-white"
 												fill="none"
