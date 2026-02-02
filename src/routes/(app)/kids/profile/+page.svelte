@@ -89,69 +89,6 @@
 		return `repeat(${cols}, minmax(120px, 1fr))`;
 	}
 
-	// Reactive statement to track selected characteristics
-	$: console.log('Selected characteristics:', selectedSubCharacteristics);
-	$: console.log('Expanded traits:', Array.from(expandedTraits));
-
-	// Personality trait helper functions
-	function toggleTrait(traitId: string) {
-		if (expandedTraits.has(traitId)) {
-			expandedTraits.delete(traitId);
-		} else {
-			expandedTraits.add(traitId);
-		}
-		expandedTraits = expandedTraits; // Trigger reactivity
-	}
-
-	function getSelectedSubCharacteristics(): SubCharacteristic[] {
-		const selected: SubCharacteristic[] = [];
-
-		// Go through all traits and find selected characteristics
-		for (const trait of personalityTraits) {
-			const matchingChars = trait.subCharacteristics.filter((sub) =>
-				selectedSubCharacteristics.includes(sub.id)
-			);
-			selected.push(...matchingChars);
-		}
-
-		return selected;
-	}
-
-	function getSelectedSubCharacteristicNames(): string[] {
-		return getSelectedSubCharacteristics().map((sub) => sub.name);
-	}
-
-	function getPersonalityDescription(): string {
-		const subChars = getSelectedSubCharacteristics();
-
-		if (subChars.length === 0) return '';
-
-		// Group characteristics by trait
-		const traitGroups = new Map<string, string[]>();
-
-		for (const subChar of subChars) {
-			// Find which trait this belongs to
-			const trait = personalityTraits.find((t) =>
-				t.subCharacteristics.some((sc) => sc.id === subChar.id)
-			);
-
-			if (trait) {
-				if (!traitGroups.has(trait.name)) {
-					traitGroups.set(trait.name, []);
-				}
-				traitGroups.get(trait.name)!.push(subChar.name);
-			}
-		}
-
-		// Format as "Trait: char1, char2\nTrait2: char3, char4"
-		const descriptions: string[] = [];
-		for (const [traitName, chars] of traitGroups.entries()) {
-			descriptions.push(`${traitName}: ${chars.join(', ')}`);
-		}
-
-		return descriptions.join('\n');
-	}
-
 	function ensureAtLeastOneChild() {
 		// No-op: allow empty list of children per user request
 	}

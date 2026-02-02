@@ -246,7 +246,8 @@
 
 			{@const isSurveyView =
 				$page.url.pathname.startsWith('/exit-survey') ||
-				$page.url.pathname.startsWith('/initial-survey')}
+				$page.url.pathname.startsWith('/initial-survey') ||
+				$page.url.pathname.startsWith('/moderation-scenario')}
 			{@const isParentOrChild =
 				$user?.role === 'parent' || $user?.role === 'child' || ($user as any)?.parent_id}
 
