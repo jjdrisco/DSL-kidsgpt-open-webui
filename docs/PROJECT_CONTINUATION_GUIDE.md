@@ -109,9 +109,16 @@ This is a fork of Open WebUI customized for a research study involving children 
 **Features**:
 
 - Child profile creation with personality traits
+- **Child account creation**: Email and password required when creating child profile
 - Parent-child profile management
 - Profile-based scenario generation
 - Attention check integration
+- **Profile display**: Characteristics & Interests section removed from profile information display
+
+**Key Components**:
+
+- `src/lib/components/profile/ChildProfileForm.svelte` - Child profile form with account creation fields
+- `src/routes/(app)/kids/profile/preview/+page.svelte` - Profile preview (without Characteristics & Interests)
 
 **Testing**: See `cypress/e2e/kids-profile.cy.ts` and `cypress/e2e/parent-child-profile.cy.ts`
 
@@ -564,6 +571,46 @@ Child and parent accounts were receiving 400 Bad Request or 403 Forbidden / "Mod
 
 ---
 
+### Recently Merged (2026-02-02)
+
+**PR #15: Remove Survey View for Parent/Child and Update Sidebar Name** ✅ **COMPLETE**
+
+- Removed Survey View button from user menu for parent and child users
+- Updated sidebar name from "Open WebUI" to "DataSmithGPT" (hardcoded in sidebar element)
+- Survey View button now only visible to interviewee and admin users
+- **Branch**: `feat/remove-survey-view-for-parent-child-and-update-webui-name` - **INACTIVE** (merged)
+
+**Key Files Changed**:
+
+- `src/lib/components/layout/Sidebar/UserMenu.svelte` - Added parent/child check to hide Survey View button
+- `src/lib/components/layout/Sidebar.svelte` - Changed sidebar name to "DataSmithGPT"
+
+**PR #14: Restore Survey Sidebar with Assignment Progress** ✅ **COMPLETE**
+
+- Restored SurveySidebar component with assignment progress display
+- Shows Child Profile, Moderation, and Exit Survey completion status
+- Includes Chat View button for navigation to main chat
+- Progress fetched from workflow state API on component mount
+- **Branch**: `feat/restore-survey-sidebar-with-progress` - **INACTIVE** (merged)
+
+**Key Files Changed**:
+
+- `src/lib/components/layout/SurveySidebar.svelte` - Restored with assignment progress and Chat View button
+
+**PR #13: Child Account Creation and Profile Cleanup** ✅ **COMPLETE**
+
+- Removed "Characteristics & Interests" section from profile information display after child creation
+- Added child account creation with email and password fields to child profile form
+- Account automatically created when child profile is created
+- Added explanatory text about account creation
+- **Branch**: `feat/child-account-creation-and-profile-cleanup` - **INACTIVE** (merged)
+
+**Key Files Changed**:
+
+- `src/lib/components/profile/ChildProfileForm.svelte` - Added email/password fields and account creation
+- `src/routes/(app)/kids/profile/preview/+page.svelte` - Removed Characteristics & Interests display
+- `cypress/e2e/kids-profile.cy.ts` - Updated tests to include email/password fields
+
 ### Recently Merged (2026-01-30)
 
 **PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**
@@ -586,6 +633,15 @@ Child and parent accounts were receiving 400 Bad Request or 403 Forbidden / "Mod
 
 The following branches have been merged and are inactive:
 
+- **`feat/remove-survey-view-for-parent-child-and-update-webui-name`** - Merged via PR #15 (2026-02-02)
+  - Status: Complete and merged to main
+  - Can be safely deleted from remote repository
+- **`feat/restore-survey-sidebar-with-progress`** - Merged via PR #14 (2026-02-02)
+  - Status: Complete and merged to main
+  - Can be safely deleted from remote repository
+- **`feat/child-account-creation-and-profile-cleanup`** - Merged via PR #13 (2026-02-01)
+  - Status: Complete and merged to main
+  - Can be safely deleted from remote repository
 - **`feature/separate-quiz-workflow`** - Merged via PR #10 (2026-01-30)
   - Status: Complete and merged to main
   - Can be safely deleted from remote repository
@@ -601,6 +657,11 @@ The following branches have been merged and are inactive:
 ### Important Context
 
 - **User Types**: The system supports multiple user types (parent, child, admin, interviewee) with different workflows
+- **Survey View Button**: Only visible to interviewee and admin users (hidden for parent/child users)
+- **Sidebar Name**: Displays "DataSmithGPT" instead of dynamic WEBUI_NAME in the sidebar
+- **Survey Sidebar**: Shows assignment progress (Child Profile, Moderation, Exit Survey) and includes Chat View button
+- **Child Account Creation**: When creating a child profile, a child user account is automatically created with the provided email and password
+- **Profile Display**: Characteristics & Interests section removed from profile information display after child creation
 - **Prolific Integration**: Special handling for Prolific study participants
 - **Personality-Based Scenarios**: Scenarios are generated from child profile characteristics, not hardcoded
 - **Attention Checks**: Randomly injected into moderation scenarios for data quality
