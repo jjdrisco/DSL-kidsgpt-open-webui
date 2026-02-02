@@ -8,29 +8,8 @@ describe('Moderation Scenario New Features', () => {
 
 	beforeEach(() => {
 		cy.login(EMAIL, PASSWORD);
-		// Step 1: Ensure we have a child profile first (workflow step 1)
-		cy.visit('/kids/profile');
-		cy.wait(3000);
-		// Create a child profile if needed
-		cy.get('body').then(($body) => {
-			const hasAddButton = $body.find('button').filter((i, el) => el.textContent?.includes('+') || el.textContent?.trim() === '+').length > 0;
-			const hasForm = $body.find('input[id="childName"]').length > 0;
-			
-			if (hasAddButton && !hasForm) {
-				cy.get('button').filter((i, el) => el.textContent?.includes('+') || el.textContent?.trim() === '+').first().click({ force: true });
-				cy.wait(2000);
-				cy.get('input[id="childName"]', { timeout: 5000 }).type('Test Child');
-				cy.get('select[id="childAge"]').select('10 years old');
-				cy.get('select[id="childGender"]').select('Male');
-				cy.get('button').contains('Save Profile').click();
-				cy.wait(3000);
-			}
-		});
-		
-		// Wait for profile to be created and page to settle
-		cy.wait(3000);
-		
-		// Get child profile ID via API and set it as current, and upload test scenario
+
+		// Ensure we have at least one child profile via API (more stable than UI flows)
 		cy.window().then((win) => {
 			const token = win.localStorage.getItem('token') || '';
 			if (token) {
@@ -64,6 +43,26 @@ describe('Moderation Scenario New Features', () => {
 						win.localStorage.setItem('assignmentStep', '2');
 						win.localStorage.setItem('moderationScenariosAccessed', 'true');
 						win.localStorage.setItem('unlock_moderation', 'true');
+					} else if (response.status === 200 && Array.isArray(response.body) && response.body.length === 0) {
+						// No profiles exist yet: create one, then set workflow flags
+						cy.request({
+							method: 'POST',
+							url: '/api/v1/child-profiles',
+							headers: {
+								Authorization: `Bearer ${token}`,
+								'Content-Type': 'application/json'
+							},
+							body: {
+								name: 'Test Child',
+								child_age: '10 years old',
+								child_gender: 'Male'
+							},
+							failOnStatusCode: false
+						}).then(() => {
+							win.localStorage.setItem('assignmentStep', '2');
+							win.localStorage.setItem('moderationScenariosAccessed', 'true');
+							win.localStorage.setItem('unlock_moderation', 'true');
+						});
 					} else {
 						// If no profiles, still set assignment step
 						win.localStorage.setItem('assignmentStep', '2');

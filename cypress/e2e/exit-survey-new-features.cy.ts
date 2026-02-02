@@ -8,23 +8,43 @@ describe('Exit Survey New Features', () => {
 
 	beforeEach(() => {
 		cy.login(EMAIL, PASSWORD);
-		// Ensure we have a child profile first
-		cy.visit('/kids/profile');
-		cy.wait(3000);
-		cy.get('body').then(($body) => {
-			// Check if we need to create a child profile
-			const hasAddButton = $body.find('button').filter((i, el) => el.textContent?.includes('+') || el.textContent?.trim() === '+').length > 0;
-			const hasForm = $body.find('input[id="childName"]').length > 0;
-			
-			if (hasAddButton && !hasForm) {
-				cy.get('button').filter((i, el) => el.textContent?.includes('+') || el.textContent?.trim() === '+').first().click({ force: true });
-				cy.wait(2000);
-				cy.get('input[id="childName"]', { timeout: 5000 }).type('Test Child');
-				cy.get('select[id="childAge"]').select('10 years old');
-				cy.get('select[id="childGender"]').select('Male');
-				cy.get('button').contains('Save Profile').click();
-				cy.wait(3000);
+		// Ensure we have at least one child profile via API (more stable than UI flows)
+		cy.window().then((win) => {
+			const token = win.localStorage.getItem('token') || '';
+			if (!token) {
+				throw new Error('No auth token found in localStorage');
 			}
+
+			cy.request({
+				method: 'GET',
+				url: '/api/v1/child-profiles',
+				headers: {
+					Authorization: `Bearer ${token}`
+				},
+				failOnStatusCode: false
+			}).then((response) => {
+				if (
+					response.status === 200 &&
+					Array.isArray(response.body) &&
+					response.body.length === 0
+				) {
+					// Create a basic child profile if none exist
+					cy.request({
+						method: 'POST',
+						url: '/api/v1/child-profiles',
+						headers: {
+							Authorization: `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: {
+							name: 'Test Child',
+							child_age: '10 years old',
+							child_gender: 'Male'
+						},
+						failOnStatusCode: false
+					});
+				}
+			});
 		});
 		// Set assignment step to allow access to exit survey
 		cy.window().then((win) => {
