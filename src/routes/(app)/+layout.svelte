@@ -409,12 +409,6 @@
 				return;
 			}
 
-			// Block Kids Profile until instructions are confirmed
-			if (currentPath.startsWith('/kids/profile') && !instructionsCompleted) {
-				await goto('/assignment-instructions');
-				return;
-			}
-
 			// Allow access to admin and workspace routes for admins
 			if (
 				$user?.role === 'admin' &&
@@ -435,6 +429,12 @@
 
 			// Allow child users to access / freely
 			if (userType === 'child' && currentPath === '/') {
+				return;
+			}
+
+			// Block Kids Profile until instructions are confirmed for interviewee users only
+			if (userType === 'interviewee' && currentPath.startsWith('/kids/profile') && !instructionsCompleted) {
+				await goto('/assignment-instructions');
 				return;
 			}
 
