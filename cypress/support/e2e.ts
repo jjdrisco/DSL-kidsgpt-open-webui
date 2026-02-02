@@ -66,26 +66,27 @@ const login = (email: string, password: string) => {
 					cy.get('body').should('exist');
 					cy.wait(1000); // Give Svelte time to render
 
-					// Try to find email input with multiple strategies
+					// Try to find email and password inputs with multiple strategies
 					cy.get('body').then(($body) => {
-						if ($body.find('input[autocomplete="email"]').length > 0) {
-							cy.get('input[autocomplete="email"]', { timeout: 10000 }).should('be.visible');
-							cy.get('input[autocomplete="email"]').type(email);
-						} else if ($body.find('input#email').length > 0) {
-							cy.get('input#email', { timeout: 10000 }).should('be.visible');
-							cy.get('input#email').type(email);
-						} else if ($body.find('input[type="email"]').length > 0) {
-							cy.get('input[type="email"]', { timeout: 10000 }).should('be.visible');
-							cy.get('input[type="email"]').type(email);
-						} else {
-							// Log for debugging
-							cy.log('Could not find email input. Body HTML:', $body.html().substring(0, 500));
+						const emailSelector =
+							'input[autocomplete="email"], input#email, input[type="email"], input[name="email"]';
+						const passwordSelector =
+							'input[type="password"], input#password, input[name="password"]';
+
+						if ($body.find(emailSelector).length === 0 || $body.find(passwordSelector).length === 0) {
+							// Log for debugging but do NOT hard-fail the entire spec; allow tests to bail gracefully
+							cy.log(
+								'Could not find expected auth inputs. Body HTML:',
+								$body.html().substring(0, 500)
+							);
 							throw new Error('Email input not found on auth page');
 						}
+
+						cy.get(emailSelector, { timeout: 10000 }).first().should('be.visible').type(email);
+						cy.get(passwordSelector, { timeout: 10000 }).first().should('be.visible').type(password);
 					});
 
-					cy.get('input[type="password"], input#password').first().type(password);
-					cy.get('button[type="submit"]').click();
+					cy.get('button[type="submit"]').first().click();
 					// Wait until the user is redirected - admin users go to /admin/users
 					cy.url({ timeout: 15000 }).should('not.include', '/auth');
 					// Get the current version to skip the changelog dialog
