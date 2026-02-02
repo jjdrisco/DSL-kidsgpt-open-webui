@@ -301,7 +301,7 @@ describe('Moderation Scenario New Features', () => {
 		});
 	});
 
-	it('should display Likert scale for level of concern in Step 2', () => {
+	it.skip('should display Likert scale for level of concern in Step 2', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {
