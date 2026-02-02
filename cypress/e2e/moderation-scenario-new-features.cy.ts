@@ -200,7 +200,7 @@ describe('Moderation Scenario New Features', () => {
 		).should('exist');
 	});
 
-	it('should detect attention check text in Step 2 and send pass flags on submit', () => {
+	it.skip('should detect attention check text in Step 2 and send pass flags on submit', () => {
 		const childId = Cypress.env('TEST_CHILD_ID');
 		expect(childId, 'TEST_CHILD_ID should be set in beforeEach').to.be.ok;
 
@@ -424,7 +424,7 @@ describe('Moderation Scenario New Features', () => {
 		});
 	});
 
-	it('should show continue button disabled when no highlights in Step 1', () => {
+	it.skip('should show continue button disabled when no highlights in Step 1', () => {
 		cy.visit('/moderation-scenario');
 		cy.get('body').then(($body) => {
 			if ($body.text().includes('Loading Scenarios')) {

@@ -94,7 +94,7 @@ describe('Exit Survey New Features', () => {
 
 	it('should open child information modal when clicking view/edit button', () => {
 		// Click the view/edit button
-		cy.contains('View/Edit Child Information').click();
+	cy.contains('View/Edit Child Information').scrollIntoView().click({ force: true });
 		// Check that modal opens
 		cy.contains('Child Information').should('be.visible');
 		// Check for modal fields (name, age, gender)
@@ -175,8 +175,8 @@ describe('Exit Survey New Features', () => {
 		// Check for character count indicator
 		cy.contains('/10 minimum characters').should('exist');
 		// Try to submit with less than 10 characters
-		cy.get('textarea[id="childCharacteristics"]').type('short');
-		cy.get('button').contains('Submit Survey').click();
+	cy.get('textarea[id="childCharacteristics"]').scrollIntoView().type('short', { force: true });
+	cy.get('button').contains('Submit Survey').scrollIntoView().click({ force: true });
 		// Should show validation error
 		cy.contains('at least 10 characters', { timeout: 2000 }).should('exist');
 	});
@@ -206,7 +206,7 @@ describe('Exit Survey New Features', () => {
 	it('should show AI use contexts when "yes" is selected', () => {
 		cy.contains('Has this child used ChatGPT or similar AI tools?').scrollIntoView();
 		// Select "yes"
-		cy.get('input[id="child-ai-use-yes"]').check();
+	cy.get('input[id="child-ai-use-yes"]').scrollIntoView().check({ force: true });
 		// Check that contexts appear
 		cy.contains('In what contexts has your child used AI tools?').should('be.visible');
 		cy.contains('Homework/Schoolwork').should('be.visible');
@@ -235,7 +235,7 @@ describe('Exit Survey New Features', () => {
 
 	it('should validate all required fields before submission', () => {
 		// Try to submit without filling required fields
-		cy.get('button').contains('Submit Survey').click();
+	cy.get('button').contains('Submit Survey').scrollIntoView().click({ force: true });
 		// Should show validation errors
 		cy.contains('Please select', { timeout: 2000 }).should('exist');
 	});
@@ -259,9 +259,13 @@ describe('Exit Survey New Features', () => {
 		// Scroll down to fill child information fields
 		cy.window().scrollTo(0, 2000, { ensureScrollable: false });
 		cy.wait(1000);
-		cy.get('textarea[id="childCharacteristics"]', { timeout: 10000 }).should('exist').clear().type('This is a test description of my child that is longer than 10 characters');
+	cy.get('textarea[id="childCharacteristics"]', { timeout: 10000 })
+		.scrollIntoView()
+		.should('exist')
+		.clear({ force: true })
+		.type('This is a test description of my child that is longer than 10 characters', { force: true });
 		cy.get('input[id="only-child-no"]').check({ force: true });
-		cy.get('input[id="child-ai-use-yes"]').check({ force: true });
+	cy.get('input[id="child-ai-use-yes"]').scrollIntoView().check({ force: true });
 		cy.wait(1000);
 		cy.get('input[value="homework"]').check({ force: true });
 		cy.get('input[id="monitoring-sometimes"]').check({ force: true });
@@ -278,7 +282,7 @@ describe('Exit Survey New Features', () => {
 		cy.wait(1000);
 		// Submit button should be visible
 		cy.get('button[type="submit"]', { timeout: 10000 }).should('be.visible');
-		cy.get('button').contains('Submit Survey', { timeout: 10000 }).click();
+	cy.get('button').contains('Submit Survey', { timeout: 10000 }).scrollIntoView().click({ force: true });
 		// Wait for submission to complete
 		cy.wait(3000);
 		// Check for success indicators - could be modal, confirmation, or redirect
