@@ -557,21 +557,25 @@
 					</div>
 				{/if}
 
-				{@const isSurveyRoute =
-					$page.url.pathname.startsWith('/exit-survey') ||
-					$page.url.pathname.startsWith('/initial-survey')}
+				{@const pathname = $page.url.pathname}
+				{@const isSurveyRoute = pathname.startsWith('/exit-survey') || pathname.startsWith('/initial-survey')}
+				{@const isScenarioRoute = pathname.startsWith('/moderation-scenario')}
+				{@const hasLayoutSidebar = !isScenarioRoute}
+				{@const isLayoutSidebarVisible = hasLayoutSidebar && $showSidebar}
 
-				{#if isSurveyRoute}
-					<SurveySidebar />
-				{:else}
-					<Sidebar />
+				{#if hasLayoutSidebar}
+					{#if isSurveyRoute}
+						<SurveySidebar />
+					{:else}
+						<Sidebar />
+					{/if}
 				{/if}
 
 				{#if loaded}
 					<slot />
 				{:else}
 					<div
-						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
+						class="w-full flex-1 h-full flex items-center justify-center {isLayoutSidebarVisible
 							? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 							: ' '}"
 					>
