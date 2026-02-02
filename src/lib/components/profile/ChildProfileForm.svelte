@@ -1069,7 +1069,9 @@
 									{$i18n.t('Child Account Creation')}
 								</h3>
 								<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-									{$i18n.t('When you create a child profile, a user account will also be created for your child. This account will allow your child to interact with the AI system.')}
+									{$i18n.t(
+										'When you create a child profile, a user account will also be created for your child. This account will allow your child to interact with the AI system.'
+									)}
 								</p>
 							</div>
 
