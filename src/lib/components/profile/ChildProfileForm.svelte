@@ -1066,11 +1066,10 @@
 						<div class="pt-6 border-t border-gray-200 dark:border-gray-700">
 							<div class="mb-4">
 								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-									Child Account Creation
+									{$i18n.t('Child Account Creation')}
 								</h3>
 								<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-									When you create a child profile, a user account will also be created for your
-									child. This account will allow your child to interact with the AI system.
+									{$i18n.t('When you create a child profile, a user account will also be created for your child. This account will allow your child to interact with the AI system.')}
 								</p>
 							</div>
 
@@ -1080,13 +1079,13 @@
 										for="childEmail"
 										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 									>
-										Child Email Address <span class="text-red-500">*</span>
+										{$i18n.t('Child Email Address')} <span class="text-red-500">*</span>
 									</label>
 									<input
 										type="email"
 										id="childEmail"
 										bind:value={childEmail}
-										placeholder="Enter child's email address"
+										placeholder={$i18n.t("Enter child's email address")}
 										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 										required
 									/>
@@ -1097,19 +1096,19 @@
 										for="childPassword"
 										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 									>
-										Child Account Password <span class="text-red-500">*</span>
+										{$i18n.t('Child Account Password')} <span class="text-red-500">*</span>
 									</label>
 									<SensitiveInput
 										type="password"
 										id="childPassword"
 										bind:value={childPassword}
-										placeholder="Enter password for child account (min. 6 characters)"
+										placeholder={$i18n.t('Enter password for child account (min. 6 characters)')}
 										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 										autocomplete="off"
 										required
 									/>
 									<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-										Password must be at least 6 characters long
+										{$i18n.t('Password must be at least 6 characters long')}
 									</p>
 								</div>
 							</div>
