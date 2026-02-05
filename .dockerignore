@@ -92,9 +92,6 @@ stat_analysis/
 *.sql
 *.db
 
-# Demo videos (can be large; serve from CDN if needed)
-static/video/
-
 # Test data and scripts
 backend/open_webui/test/
 backend/open_webui/retrieval/web/testdata/
