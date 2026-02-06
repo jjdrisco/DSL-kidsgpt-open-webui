@@ -82,7 +82,7 @@ chardet==5.2.0
 # sentence-transformers==5.1.1 # REMOVED: Too heavy for Heroku
 # accelerate # REMOVED: Too heavy for Heroku
 # pyarrow==20.0.0 # REMOVED: heavy; not needed on Heroku pilot
-einops==0.8.1 
+# einops==0.8.1    # REMOVED: heavy; not needed for basic chat 
 
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
 
@@ -102,14 +102,14 @@ ftfy==6.3.1
 Markdown==3.8.2
 validators==0.35.0
 psutil
-sentencepiece
+# sentencepiece  # REMOVED: heavy tokenizer, not needed for basic chat
 # soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
 # azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
 
 pillow==11.3.0
 # opencv-python-headless==4.11.0.86 # REMOVED: Too heavy for Heroku
 # rapidocr-onnxruntime==1.4.4 # REMOVED: Too heavy for Heroku
-rank-bm25==0.2.2
+# rank-bm25==0.2.2  # REMOVED: RAG retriever not needed without langchain
 
 # onnxruntime==1.20.1 # REMOVED: Too heavy for Heroku
 # faster-whisper==1.1.1 # REMOVED: Too heavy for Heroku
@@ -118,7 +118,7 @@ black==25.1.0
 # youtube-transcript-api==1.2.2  # REMOVED: optional YouTube loader
 # pytube==15.0.0                  # REMOVED: optional YouTube loader
 
-pydub
+# pydub  # REMOVED: audio processing not needed on Heroku
 # ddgs # REMOVED: Lazy import - install if using DuckDuckGo search
 
 ## Google Drive - REMOVED for slim Heroku slug (optional integration)
