@@ -61,7 +61,7 @@ openai
 # langchain-classic==1.0.1      # REMOVED: heavy RAG/tools stack  
 # langchain-text-splitters==1.1.0  # REMOVED: heavy RAG/tools stack
 
-fake-useragent==2.2.0
+# fake-useragent==2.2.0  # REMOVED: user agent faking, not needed for basic chat
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
 # huggingface_hub           # REMOVED: heavy HF integration, lazy import in retrieval.utils
 PyYAML
@@ -86,7 +86,7 @@ chardet==5.2.0
 
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
 
-ftfy==6.3.1
+# ftfy==6.3.1  # REMOVED: text fixing, not essential
 # Document/RAG helpers - REMOVED to shrink Heroku slug
 # pypdf==6.5.0
 # fpdf2==2.8.2
@@ -100,7 +100,7 @@ ftfy==6.3.1
 # pyxlsb==1.0.10
 # xlrd==2.0.1
 Markdown==3.8.2
-validators==0.35.0
+# validators==0.35.0  # REMOVED: validation library, not essential
 psutil
 # sentencepiece  # REMOVED: heavy tokenizer, not needed for basic chat
 # soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
