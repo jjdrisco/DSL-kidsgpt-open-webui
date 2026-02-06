@@ -65,7 +65,7 @@ openai
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
 # huggingface_hub           # REMOVED: heavy HF integration, lazy import in retrieval.utils
 PyYAML
-websocket-client
+# websocket-client  # REMOVED: only needed for optional ComfyUI integration
 websockets
 chardet==5.2.0
 # opensearch-py==2.8.0  # REMOVED: optional search backend
