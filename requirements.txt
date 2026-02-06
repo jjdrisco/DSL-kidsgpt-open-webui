@@ -27,10 +27,10 @@ anyio
 
 sqlalchemy==2.0.38
 alembic==1.14.0
-peewee==3.18.1
-peewee-migrate==1.12.2
+# peewee==3.18.1  # REMOVED: ORM not used (using SQLAlchemy)
+# peewee-migrate==1.12.2  # REMOVED: migration tool for peewee
 
-pycrdt==0.12.25
+# pycrdt==0.12.25  # REMOVED: Y.js CRDT, not needed for basic chat
 redis
 
 # Optional DB/search backends - REMOVED for slim Heroku slug
@@ -114,7 +114,7 @@ psutil
 # onnxruntime==1.20.1 # REMOVED: Too heavy for Heroku
 # faster-whisper==1.1.1 # REMOVED: Too heavy for Heroku
 
-black==25.1.0
+# black==25.1.0  # REMOVED: code formatter not needed in production
 # youtube-transcript-api==1.2.2  # REMOVED: optional YouTube loader
 # pytube==15.0.0                  # REMOVED: optional YouTube loader
 
