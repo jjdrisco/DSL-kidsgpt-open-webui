@@ -49,21 +49,21 @@ typer
 
 ## Core AI libraries (keep for pilot)
 tiktoken
-mcp==1.14.1
+# mcp==1.14.1                 # REMOVED for Heroku slug size (optional MCP tooling)
 
 openai
-anthropic
-google-genai==1.38.0
-google-generativeai==0.8.5
+# anthropic                   # REMOVED: optional model provider for Heroku pilot
+# google-genai==1.38.0        # REMOVED: optional Google GenAI provider
+# google-generativeai==0.8.5  # REMOVED: optional Google GenAI provider
 
-langchain==1.2.0
+langchain==1.2.2
 langchain-community==0.4.1
 langchain-classic==1.0.1
 langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
-# huggingface_hub           # REMOVED: heavy HF integration not needed on Heroku
+huggingface_hub           # needed by retrieval.utils (HF snapshot_download)
 PyYAML
 websocket-client
 websockets
@@ -81,7 +81,7 @@ chardet==5.2.0
 # transformers # REMOVED: Too heavy for Heroku
 # sentence-transformers==5.1.1 # REMOVED: Too heavy for Heroku
 # accelerate # REMOVED: Too heavy for Heroku
-pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
+# pyarrow==20.0.0 # REMOVED: heavy; not needed on Heroku pilot
 einops==0.8.1 
 
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
