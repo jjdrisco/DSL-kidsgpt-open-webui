@@ -1,158 +1,154 @@
-fastapi==0.115.7
-uvicorn==0.35.0  # Removed [standard] extras to reduce slug size
-pydantic==2.11.7
-python-multipart==0.0.20
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+pydantic==2.12.5
+python-multipart==0.0.21
 itsdangerous==2.2.0
 
-python-socketio==5.13.0
-python-jose==3.4.0
-passlib[bcrypt]==1.7.4
+python-socketio==5.16.0
+python-jose==3.5.0
 cryptography
-bcrypt==4.3.0
+bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.10.1
-authlib==1.6.3
+authlib==1.6.6
 
 requests==2.32.5
-aiohttp==3.12.15
+aiohttp==3.13.2
 async-timeout
 aiocache
 aiofiles
-# starlette-compress==1.6.0  # REMOVED: compression middleware optional for Heroku slug size
-httpx[http2]==0.28.1  # Removed socks/cli/zstd/brotli to reduce slug size
-starsessions[redis]==2.2.1  # Need RedisStore
-# python-mimeparse==2.0.0  # REMOVED: replaced with simple implementation for slug size
-pytz
-anyio
+starlette-compress==1.6.1
+httpx[socks,http2,zstd,cli,brotli]==0.28.1
+starsessions[redis]==2.2.1
+python-mimeparse==2.0.0
 
-sqlalchemy==2.0.38
-alembic==1.14.0
-# peewee==3.18.1  # REMOVED: ORM not used (using SQLAlchemy)
-# peewee-migrate==1.12.2  # REMOVED: migration tool for peewee
+sqlalchemy==2.0.45
+alembic==1.17.2
+peewee==3.18.3
+peewee-migrate==1.14.3
 
-# pycrdt==0.12.25  # REMOVED: Y.js CRDT, not needed for basic chat
+pycrdt==0.12.44
 redis
 
-# Optional DB/search backends - REMOVED for slim Heroku slug
-# pymongo
-psycopg2-binary==2.9.10
-# pgvector==0.4.1  # REMOVED: may pull numpy; use VECTOR_DB=pgvector but install manually if needed
-# PyMySQL==1.1.1  # install manually if MySQL is needed
-# boto3 # REMOVED: Lazy import - install if using STORAGE_PROVIDER=s3
-
-# APScheduler==3.10.4  # REMOVED: task scheduler, not needed for basic chat
-RestrictedPython==8.0
+APScheduler==3.11.2
+RestrictedPython==8.1
 
 loguru==0.7.3
-asgiref==3.8.1
-# typer  # REMOVED: CLI tool not needed in production Heroku deployment
+asgiref==3.11.0
 
-## Core AI libraries (keep for pilot)
+# AI libraries
 tiktoken
-# mcp==1.14.1                 # REMOVED for Heroku slug size (optional MCP tooling)
+mcp==1.25.0
 
 openai
-# anthropic                   # REMOVED: optional model provider for Heroku pilot
-# google-genai==1.38.0        # REMOVED: optional Google GenAI provider
-# google-generativeai==0.8.5  # REMOVED: optional Google GenAI provider
+anthropic
+google-genai==1.56.0
 
-# langchain==1.2.2              # REMOVED: heavy RAG/tools stack for Heroku pilot
-# langchain-community==0.4.1    # REMOVED: heavy RAG/tools stack
-# langchain-classic==1.0.1      # REMOVED: heavy RAG/tools stack  
-# langchain-text-splitters==1.1.0  # REMOVED: heavy RAG/tools stack
+langchain==1.2.0
+langchain-community==0.4.1
+langchain-classic==1.0.1
+langchain-text-splitters==1.1.0
 
-# fake-useragent==2.2.0  # REMOVED: user agent faking, not needed for basic chat
-# chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
-# huggingface_hub           # REMOVED: heavy HF integration, lazy import in retrieval.utils
-PyYAML
-# websocket-client  # REMOVED: only needed for optional ComfyUI integration
-websockets
+fake-useragent==2.2.0
+chromadb==1.4.0
+weaviate-client==4.19.2
+opensearch-py==3.1.0
+
+transformers==4.57.3
+sentence-transformers==5.2.0
+accelerate
+pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
+einops==0.8.1 
+
+ftfy==6.3.1
 chardet==5.2.0
-# opensearch-py==2.8.0  # REMOVED: optional search backend
+pypdf==6.5.0
+fpdf2==2.8.5
+pymdown-extensions==10.20
+docx2txt==0.9
+python-pptx==1.0.2
+unstructured==0.18.24
+msoffcrypto-tool==5.4.2
+nltk==3.9.2
+Markdown==3.10
+pypandoc==1.16.2
+pandas==2.3.3
+openpyxl==3.1.5
+pyxlsb==1.0.10
+xlrd==2.0.2
+validators==0.35.0
+psutil
+sentencepiece
+soundfile==0.13.1
 
-# pymilvus==2.5.0         # REMOVED: optional vector DB
-# qdrant-client==1.14.3   # REMOVED: optional vector DB
-# playwright==1.49.1 # REMOVED: Too heavy for Heroku
-# elasticsearch==9.1.0    # REMOVED: optional search backend
-# pinecone==6.0.2         # REMOVED: optional vector DB
-# oracledb==3.2.0         # REMOVED: optional DB
+pillow==12.1.0
+opencv-python-headless==4.12.0.88
+rapidocr-onnxruntime==1.4.4
+rank-bm25==0.2.2
 
-# av==14.0.1 # REMOVED: Heavy video processing
-# transformers # REMOVED: Too heavy for Heroku
-# sentence-transformers==5.1.1 # REMOVED: Too heavy for Heroku
-# accelerate # REMOVED: Too heavy for Heroku
-# pyarrow==20.0.0 # REMOVED: heavy; not needed on Heroku pilot
-# einops==0.8.1    # REMOVED: heavy; not needed for basic chat 
+onnxruntime==1.23.2
+faster-whisper==1.2.1
 
-# colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
+black==25.12.0
+youtube-transcript-api==1.2.3
+pytube==15.0.0
 
-# ftfy==6.3.1  # REMOVED: text fixing, not essential
-# Document/RAG helpers - REMOVED to shrink Heroku slug
-# pypdf==6.5.0
-# fpdf2==2.8.2
-# docx2txt==0.8
-# python-pptx==1.0.2
-# unstructured==0.16.17
-# nltk==3.9.1
-# pypandoc==1.15
-# pandas==2.2.3
-# openpyxl==3.1.5
-# pyxlsb==1.0.10
-# xlrd==2.0.1
-Markdown==3.8.2
-# validators==0.35.0  # REMOVED: validation library, not essential
-# psutil  # REMOVED: system utilities, not used in codebase
-# sentencepiece  # REMOVED: heavy tokenizer, not needed for basic chat
-# soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
-# azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
+pydub
+ddgs==9.10.0
 
-# pillow==11.3.0  # REMOVED: heavy image processing, not needed for basic chat
-# opencv-python-headless==4.11.0.86 # REMOVED: Too heavy for Heroku
-# rapidocr-onnxruntime==1.4.4 # REMOVED: Too heavy for Heroku
-# rank-bm25==0.2.2  # REMOVED: RAG retriever not needed without langchain
+azure-ai-documentintelligence==1.0.2
+azure-identity==1.25.1
+azure-storage-blob==12.27.1
+azure-search-documents==11.6.0
 
-# onnxruntime==1.20.1 # REMOVED: Too heavy for Heroku
-# faster-whisper==1.1.1 # REMOVED: Too heavy for Heroku
+## Google Drive
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
 
-# black==25.1.0  # REMOVED: code formatter not needed in production
-# youtube-transcript-api==1.2.2  # REMOVED: optional YouTube loader
-# pytube==15.0.0                  # REMOVED: optional YouTube loader
+googleapis-common-protos==1.72.0
+google-cloud-storage==3.7.0
 
-# pydub  # REMOVED: audio processing not needed on Heroku
-# ddgs # REMOVED: Lazy import - install if using DuckDuckGo search
+## Databases
+pymongo
+psycopg2-binary==2.9.11
+pgvector==0.4.2
 
-## Google Drive - REMOVED for slim Heroku slug (optional integration)
-# google-api-python-client
-# google-auth-httplib2
-# google-auth-oauthlib
+PyMySQL==1.1.2
+boto3==1.42.21
+
+pymilvus==2.6.6
+qdrant-client==1.16.2
+playwright==1.57.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
+elasticsearch==9.2.1
+pinecone==6.0.2
+oracledb==3.4.1
+
+av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
+
+colbert-ai==0.2.22
+
 
 ## Tests
-# docker~=7.1.0 # REMOVED: Not needed for production
-# pytest~=8.4.1 # REMOVED: Not needed for production
-# pytest-docker~=3.1.1 # REMOVED: Not needed for production
+docker~=7.1.0
+pytest~=8.4.1
+pytest-docker~=3.2.5
 
-# googleapis-common-protos # REMOVED: Lazy import - install if using STORAGE_PROVIDER=gcs
-# google-cloud-storage # REMOVED: Lazy import - install if using STORAGE_PROVIDER=gcs
+## LDAP
+ldap3==2.9.1
 
-# azure-identity # REMOVED: Lazy import - install if using STORAGE_PROVIDER=azure or document_intelligence
-# azure-storage-blob # REMOVED: Lazy import - install if using STORAGE_PROVIDER=azure
+## Firecrawl
+firecrawl-py==4.12.0
 
-## LDAP - REMOVED for slim Heroku slug (optional integration)
-# ldap3==2.9.1
-
-# firecrawl-py # REMOVED: Lazy import - install if using WEB_LOADER_ENGINE=firecrawl
-
-# tencentcloud-sdk-python # REMOVED: Lazy import - install if using Sogou search
-
-# OpenTelemetry - REMOVED: Lazy import - install if ENABLE_OTEL=true
-# opentelemetry-api
-# opentelemetry-sdk
-# opentelemetry-exporter-otlp
-# opentelemetry-instrumentation
-# opentelemetry-instrumentation-fastapi
-# opentelemetry-instrumentation-sqlalchemy
-# opentelemetry-instrumentation-redis
-# opentelemetry-instrumentation-requests
-# opentelemetry-instrumentation-logging
-# opentelemetry-instrumentation-httpx
-# opentelemetry-instrumentation-aiohttp-client
+## Trace
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-exporter-otlp==1.39.1
+opentelemetry-instrumentation==0.60b1
+opentelemetry-instrumentation-fastapi==0.60b1
+opentelemetry-instrumentation-sqlalchemy==0.60b1
+opentelemetry-instrumentation-redis==0.60b1
+opentelemetry-instrumentation-requests==0.60b1
+opentelemetry-instrumentation-logging==0.60b1
+opentelemetry-instrumentation-httpx==0.60b1
+opentelemetry-instrumentation-aiohttp-client==0.60b1

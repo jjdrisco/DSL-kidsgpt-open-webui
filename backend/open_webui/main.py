@@ -43,13 +43,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-# Lazy import starlette-compress for Heroku slug size (compression is optional)
-try:
-    from starlette_compress import CompressMiddleware
-    COMPRESS_AVAILABLE = True
-except ImportError:
-    COMPRESS_AVAILABLE = False
-    CompressMiddleware = None
+from starlette_compress import CompressMiddleware
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -90,7 +84,7 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    # memories,  # REMOVED: vector/memory functionality not needed for this stage
+    memories,
     models,
     knowledge,
     prompts,
@@ -101,14 +95,6 @@ from open_webui.routers import (
     scim,
     child_profiles,
 )
-
-# Lazy import memories for Heroku slug size (vector/memory functionality optional)
-try:
-    from open_webui.routers import memories
-    MEMORIES_AVAILABLE = True
-except ImportError:
-    memories = None
-    MEMORIES_AVAILABLE = False
 from open_webui.routers import workflow
 
 from open_webui.routers.retrieval import (
@@ -1275,8 +1261,7 @@ app.state.MODELS = MODELS
 
 # Add the middleware to the app
 if ENABLE_COMPRESSION_MIDDLEWARE:
-    if COMPRESS_AVAILABLE and CompressMiddleware:
-        app.add_middleware(CompressMiddleware)
+    app.add_middleware(CompressMiddleware)
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):
@@ -1445,8 +1430,7 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-if MEMORIES_AVAILABLE and memories:
-    app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
+app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])

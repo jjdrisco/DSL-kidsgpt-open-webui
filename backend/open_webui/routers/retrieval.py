@@ -43,11 +43,7 @@ from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
 
-# Lazy import vector DB for Heroku slug size (vector functionality optional)
-try:
-    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-except ImportError:
-    VECTOR_DB_CLIENT = None
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader

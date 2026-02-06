@@ -8,11 +8,7 @@ import urllib.parse
 import urllib.request
 from typing import Optional
 
-# Lazy import websocket-client for Heroku slug size (ComfyUI is optional)
-try:
-    import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
-except ImportError:
-    websocket = None
+import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -195,8 +191,6 @@ async def comfyui_create_image(
             for node_id in node.node_ids:
                 workflow[node_id]["inputs"][node.key] = node.value
 
-    if websocket is None:
-        raise ImportError("websocket-client is required for ComfyUI integration. Install it with: pip install websocket-client")
     try:
         ws = websocket.WebSocket()
         headers = {"Authorization": f"Bearer {api_key}"}
@@ -296,8 +290,6 @@ async def comfyui_edit_image(
             for node_id in node.node_ids:
                 workflow[node_id]["inputs"][node.key] = node.value
 
-    if websocket is None:
-        raise ImportError("websocket-client is required for ComfyUI integration. Install it with: pip install websocket-client")
     try:
         ws = websocket.WebSocket()
         headers = {"Authorization": f"Bearer {api_key}"}

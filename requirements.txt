@@ -1,5 +1,5 @@
 fastapi==0.115.7
-uvicorn==0.35.0  # Removed [standard] extras to reduce slug size
+uvicorn[standard]==0.35.0
 pydantic==2.11.7
 python-multipart==0.0.20
 itsdangerous==2.2.0
@@ -18,8 +18,8 @@ aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
-# starlette-compress==1.6.0  # REMOVED: compression middleware optional for Heroku slug size
-httpx[http2]==0.28.1  # Removed socks/cli/zstd/brotli to reduce slug size
+starlette-compress==1.6.0
+httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 pytz
@@ -27,25 +27,25 @@ anyio
 
 sqlalchemy==2.0.38
 alembic==1.14.0
-# peewee==3.18.1  # REMOVED: ORM not used (using SQLAlchemy)
-# peewee-migrate==1.12.2  # REMOVED: migration tool for peewee
+peewee==3.18.1
+peewee-migrate==1.12.2
 
-# pycrdt==0.12.25  # REMOVED: Y.js CRDT, not needed for basic chat
+pycrdt==0.12.25
 redis
 
 # Optional DB/search backends - REMOVED for slim Heroku slug
 # pymongo
 psycopg2-binary==2.9.10
-# pgvector==0.4.1  # REMOVED: may pull numpy; use VECTOR_DB=pgvector but install manually if needed
+pgvector==0.4.1
 # PyMySQL==1.1.1  # install manually if MySQL is needed
 # boto3 # REMOVED: Lazy import - install if using STORAGE_PROVIDER=s3
 
-# APScheduler==3.10.4  # REMOVED: task scheduler, not needed for basic chat
+APScheduler==3.10.4
 RestrictedPython==8.0
 
 loguru==0.7.3
 asgiref==3.8.1
-# typer  # REMOVED: CLI tool not needed in production Heroku deployment
+typer
 
 ## Core AI libraries (keep for pilot)
 tiktoken
@@ -61,11 +61,11 @@ openai
 # langchain-classic==1.0.1      # REMOVED: heavy RAG/tools stack  
 # langchain-text-splitters==1.1.0  # REMOVED: heavy RAG/tools stack
 
-# fake-useragent==2.2.0  # REMOVED: user agent faking, not needed for basic chat
+fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
 # huggingface_hub           # REMOVED: heavy HF integration, lazy import in retrieval.utils
 PyYAML
-# websocket-client  # REMOVED: only needed for optional ComfyUI integration
+websocket-client
 websockets
 chardet==5.2.0
 # opensearch-py==2.8.0  # REMOVED: optional search backend
@@ -86,7 +86,7 @@ chardet==5.2.0
 
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
 
-# ftfy==6.3.1  # REMOVED: text fixing, not essential
+ftfy==6.3.1
 # Document/RAG helpers - REMOVED to shrink Heroku slug
 # pypdf==6.5.0
 # fpdf2==2.8.2
@@ -100,8 +100,8 @@ chardet==5.2.0
 # pyxlsb==1.0.10
 # xlrd==2.0.1
 Markdown==3.8.2
-# validators==0.35.0  # REMOVED: validation library, not essential
-# psutil  # REMOVED: system utilities, not used in codebase
+validators==0.35.0
+psutil
 # sentencepiece  # REMOVED: heavy tokenizer, not needed for basic chat
 # soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
 # azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
@@ -114,7 +114,7 @@ Markdown==3.8.2
 # onnxruntime==1.20.1 # REMOVED: Too heavy for Heroku
 # faster-whisper==1.1.1 # REMOVED: Too heavy for Heroku
 
-# black==25.1.0  # REMOVED: code formatter not needed in production
+black==25.1.0
 # youtube-transcript-api==1.2.2  # REMOVED: optional YouTube loader
 # pytube==15.0.0                  # REMOVED: optional YouTube loader
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence, Union
 import json
 import aiohttp
-# Removed mimeparse dependency for Heroku slug size - using simple MIME matching instead
+import mimeparse
 
 
 import collections.abc
@@ -626,52 +626,12 @@ def strict_match_mime_type(supported: list[str] | str, header: str) -> Optional[
             # Default to common types if none are specified
             supported = ["audio/*", "video/webm"]
 
-        # Simple MIME type matching (replaced mimeparse for Heroku slug size)
-        def parse_mime_type(mime_str: str) -> tuple[str, str, dict]:
-            """Parse MIME type into type, subtype, and params."""
-            parts = mime_str.split(";")
-            type_subtype = parts[0].strip().lower()
-            params = {}
-            for part in parts[1:]:
-                if "=" in part:
-                    k, v = part.split("=", 1)
-                    params[k.strip()] = v.strip().strip('"')
-            if "/" in type_subtype:
-                mime_type, subtype = type_subtype.split("/", 1)
-            else:
-                mime_type, subtype = type_subtype, "*"
-            return mime_type, subtype, params
-
-        def best_match(supported: list[str], header: str) -> Optional[str]:
-            """Find best matching MIME type."""
-            header_type, header_subtype, _ = parse_mime_type(header)
-            best_match = None
-            best_score = -1
-            
-            for supp in supported:
-                supp_type, supp_subtype, _ = parse_mime_type(supp)
-                score = 0
-                if supp_type == "*" or supp_type == header_type:
-                    score += 1
-                    if supp_subtype == "*" or supp_subtype == header_subtype:
-                        score += 1
-                        if score > best_score:
-                            best_score = score
-                            best_match = supp
-                elif supp_type == header_type and supp_subtype == "*":
-                    score = 1
-                    if score > best_score:
-                        best_score = score
-                        best_match = supp
-            
-            return best_match
-
-        match = best_match(supported, header)
+        match = mimeparse.best_match(supported, header)
         if not match:
             return None
 
-        _, _, match_params = parse_mime_type(match)
-        _, _, header_params = parse_mime_type(header)
+        _, _, match_params = mimeparse.parse_mime_type(match)
+        _, _, header_params = mimeparse.parse_mime_type(header)
         for k, v in match_params.items():
             if header_params.get(k) != v:
                 return None

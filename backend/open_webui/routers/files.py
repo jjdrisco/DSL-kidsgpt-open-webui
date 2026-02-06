@@ -25,11 +25,7 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session, SessionLocal
 
 from open_webui.constants import ERROR_MESSAGES
-# Lazy import vector DB for Heroku slug size (vector functionality optional)
-try:
-    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-except ImportError:
-    VECTOR_DB_CLIENT = None
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.channels import Channels
 from open_webui.models.users import Users
