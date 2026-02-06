@@ -43,7 +43,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from starlette_compress import CompressMiddleware
+# Lazy import starlette-compress for Heroku slug size (compression is optional)
+try:
+    from starlette_compress import CompressMiddleware
+    COMPRESS_AVAILABLE = True
+except ImportError:
+    COMPRESS_AVAILABLE = False
+    CompressMiddleware = None
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -1261,7 +1267,8 @@ app.state.MODELS = MODELS
 
 # Add the middleware to the app
 if ENABLE_COMPRESSION_MIDDLEWARE:
-    app.add_middleware(CompressMiddleware)
+    if COMPRESS_AVAILABLE and CompressMiddleware:
+        app.add_middleware(CompressMiddleware)
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):

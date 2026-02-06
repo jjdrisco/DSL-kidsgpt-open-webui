@@ -18,7 +18,7 @@ aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
-starlette-compress==1.6.0
+# starlette-compress==1.6.0  # REMOVED: compression middleware optional for Heroku slug size
 httpx[http2]==0.28.1  # Removed socks/cli/zstd/brotli to reduce slug size
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
