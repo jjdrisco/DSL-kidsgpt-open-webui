@@ -83,3 +83,9 @@ static/video/
 
 # SvelteKit build artifacts (not needed in production)
 .svelte-kit/
+
+# Large build assets that can be excluded
+build/_app/immutable/assets/ort-wasm-simd-threaded.jsep.*.wasm
+build/_app/immutable/workers/assets/ort-wasm-simd-threaded.jsep-*.wasm
+build/wasm/ort-wasm-simd-threaded.jsep.wasm
+build/assets/images/galaxy.jpg

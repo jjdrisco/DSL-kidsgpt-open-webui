@@ -36,7 +36,7 @@ redis
 # Optional DB/search backends - REMOVED for slim Heroku slug
 # pymongo
 psycopg2-binary==2.9.10
-pgvector==0.4.1
+# pgvector==0.4.1  # REMOVED: may pull numpy; use VECTOR_DB=pgvector but install manually if needed
 # PyMySQL==1.1.1  # install manually if MySQL is needed
 # boto3 # REMOVED: Lazy import - install if using STORAGE_PROVIDER=s3
 
