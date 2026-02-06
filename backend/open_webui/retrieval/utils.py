@@ -11,15 +11,26 @@ import time
 import re
 
 from urllib.parse import quote
-from huggingface_hub import snapshot_download
-from langchain_classic.retrievers import (
-    ContextualCompressionRetriever,
-    EnsembleRetriever,
-)
+# Lazy import huggingface_hub for Heroku slug size
+def snapshot_download(*args, **kwargs):
+    from huggingface_hub import snapshot_download as _snapshot_download
+    return _snapshot_download(*args, **kwargs)
 
-from langchain_community.retrievers import BM25Retriever
+# Lazy imports for langchain (removed from requirements for Heroku slug size)
+def _get_langchain_imports():
+    from langchain_classic.retrievers import (
+        ContextualCompressionRetriever,
+        EnsembleRetriever,
+    )
+    from langchain_community.retrievers import BM25Retriever
+    from langchain_core.documents import Document
+    return ContextualCompressionRetriever, EnsembleRetriever, BM25Retriever, Document
 
-from langchain_core.documents import Document
+# Will be set on first use
+ContextualCompressionRetriever = None
+EnsembleRetriever = None
+BM25Retriever = None
+Document = None
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
@@ -58,8 +69,14 @@ log = logging.getLogger(__name__)
 
 from typing import Any
 
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
+# Lazy imports for langchain (removed from requirements for Heroku slug size)
+def _get_langchain_core_imports():
+    from langchain_core.callbacks import CallbackManagerForRetrieverRun
+    from langchain_core.retrievers import BaseRetriever
+    return CallbackManagerForRetrieverRun, BaseRetriever
+
+CallbackManagerForRetrieverRun = None
+BaseRetriever = None
 
 
 def is_youtube_url(url: str) -> bool:
@@ -1254,8 +1271,12 @@ def get_model_path(model: str, update_model: bool = False):
 import operator
 from typing import Optional, Sequence
 
-from langchain_core.callbacks import Callbacks
-from langchain_core.documents import BaseDocumentCompressor, Document
+# Lazy imports (already handled above)
+# from langchain_core.callbacks import Callbacks
+# from langchain_core.documents import BaseDocumentCompressor, Document
+Callbacks = None
+BaseDocumentCompressor = None
+# Document already defined above
 
 
 class RerankCompressor(BaseDocumentCompressor):

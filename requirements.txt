@@ -63,7 +63,7 @@ openai
 
 fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
-huggingface_hub           # needed by retrieval.utils (HF snapshot_download)
+# huggingface_hub           # REMOVED: heavy HF integration, lazy import in retrieval.utils
 PyYAML
 websocket-client
 websockets
