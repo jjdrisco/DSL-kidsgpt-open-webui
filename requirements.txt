@@ -19,7 +19,7 @@ async-timeout
 aiocache
 aiofiles
 starlette-compress==1.6.0
-httpx[socks,http2,cli]==0.28.1  # Removed zstd/brotli to reduce slug size
+httpx[http2]==0.28.1  # Removed socks/cli/zstd/brotli to reduce slug size
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 pytz
@@ -45,7 +45,7 @@ RestrictedPython==8.0
 
 loguru==0.7.3
 asgiref==3.8.1
-typer
+# typer  # REMOVED: CLI tool not needed in production Heroku deployment
 
 ## Core AI libraries (keep for pilot)
 tiktoken
