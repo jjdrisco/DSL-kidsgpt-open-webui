@@ -47,7 +47,7 @@ loguru==0.7.3
 asgiref==3.8.1
 typer
 
-# AI libraries
+## Core AI libraries (keep for pilot)
 tiktoken
 mcp==1.14.1
 
@@ -63,7 +63,7 @@ langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
-huggingface_hub
+# huggingface_hub           # REMOVED: heavy HF integration not needed on Heroku
 PyYAML
 websocket-client
 websockets
@@ -87,23 +87,23 @@ einops==0.8.1
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
 
 ftfy==6.3.1
-pypdf==6.5.0
-fpdf2==2.8.2
-pymdown-extensions==10.14.2
-docx2txt==0.8
-python-pptx==1.0.2
-unstructured==0.16.17
-nltk==3.9.1
+# Document/RAG helpers - REMOVED to shrink Heroku slug
+# pypdf==6.5.0
+# fpdf2==2.8.2
+# docx2txt==0.8
+# python-pptx==1.0.2
+# unstructured==0.16.17
+# nltk==3.9.1
+# pypandoc==1.15
+# pandas==2.2.3
+# openpyxl==3.1.5
+# pyxlsb==1.0.10
+# xlrd==2.0.1
 Markdown==3.8.2
-pypandoc==1.15
-pandas==2.2.3
-openpyxl==3.1.5
-pyxlsb==1.0.10
-xlrd==2.0.1
 validators==0.35.0
 psutil
 sentencepiece
-soundfile==0.13.1
+# soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
 # azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
 
 pillow==11.3.0
