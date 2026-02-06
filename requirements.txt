@@ -106,7 +106,7 @@ psutil
 # soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
 # azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
 
-pillow==11.3.0
+# pillow==11.3.0  # REMOVED: heavy image processing, not needed for basic chat
 # opencv-python-headless==4.11.0.86 # REMOVED: Too heavy for Heroku
 # rapidocr-onnxruntime==1.4.4 # REMOVED: Too heavy for Heroku
 # rank-bm25==0.2.2  # REMOVED: RAG retriever not needed without langchain
