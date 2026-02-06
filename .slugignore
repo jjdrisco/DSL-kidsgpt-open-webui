@@ -78,6 +78,9 @@ backend/open_webui/test/
 # Retrieval test data (mock search responses)
 backend/open_webui/retrieval/web/testdata/
 
+# Large font files (CJK fonts - can be served from CDN if needed)
+backend/open_webui/static/fonts/
+
 # Demo videos (can be large; serve from CDN if needed)
 static/video/
 build/video/
