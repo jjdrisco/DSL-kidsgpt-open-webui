@@ -90,7 +90,7 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    memories,
+    # memories,  # REMOVED: vector/memory functionality not needed for this stage
     models,
     knowledge,
     prompts,
@@ -101,6 +101,14 @@ from open_webui.routers import (
     scim,
     child_profiles,
 )
+
+# Lazy import memories for Heroku slug size (vector/memory functionality optional)
+try:
+    from open_webui.routers import memories
+    MEMORIES_AVAILABLE = True
+except ImportError:
+    memories = None
+    MEMORIES_AVAILABLE = False
 from open_webui.routers import workflow
 
 from open_webui.routers.retrieval import (
@@ -1437,7 +1445,8 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
+if MEMORIES_AVAILABLE and memories:
+    app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])

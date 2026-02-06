@@ -18,7 +18,11 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+# Lazy import vector DB for Heroku slug size (vector functionality optional)
+try:
+    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+except ImportError:
+    VECTOR_DB_CLIENT = None
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,

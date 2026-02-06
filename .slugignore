@@ -84,6 +84,11 @@ backend/open_webui/static/fonts/
 # Swagger UI (only used in dev mode, not needed in production)
 backend/open_webui/static/swagger-ui/
 
+# Vector and memory functionality (not needed for this stage)
+backend/open_webui/retrieval/vector/
+backend/open_webui/routers/memories.py
+backend/open_webui/models/memories.py
+
 # Demo videos (can be large; serve from CDN if needed)
 static/video/
 build/video/
