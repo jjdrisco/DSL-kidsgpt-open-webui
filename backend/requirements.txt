@@ -20,7 +20,7 @@ aiocache
 aiofiles
 # starlette-compress==1.6.0  # REMOVED: compression middleware optional for Heroku slug size
 httpx[http2]==0.28.1  # Removed socks/cli/zstd/brotli to reduce slug size
-starsessions[redis]==2.2.1
+starsessions[redis]==2.2.1  # Need RedisStore
 python-mimeparse==2.0.0
 pytz
 anyio
