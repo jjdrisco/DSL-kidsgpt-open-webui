@@ -66,6 +66,12 @@ async function downloadPackages() {
 			console.log('Pyodide version mismatch, removing static/pyodide directory');
 			await rmdir('static/pyodide', { recursive: true });
 		}
+		// Also remove lock file if packages list changed to force re-download with new packages
+		try {
+			await rmdir('static/pyodide/pyodide-lock.json', { recursive: false });
+		} catch (e) {
+			// Ignore if file doesn't exist
+		}
 	} catch (err) {
 		console.log('Pyodide package not found, proceeding with download.', err);
 	}
