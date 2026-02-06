@@ -80,6 +80,7 @@ backend/open_webui/retrieval/web/testdata/
 
 # Demo videos (can be large; serve from CDN if needed)
 static/video/
+build/video/
 
 # SvelteKit build artifacts (not needed in production)
 .svelte-kit/
@@ -89,3 +90,19 @@ build/_app/immutable/assets/ort-wasm-simd-threaded.jsep.*.wasm
 build/_app/immutable/workers/assets/ort-wasm-simd-threaded.jsep-*.wasm
 build/wasm/ort-wasm-simd-threaded.jsep.wasm
 build/assets/images/galaxy.jpg
+
+# Exclude old/unused Pyodide packages (removed from prepare-pyodide.js for slug size)
+static/pyodide/scipy-*.whl
+static/pyodide/scikit_learn-*.whl
+static/pyodide/pandas-*.whl
+static/pyodide/matplotlib-*.whl
+static/pyodide/numpy-*.whl
+static/pyodide/sympy-*.whl
+static/pyodide/seaborn-*.whl
+build/pyodide/scipy-*.whl
+build/pyodide/scikit_learn-*.whl
+build/pyodide/pandas-*.whl
+build/pyodide/matplotlib-*.whl
+build/pyodide/numpy-*.whl
+build/pyodide/sympy-*.whl
+build/pyodide/seaborn-*.whl
