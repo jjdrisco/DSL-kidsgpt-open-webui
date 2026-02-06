@@ -101,7 +101,7 @@ chardet==5.2.0
 # xlrd==2.0.1
 Markdown==3.8.2
 # validators==0.35.0  # REMOVED: validation library, not essential
-psutil
+# psutil  # REMOVED: system utilities, not used in codebase
 # sentencepiece  # REMOVED: heavy tokenizer, not needed for basic chat
 # soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
 # azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
