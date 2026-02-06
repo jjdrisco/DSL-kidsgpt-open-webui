@@ -56,10 +56,10 @@ openai
 # google-genai==1.38.0        # REMOVED: optional Google GenAI provider
 # google-generativeai==0.8.5  # REMOVED: optional Google GenAI provider
 
-langchain==1.2.2
-langchain-community==0.4.1
-langchain-classic==1.0.1
-langchain-text-splitters==1.1.0
+# langchain==1.2.2              # REMOVED: heavy RAG/tools stack for Heroku pilot
+# langchain-community==0.4.1    # REMOVED: heavy RAG/tools stack
+# langchain-classic==1.0.1      # REMOVED: heavy RAG/tools stack  
+# langchain-text-splitters==1.1.0  # REMOVED: heavy RAG/tools stack
 
 fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
