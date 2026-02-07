@@ -5,7 +5,5 @@ build:
 release:
   command: cd /app/backend/open_webui && python -m alembic upgrade head
 
-# For Container Registry, Heroku uses Dockerfile CMD, not heroku.yml run
-# The Dockerfile CMD already runs start.sh which starts uvicorn
-run:
-  web: cd /app/backend && bash start.sh
+# For Container Registry, Heroku uses Dockerfile CMD (bash start.sh)
+# The heroku.yml run section is ignored for Container Registry deployments
