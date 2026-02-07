@@ -154,8 +154,6 @@ RUN pip3 install --no-cache-dir uv && \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
     fi && \
-    # Ensure uvicorn is accessible - verify installation
-    python3 -m pip list | grep uvicorn || (echo "WARNING: uvicorn not found in pip list" && python3 -c "import sys; sys.path.insert(0, '/usr/local/lib/python3.11/site-packages'); import uvicorn; print('uvicorn found via sys.path')") && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
 
