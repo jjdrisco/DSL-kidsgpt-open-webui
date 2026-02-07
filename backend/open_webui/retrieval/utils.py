@@ -71,12 +71,25 @@ from typing import Any
 
 # Lazy imports for langchain (removed from requirements for Heroku slug size)
 def _get_langchain_core_imports():
-    from langchain_core.callbacks import CallbackManagerForRetrieverRun
-    from langchain_core.retrievers import BaseRetriever
-    return CallbackManagerForRetrieverRun, BaseRetriever
+    try:
+        from langchain_core.callbacks import CallbackManagerForRetrieverRun
+        from langchain_core.retrievers import BaseRetriever
+        return CallbackManagerForRetrieverRun, BaseRetriever
+    except ImportError:
+        # If langchain is not available, return None
+        return None, None
 
 CallbackManagerForRetrieverRun = None
 BaseRetriever = None
+
+# Try to import BaseRetriever at module load time
+try:
+    _, BaseRetriever = _get_langchain_core_imports()
+    if BaseRetriever is not None:
+        _, CallbackManagerForRetrieverRun = _get_langchain_core_imports()
+except Exception:
+    # If import fails, BaseRetriever will remain None
+    pass
 
 
 def is_youtube_url(url: str) -> bool:
@@ -107,51 +120,58 @@ def get_content_from_url(request, url: str) -> str:
     return content, docs
 
 
-class VectorSearchRetriever(BaseRetriever):
-    collection_name: Any
-    embedding_function: Any
-    top_k: int
+# Only define VectorSearchRetriever if BaseRetriever is available
+if BaseRetriever is not None:
+    class VectorSearchRetriever(BaseRetriever):
+        collection_name: Any
+        embedding_function: Any
+        top_k: int
 
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ) -> list[Document]:
-        """Get documents relevant to a query.
+        def _get_relevant_documents(
+            self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+        ) -> list[Document]:
+            """Get documents relevant to a query.
 
-        Args:
-            query: String to find relevant documents for.
-            run_manager: The callback handler to use.
+            Args:
+                query: String to find relevant documents for.
+                run_manager: The callback handler to use.
 
-        Returns:
-            List of relevant documents.
-        """
-        return []
+            Returns:
+                List of relevant documents.
+            """
+            return []
 
-    async def _aget_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: CallbackManagerForRetrieverRun,
-    ) -> list[Document]:
-        embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=self.collection_name,
-            vectors=[embedding],
-            limit=self.top_k,
-        )
-
-        ids = result.ids[0]
-        metadatas = result.metadatas[0]
-        documents = result.documents[0]
-
-        results = []
-        for idx in range(len(ids)):
-            results.append(
-                Document(
-                    metadata=metadatas[idx],
-                    page_content=documents[idx],
-                )
+        async def _aget_relevant_documents(
+            self,
+            query: str,
+            *,
+            run_manager: CallbackManagerForRetrieverRun,
+        ) -> list[Document]:
+            embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=self.collection_name,
+                vectors=[embedding],
+                limit=self.top_k,
             )
-        return results
+
+            ids = result.ids[0]
+            metadatas = result.metadatas[0]
+            documents = result.documents[0]
+
+            results = []
+            for idx in range(len(ids)):
+                results.append(
+                    Document(
+                        metadata=metadatas[idx],
+                        page_content=documents[idx],
+                    )
+                )
+            return results
+else:
+    # Create a dummy class if BaseRetriever is not available
+    class VectorSearchRetriever:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("langchain_core.retrievers.BaseRetriever is not available. Please install langchain-core.")
 
 
 def query_doc(
