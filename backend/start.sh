@@ -79,9 +79,14 @@ else
     ARGS=(--workers "$UVICORN_WORKERS")
 fi
 
-# Run uvicorn
+# Run uvicorn with error handling
+echo "Starting uvicorn on $HOST:$PORT..."
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
     --host "$HOST" \
     --port "$PORT" \
     --forwarded-allow-ips '*' \
-    "${ARGS[@]}"
+    --log-level info \
+    "${ARGS[@]}" || {
+    echo "Uvicorn failed to start. Exit code: $?"
+    exit 1
+}
