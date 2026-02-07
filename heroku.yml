@@ -8,4 +8,4 @@ release:
 # For Container Registry, Heroku uses Dockerfile CMD, not heroku.yml run
 # The Dockerfile CMD already runs start.sh which starts uvicorn
 run:
-  web: bash start.sh
+  web: cd /app/backend && bash start.sh
