@@ -84,11 +84,12 @@ BaseRetriever = None
 
 # Try to import BaseRetriever at module load time
 try:
-    _, BaseRetriever = _get_langchain_core_imports()
-    if BaseRetriever is not None:
-        _, CallbackManagerForRetrieverRun = _get_langchain_core_imports()
-except Exception:
+    CallbackManagerForRetrieverRun, BaseRetriever = _get_langchain_core_imports()
+except Exception as e:
     # If import fails, BaseRetriever will remain None
+    import logging
+    log = logging.getLogger(__name__)
+    log.warning(f"Failed to import BaseRetriever: {e}")
     pass
 
 
