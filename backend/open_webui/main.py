@@ -587,16 +587,22 @@ async def lifespan(app: FastAPI):
     start_logger()
 
     if RESET_CONFIG_ON_START:
-        reset_config()
+        try:
+            reset_config()
+        except Exception as e:
+            log.warning(f"Failed to reset config on start: {e}")
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
 
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
-        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
-            # Disable signup since we now have an admin
-            app.state.config.ENABLE_SIGNUP = False
+        try:
+            if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+                # Disable signup since we now have an admin
+                app.state.config.ENABLE_SIGNUP = False
+        except Exception as e:
+            log.warning(f"Failed to create admin user: {e}")
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
