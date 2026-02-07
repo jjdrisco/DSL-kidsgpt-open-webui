@@ -1299,83 +1299,99 @@ Callbacks = None
 BaseDocumentCompressor = None
 # Document already defined above
 
+# Try to import BaseDocumentCompressor at module load time
+try:
+    from langchain_core.documents import BaseDocumentCompressor as _BaseDocumentCompressor
+    BaseDocumentCompressor = _BaseDocumentCompressor
+except ImportError:
+    import logging
+    log = logging.getLogger(__name__)
+    log.warning("Failed to import BaseDocumentCompressor from langchain_core.documents")
+    BaseDocumentCompressor = None
 
-class RerankCompressor(BaseDocumentCompressor):
-    embedding_function: Any
-    top_n: int
-    reranking_function: Any
-    r_score: float
+# Only define RerankCompressor if BaseDocumentCompressor is available
+if BaseDocumentCompressor is not None:
+    class RerankCompressor(BaseDocumentCompressor):
+        embedding_function: Any
+        top_n: int
+        reranking_function: Any
+        r_score: float
 
-    class Config:
-        extra = "forbid"
-        arbitrary_types_allowed = True
+        class Config:
+            extra = "forbid"
+            arbitrary_types_allowed = True
 
-    def compress_documents(
-        self,
-        documents: Sequence[Document],
-        query: str,
-        callbacks: Optional[Callbacks] = None,
-    ) -> Sequence[Document]:
-        """Compress retrieved documents given the query context.
+        def compress_documents(
+            self,
+            documents: Sequence[Document],
+            query: str,
+            callbacks: Optional[Callbacks] = None,
+        ) -> Sequence[Document]:
+            """Compress retrieved documents given the query context.
 
-        Args:
-            documents: The retrieved documents.
-            query: The query context.
-            callbacks: Optional callbacks to run during compression.
+            Args:
+                documents: The retrieved documents.
+                query: The query context.
+                callbacks: Optional callbacks to run during compression.
 
-        Returns:
-            The compressed documents.
+            Returns:
+                The compressed documents.
 
-        """
-        return []
+            """
+            return []
 
-    async def acompress_documents(
-        self,
-        documents: Sequence[Document],
-        query: str,
-        callbacks: Optional[Callbacks] = None,
-    ) -> Sequence[Document]:
-        reranking = self.reranking_function is not None
+        async def acompress_documents(
+            self,
+            documents: Sequence[Document],
+            query: str,
+            callbacks: Optional[Callbacks] = None,
+        ) -> Sequence[Document]:
+            reranking = self.reranking_function is not None
 
-        scores = None
-        if reranking:
-            scores = await asyncio.to_thread(self.reranking_function, query, documents)
-        else:
-            from sentence_transformers import util
+            scores = None
+            if reranking:
+                scores = await asyncio.to_thread(self.reranking_function, query, documents)
+            else:
+                from sentence_transformers import util
 
-            query_embedding = await self.embedding_function(
-                query, RAG_EMBEDDING_QUERY_PREFIX
-            )
-            document_embedding = await self.embedding_function(
-                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
-            )
-            scores = util.cos_sim(query_embedding, document_embedding)[0]
-
-        if scores is not None:
-            docs_with_scores = list(
-                zip(
-                    documents,
-                    scores.tolist() if not isinstance(scores, list) else scores,
+                query_embedding = await self.embedding_function(
+                    query, RAG_EMBEDDING_QUERY_PREFIX
                 )
-            )
-            if self.r_score:
-                docs_with_scores = [
-                    (d, s) for d, s in docs_with_scores if s >= self.r_score
-                ]
-
-            result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
-            final_results = []
-            for doc, doc_score in result[: self.top_n]:
-                metadata = doc.metadata
-                metadata["score"] = doc_score
-                doc = Document(
-                    page_content=doc.page_content,
-                    metadata=metadata,
+                document_embedding = await self.embedding_function(
+                    [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
                 )
-                final_results.append(doc)
-            return final_results
-        else:
-            log.warning(
-                "No valid scores found, check your reranking function. Returning original documents."
-            )
-            return documents
+                scores = util.cos_sim(query_embedding, document_embedding)[0]
+
+            if scores is not None:
+                docs_with_scores = list(
+                    zip(
+                        documents,
+                        scores.tolist() if not isinstance(scores, list) else scores,
+                    )
+                )
+                if self.r_score:
+                    docs_with_scores = [
+                        (d, s) for d, s in docs_with_scores if s >= self.r_score
+                    ]
+
+                result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
+                final_results = []
+                for doc, doc_score in result[: self.top_n]:
+                    metadata = doc.metadata
+                    metadata["score"] = doc_score
+                    doc = Document(
+                        page_content=doc.page_content,
+                        metadata=metadata,
+                    )
+                    final_results.append(doc)
+                return final_results
+            else:
+                log.warning(
+                    "No valid scores found, check your reranking function. Returning original documents."
+                )
+                return documents
+else:
+    # Create a dummy class if BaseDocumentCompressor is not available
+    class RerankCompressor:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("langchain_core.documents.BaseDocumentCompressor is not available. Please install langchain-core.")
