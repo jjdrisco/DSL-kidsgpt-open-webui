@@ -8,7 +8,6 @@ on:
 
 env:
   HEROKU_APP_NAME: dsl-kidsgpt-pilot-alt
-  HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
 
 jobs:
   build-and-deploy:
@@ -20,7 +19,9 @@ jobs:
 
       - name: Login to Heroku Container Registry
         run: |
-          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+          echo "${{ secrets.HEROKU_API_KEY }}" | docker login --username=_ --password-stdin registry.heroku.com
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
 
       - name: Build Docker image
         run: |
