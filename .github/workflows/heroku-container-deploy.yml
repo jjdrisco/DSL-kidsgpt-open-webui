@@ -1,0 +1,42 @@
+name: Deploy to Heroku Container Registry
+
+on:
+  push:
+    branches:
+      - cursor/heroku-build-memory-e9e1
+  workflow_dispatch:
+
+env:
+  HEROKU_APP_NAME: dsl-kidsgpt-pilot-alt
+  HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Heroku Container Registry
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Build Docker image
+        run: |
+          docker build -t registry.heroku.com/$HEROKU_APP_NAME/web .
+
+      - name: Push to Heroku Container Registry
+        run: |
+          docker push registry.heroku.com/$HEROKU_APP_NAME/web
+
+      - name: Release container
+        run: |
+          heroku container:release web -a $HEROKU_APP_NAME
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+      - name: Check deployment status
+        run: |
+          heroku ps:wait -a $HEROKU_APP_NAME || true
+          heroku ps -a $HEROKU_APP_NAME
