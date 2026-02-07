@@ -201,4 +201,5 @@ ENV DOCKER=true
 # Ensure start.sh is executable
 RUN chmod +x start.sh
 
-CMD [ "bash", "start.sh"]
+# Use absolute path to be safe
+CMD [ "bash", "/app/backend/start.sh"]
