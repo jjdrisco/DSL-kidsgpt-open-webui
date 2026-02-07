@@ -152,11 +152,11 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
-    fi; \
+    fi && \
     # Verify uvicorn is installed
     python3 -c "import uvicorn; print('uvicorn version:', uvicorn.__version__)" && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
-    rm -rf /var/lib/apt/lists/*;
+    rm -rf /var/lib/apt/lists/*
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
