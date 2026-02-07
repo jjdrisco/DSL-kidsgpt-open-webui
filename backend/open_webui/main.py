@@ -683,12 +683,18 @@ oauth_client_manager = OAuthClientManager(app)
 app.state.oauth_client_manager = oauth_client_manager
 
 app.state.instance_id = None
-app.state.config = AppConfig(
-    redis_url=REDIS_URL,
-    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
-    redis_cluster=REDIS_CLUSTER,
-    redis_key_prefix=REDIS_KEY_PREFIX,
-)
+try:
+    app.state.config = AppConfig(
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
+        redis_cluster=REDIS_CLUSTER,
+        redis_key_prefix=REDIS_KEY_PREFIX,
+    )
+except Exception as e:
+    log.error(f"Failed to initialize AppConfig: {e}")
+    # Create a minimal config to allow app to start
+    from open_webui.config import AppConfig
+    app.state.config = AppConfig()
 app.state.redis = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
