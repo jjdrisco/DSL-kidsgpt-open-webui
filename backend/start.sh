@@ -72,6 +72,19 @@ fi
 PYTHON_CMD=$(command -v python3 || command -v python)
 UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
+# Verify Python and uvicorn are available
+echo "Python command: $PYTHON_CMD"
+echo "Python version: $($PYTHON_CMD --version 2>&1)"
+echo "Checking uvicorn installation..."
+if ! $PYTHON_CMD -c "import uvicorn" 2>/dev/null; then
+    echo "ERROR: uvicorn is not available. Checking Python path..."
+    $PYTHON_CMD -c "import sys; print('Python path:', sys.path)" 2>&1
+    echo "Attempting to find uvicorn..."
+    find /usr/local -name uvicorn 2>/dev/null | head -5
+    exit 1
+fi
+echo "Uvicorn is available."
+
 # If script is called with arguments, use them; otherwise use default workers
 if [ "$#" -gt 0 ]; then
     ARGS=("$@")
