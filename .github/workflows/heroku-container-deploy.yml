@@ -44,7 +44,11 @@ jobs:
 
       - name: Check deployment status
         run: |
-          heroku ps:wait -a $HEROKU_APP_NAME --type web || true
+          echo "Waiting for dyno to start (max 5 minutes)..."
+          timeout 300 bash -c 'until heroku ps:wait -a $HEROKU_APP_NAME --type web 2>/dev/null; do sleep 10; done' || echo "Dyno may still be starting"
           heroku ps -a $HEROKU_APP_NAME
+          echo "Checking app health..."
+          sleep 10
+          curl -f https://$HEROKU_APP_NAME.herokuapp.com/health || echo "Health check failed - check logs"
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
