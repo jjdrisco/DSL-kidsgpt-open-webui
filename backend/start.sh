@@ -95,38 +95,12 @@ else
 fi
 echo "Uvicorn is available."
 
-# Verify critical packages and install from requirements.txt if missing
+# Run comprehensive dependency checker (automatically installs missing packages)
 echo "Verifying critical packages..."
-MISSING_PACKAGES=()
-CRITICAL_PACKAGES=("typer" "sqlalchemy" "loguru" "pydantic" "aiohttp" "aiocache" "requests" "redis")
-
-for pkg in "${CRITICAL_PACKAGES[@]}"; do
-    if ! $PYTHON_CMD -c "import ${pkg//-/_}" 2>/dev/null; then
-        MISSING_PACKAGES+=("$pkg")
-    fi
-done
-
-if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
-    echo "WARNING: Missing packages detected: ${MISSING_PACKAGES[*]}"
-    echo "Installing missing packages from requirements.txt..."
-    $PYTHON_CMD -m pip install --no-cache-dir -r requirements.txt || {
-        echo "ERROR: Failed to install from requirements.txt"
-        echo "Attempting to install missing packages individually..."
-        for pkg in "${MISSING_PACKAGES[@]}"; do
-            echo "Installing $pkg..."
-            $PYTHON_CMD -m pip install --no-cache-dir "$pkg" || echo "Warning: Failed to install $pkg"
-        done
-    }
-    # Verify again
-    for pkg in "${MISSING_PACKAGES[@]}"; do
-        if $PYTHON_CMD -c "import ${pkg//-/_}" 2>/dev/null; then
-            echo "✓ $pkg installed successfully"
-        else
-            echo "ERROR: $pkg still not available after installation attempt"
-        fi
-    done
-else
+if $PYTHON_CMD /app/backend/check_dependencies.py 2>&1; then
     echo "✓ All critical packages verified"
+else
+    echo "WARNING: Some dependencies may be missing, but continuing..."
 fi
 
 # If script is called with arguments, use them; otherwise use default workers
