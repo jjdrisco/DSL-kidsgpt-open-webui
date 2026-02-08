@@ -147,6 +147,9 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 # Install remaining requirements (non-blocking to prevent build failures, but typer is already installed)
 RUN pip3 install --no-cache-dir -r requirements.txt || (echo "Some packages failed to install, but continuing..." && pip3 list | head -20)
 
+# Verify critical packages are installed
+RUN python3 -c "import uvicorn, fastapi, typer; print('✓ Critical packages verified')" || (echo "ERROR: Critical packages missing!" && exit 1)
+
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
