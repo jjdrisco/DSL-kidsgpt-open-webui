@@ -139,12 +139,11 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 RUN pip3 install --upgrade pip setuptools wheel
 
 RUN if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    pip3 install --no-cache-dir -r requirements.txt || (echo "pip install failed, showing error:" && pip3 install --no-cache-dir -r requirements.txt 2>&1 | head -50 && exit 1); \
+    pip3 install --no-cache-dir -r requirements.txt; \
     else \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    pip3 install --no-cache-dir -r requirements.txt || (echo "pip install failed, showing error:" && pip3 install --no-cache-dir -r requirements.txt 2>&1 | head -50 && exit 1); \
+    pip3 install --no-cache-dir -r requirements.txt; \
     fi && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
