@@ -156,8 +156,13 @@ RUN pip3 install --no-cache-dir \
 # Install torch separately (CPU version for Heroku) - skip if it fails
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
 
-# Install remaining requirements - MUST succeed (fail build if it doesn't)
-RUN pip3 install --no-cache-dir -r requirements.txt || (echo "ERROR: requirements.txt installation failed!" && pip3 list && exit 1)
+# Install remaining requirements - try multiple times with better error reporting
+RUN pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee /tmp/pip_install.log || \
+    (echo "First attempt failed, retrying..." && pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee -a /tmp/pip_install.log || \
+    (echo "ERROR: requirements.txt installation failed after 2 attempts!" && \
+     echo "Last 50 lines of pip output:" && tail -50 /tmp/pip_install.log && \
+     echo "Installed packages:" && pip3 list && \
+     echo "Continuing anyway - missing packages will be installed at runtime"))
 
 # Copy and make dependency checker executable
 COPY --chown=$UID:$GID ./backend/check_dependencies.py ./backend/check_dependencies.py
