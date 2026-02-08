@@ -138,9 +138,12 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 # Upgrade pip first
 RUN pip3 install --upgrade pip setuptools wheel
 
-# Install all requirements together (including uvicorn)
-RUN pip3 install --no-cache-dir -r requirements.txt && \
-    python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)" && \
+# Install requirements (this may take a while, especially torch)
+# Increase timeout by installing in stages if needed
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Verify critical packages are installed
+RUN python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)" && \
     python3 -c "import fastapi; print('✓ fastapi installed')" && \
     echo "All packages installed successfully"
 
