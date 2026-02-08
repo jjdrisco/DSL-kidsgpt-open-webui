@@ -138,21 +138,13 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 RUN if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding model will be downloaded on first use
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" 2>&1 | head -5 || echo "WARNING: Failed to load RAG_EMBEDDING_MODEL" && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')" 2>&1 | head -5 || echo "WARNING: Failed to load AUXILIARY_EMBEDDING_MODEL" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" 2>&1 | head -5 || echo "WARNING: Failed to load WhisperModel" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" 2>&1 | head -5 || echo "WARNING: Failed to load tiktoken encoding" && \
+    pip3 install --no-cache-dir -r requirements.txt; \
     else \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    if [ "$USE_SLIM" != "true" ]; then \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" 2>&1 | head -5 || echo "WARNING: Failed to load RAG_EMBEDDING_MODEL" && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')" 2>&1 | head -5 || echo "WARNING: Failed to load AUXILIARY_EMBEDDING_MODEL" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" 2>&1 | head -5 || echo "WARNING: Failed to load WhisperModel" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" 2>&1 | head -5 || echo "WARNING: Failed to load tiktoken encoding" && \
-    fi; \
+    pip3 install --no-cache-dir -r requirements.txt; \
     fi && \
+    # Verify uvicorn is installed
+    python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)" && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
 
