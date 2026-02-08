@@ -95,6 +95,20 @@ else
 fi
 echo "Uvicorn is available."
 
+# Verify typer is available (required by open_webui/__init__.py)
+echo "Checking typer installation..."
+if $PYTHON_CMD -c "import typer" 2>/dev/null; then
+    echo "✓ Typer is available via import"
+else
+    echo "ERROR: typer is not available. Attempting to install..."
+    $PYTHON_CMD -m pip install --no-cache-dir typer || echo "Failed to install typer"
+    if ! $PYTHON_CMD -c "import typer" 2>/dev/null; then
+        echo "ERROR: typer still not available after fallback install"
+        exit 1
+    fi
+    echo "✓ Typer installed via fallback"
+fi
+
 # If script is called with arguments, use them; otherwise use default workers
 if [ "$#" -gt 0 ]; then
     ARGS=("$@")
