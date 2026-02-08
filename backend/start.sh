@@ -76,7 +76,7 @@ UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 echo "Python command: $PYTHON_CMD"
 echo "Python version: $($PYTHON_CMD --version 2>&1)"
 echo "Checking uvicorn installation..."
-if ! $PYTHON_CMD -c "import uvicorn" 2>/dev/null; then
+if $PYTHON_CMD -c "import uvicorn" 2>/dev/null; then
     echo "✓ Uvicorn is available via import"
 else
     echo "ERROR: uvicorn is not available. Checking Python path..."
