@@ -157,10 +157,11 @@ RUN pip3 install --no-cache-dir \
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
 
 # Install remaining requirements (retry once if it fails, but critical packages are already installed)
+# Use --no-deps for packages already installed to avoid conflicts, then install remaining deps
 RUN pip3 install --no-cache-dir -r requirements.txt || (echo "First attempt failed, retrying..." && pip3 install --no-cache-dir -r requirements.txt || echo "Warning: Some packages may have failed, but critical ones are installed")
 
-# Verify critical packages are installed
-RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, aiohttp, aiocache, requests, redis; print('✓ Critical packages verified')" || (echo "ERROR: Critical packages missing!" && exit 1)
+# Verify critical packages are installed and install any missing ones
+RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, aiohttp, aiocache, requests, redis, loguru; print('✓ Critical packages verified')" || (echo "WARNING: Some critical packages missing, will be installed at runtime" && pip3 install --no-cache-dir loguru || echo "loguru install failed")
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \

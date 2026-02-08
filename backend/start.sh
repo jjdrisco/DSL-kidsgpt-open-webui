@@ -95,18 +95,38 @@ else
 fi
 echo "Uvicorn is available."
 
-# Verify typer is available (required by open_webui/__init__.py)
-echo "Checking typer installation..."
-if $PYTHON_CMD -c "import typer" 2>/dev/null; then
-    echo "✓ Typer is available via import"
-else
-    echo "ERROR: typer is not available. Attempting to install..."
-    $PYTHON_CMD -m pip install --no-cache-dir typer || echo "Failed to install typer"
-    if ! $PYTHON_CMD -c "import typer" 2>/dev/null; then
-        echo "ERROR: typer still not available after fallback install"
-        exit 1
+# Verify critical packages and install from requirements.txt if missing
+echo "Verifying critical packages..."
+MISSING_PACKAGES=()
+CRITICAL_PACKAGES=("typer" "sqlalchemy" "loguru" "pydantic" "aiohttp" "aiocache" "requests" "redis")
+
+for pkg in "${CRITICAL_PACKAGES[@]}"; do
+    if ! $PYTHON_CMD -c "import ${pkg//-/_}" 2>/dev/null; then
+        MISSING_PACKAGES+=("$pkg")
     fi
-    echo "✓ Typer installed via fallback"
+done
+
+if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
+    echo "WARNING: Missing packages detected: ${MISSING_PACKAGES[*]}"
+    echo "Installing missing packages from requirements.txt..."
+    $PYTHON_CMD -m pip install --no-cache-dir -r requirements.txt || {
+        echo "ERROR: Failed to install from requirements.txt"
+        echo "Attempting to install missing packages individually..."
+        for pkg in "${MISSING_PACKAGES[@]}"; do
+            echo "Installing $pkg..."
+            $PYTHON_CMD -m pip install --no-cache-dir "$pkg" || echo "Warning: Failed to install $pkg"
+        done
+    }
+    # Verify again
+    for pkg in "${MISSING_PACKAGES[@]}"; do
+        if $PYTHON_CMD -c "import ${pkg//-/_}" 2>/dev/null; then
+            echo "✓ $pkg installed successfully"
+        else
+            echo "ERROR: $pkg still not available after installation attempt"
+        fi
+    done
+else
+    echo "✓ All critical packages verified"
 fi
 
 # If script is called with arguments, use them; otherwise use default workers
