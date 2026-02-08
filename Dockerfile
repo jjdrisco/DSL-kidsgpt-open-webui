@@ -136,8 +136,9 @@ RUN apt-get update && \
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
 # Install all requirements (uvicorn is in requirements.txt)
-RUN pip3 install --upgrade pip setuptools wheel && \
-    pip3 install --no-cache-dir -r requirements.txt
+# Upgrade pip first, then install requirements
+RUN pip3 install --upgrade pip setuptools wheel
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
