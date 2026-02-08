@@ -143,8 +143,6 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
     pip3 install --no-cache-dir -r requirements.txt; \
     fi && \
-    # Verify uvicorn is installed
-    python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)" && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
 
