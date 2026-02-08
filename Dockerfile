@@ -153,9 +153,6 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
     fi && \
-    # Verify critical packages are installed (non-blocking - continue even if check fails)
-    (python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)" || echo "WARNING: uvicorn verification failed") && \
-    (python3 -c "import fastapi; print('✓ fastapi installed')" || echo "WARNING: fastapi verification failed") && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
 
