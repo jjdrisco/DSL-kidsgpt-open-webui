@@ -77,11 +77,21 @@ echo "Python command: $PYTHON_CMD"
 echo "Python version: $($PYTHON_CMD --version 2>&1)"
 echo "Checking uvicorn installation..."
 if ! $PYTHON_CMD -c "import uvicorn" 2>/dev/null; then
+    echo "✓ Uvicorn is available via import"
+else
     echo "ERROR: uvicorn is not available. Checking Python path..."
     $PYTHON_CMD -c "import sys; print('Python path:', sys.path)" 2>&1
+    echo "Checking installed packages..."
+    $PYTHON_CMD -m pip list | grep -i uvicorn || echo "uvicorn not found in pip list"
     echo "Attempting to find uvicorn..."
     find /usr/local -name uvicorn 2>/dev/null | head -5
-    exit 1
+    echo "Attempting to install uvicorn as fallback..."
+    $PYTHON_CMD -m pip install --no-cache-dir "uvicorn[standard]==0.40.0" || echo "Failed to install uvicorn"
+    if ! $PYTHON_CMD -c "import uvicorn" 2>/dev/null; then
+        echo "ERROR: uvicorn still not available after fallback install"
+        exit 1
+    fi
+    echo "✓ Uvicorn installed via fallback"
 fi
 echo "Uvicorn is available."
 
