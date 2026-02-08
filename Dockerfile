@@ -135,15 +135,9 @@ RUN apt-get update && \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-# Upgrade pip first
-RUN pip3 install --upgrade pip setuptools wheel
-
-# Install uvicorn first to ensure it's available
-RUN pip3 install --no-cache-dir "uvicorn[standard]==0.40.0" "fastapi==0.128.0" && \
-    python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)"
-
-# Install remaining requirements
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install all requirements (uvicorn is in requirements.txt)
+RUN pip3 install --upgrade pip setuptools wheel && \
+    pip3 install --no-cache-dir -r requirements.txt
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
