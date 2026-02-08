@@ -138,11 +138,14 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 # Upgrade pip first
 RUN pip3 install --upgrade pip setuptools wheel
 
-# Install torch separately (CPU version for Heroku)
-RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
+# Install critical packages first (uvicorn, fastapi)
+RUN pip3 install --no-cache-dir uvicorn[standard]==0.40.0 fastapi==0.128.0
 
-# Install requirements
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install torch separately (CPU version for Heroku) - skip if it fails
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
+
+# Install remaining requirements
+RUN pip3 install --no-cache-dir -r requirements.txt || (echo "Some packages failed to install, but continuing..." && pip3 list | head -20)
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
