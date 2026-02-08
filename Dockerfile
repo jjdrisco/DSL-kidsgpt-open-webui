@@ -138,14 +138,12 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 # Upgrade pip first
 RUN pip3 install --upgrade pip setuptools wheel
 
-# Install requirements (this may take a while, especially torch)
-# Increase timeout by installing in stages if needed
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install uvicorn first to ensure it's available
+RUN pip3 install --no-cache-dir "uvicorn[standard]==0.40.0" "fastapi==0.128.0" && \
+    python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)"
 
-# Verify critical packages are installed
-RUN python3 -c "import uvicorn; print('✓ uvicorn installed:', uvicorn.__version__)" && \
-    python3 -c "import fastapi; print('✓ fastapi installed')" && \
-    echo "All packages installed successfully"
+# Install remaining requirements
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
