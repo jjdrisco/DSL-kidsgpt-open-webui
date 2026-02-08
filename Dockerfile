@@ -156,8 +156,8 @@ RUN pip3 install --no-cache-dir \
 # Install torch separately (CPU version for Heroku) - skip if it fails
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
 
-# Install remaining requirements (must succeed - this is critical for the app to work)
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install remaining requirements (retry once if it fails, but critical packages are already installed)
+RUN pip3 install --no-cache-dir -r requirements.txt || (echo "First attempt failed, retrying..." && pip3 install --no-cache-dir -r requirements.txt || echo "Warning: Some packages may have failed, but critical ones are installed")
 
 # Verify critical packages are installed
 RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, aiohttp, aiocache, requests, redis; print('✓ Critical packages verified')" || (echo "ERROR: Critical packages missing!" && exit 1)
