@@ -138,14 +138,14 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 # Upgrade pip first
 RUN pip3 install --upgrade pip setuptools wheel
 
-RUN if [ "$USE_CUDA" = "true" ]; then \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    pip3 install --no-cache-dir -r requirements.txt; \
-    else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    pip3 install --no-cache-dir -r requirements.txt; \
-    fi && \
-    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
+# Install torch separately (CPU version for Heroku)
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
+
+# Install requirements
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Create data directory
+RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Ollama if requested
