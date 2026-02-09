@@ -41,7 +41,8 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+# Build frontend - NODE_OPTIONS is already set as ENV, so use it directly
+RUN npm run pyodide:fetch && vite build
 
 ######## WebUI backend ########
 FROM python:3.11.14-slim-bookworm AS base
