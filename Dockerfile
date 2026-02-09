@@ -39,7 +39,7 @@ RUN apk add --no-cache git
 COPY package.json package-lock.json ./
 RUN npm ci --force
 
-# Copy source files needed for build (respecting .dockerignore)
+# Copy all source files needed for build (respecting .dockerignore)
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 # Build frontend - NODE_OPTIONS is set as ENV variable above
