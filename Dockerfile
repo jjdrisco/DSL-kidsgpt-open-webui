@@ -41,8 +41,9 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-# Build frontend - package.json build script already sets NODE_OPTIONS, so just use it
-RUN npm run build
+# Build frontend - ENV NODE_OPTIONS is set, package.json build script also sets it inline (redundant but safe)
+# Use sh -c to ensure proper environment variable handling
+RUN sh -c 'npm run build'
 
 ######## WebUI backend ########
 FROM python:3.11.14-slim-bookworm AS base
