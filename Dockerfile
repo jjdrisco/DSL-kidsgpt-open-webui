@@ -41,8 +41,8 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-# Build frontend - NODE_OPTIONS is already set as ENV, so use it directly
-RUN npm run pyodide:fetch && vite build
+# Build frontend - ensure NODE_OPTIONS is set and run build
+RUN npm run pyodide:fetch && NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 ######## WebUI backend ########
 FROM python:3.11.14-slim-bookworm AS base
