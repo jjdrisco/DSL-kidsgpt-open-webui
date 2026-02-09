@@ -41,9 +41,9 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-# Build frontend - NODE_OPTIONS is set as ENV above, and package.json build script also sets it
-# The ENV variable should be sufficient, but package.json script has it as backup
-RUN npm run build
+# Build frontend - NODE_OPTIONS is set as ENV, ensure it's used
+# Run build with explicit NODE_OPTIONS to be safe
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build || (echo "Build failed, checking Node version..." && node --version && npm --version && exit 1)
 
 ######## WebUI backend ########
 FROM python:3.11.14-slim-bookworm AS base
