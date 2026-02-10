@@ -167,8 +167,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee /tmp/pip_install.
      echo "Continuing anyway - missing packages will be installed at runtime"))
 
 # Copy and make dependency checker executable
-COPY --chown=$UID:$GID ./backend/check_dependencies.py ./backend/check_dependencies.py
-RUN chmod +x /app/backend/check_dependencies.py
+COPY --chown=$UID:$GID ./backend/check_dependencies.py ./check_dependencies.py
+RUN chmod +x ./check_dependencies.py
 
 # Verify critical packages are installed
 RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, aiohttp, aiocache, requests, redis, loguru, cryptography; print('✓ Critical packages verified')" || (echo "ERROR: Critical packages missing!" && exit 1)
