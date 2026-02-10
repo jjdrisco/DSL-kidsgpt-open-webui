@@ -13,6 +13,7 @@ import importlib.util
 # Add common mappings here to avoid brute-force/manual fixes.
 MODULE_TO_PIP = {
     "bs4": "beautifulsoup4",
+    "jwt": "PyJWT",
     "yaml": "PyYAML",
     "dotenv": "python-dotenv",
     "dateutil": "python-dateutil",
@@ -67,7 +68,8 @@ def install_package(package_spec):
 def check_and_install_missing():
     """Try to import the main module and install missing dependencies"""
     requirements = get_requirements_packages()
-    max_attempts = 5
+    # In minimal images it can take several iterations to satisfy deep import chains.
+    max_attempts = 20
     attempt = 0
     
     while attempt < max_attempts:
