@@ -170,8 +170,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee /tmp/pip_install.
 COPY --chown=$UID:$GID ./backend/check_dependencies.py ./check_dependencies.py
 RUN chmod +x ./check_dependencies.py
 
-# Verify critical packages are installed
-RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, aiohttp, aiocache, requests, redis, loguru, cryptography; print('✓ Critical packages verified')" || (echo "ERROR: Critical packages missing!" && exit 1)
+# Verify core packages needed to start the app.
+# Do NOT fail the image build on optional/large deps (runtime checker will handle them).
+RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic; print('✓ Core packages verified')" || (echo "ERROR: Core packages missing!" && exit 1)
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
