@@ -7,6 +7,7 @@
 ## Overview
 
 This setup implements a two-stage deployment workflow:
+
 - **`dev` branch**: Staging/integration testing
 - **`main` branch**: Production deployments
 
@@ -33,13 +34,14 @@ git push -u origin dev
 **File**: `.github/workflows/heroku-container-deploy.yml`
 
 **Current content** (lines 3-14):
+
 ```yaml
 on:
   push:
     branches:
-      - main        # Production deployments
+      - main # Production deployments
       # - dev       # Uncomment for staging deployments (requires separate Heroku app)
-      - cursor/heroku-build-memory-e9e1  # Legacy: remove after merging to main
+      - cursor/heroku-build-memory-e9e1 # Legacy: remove after merging to main
   workflow_dispatch:
 
 env:
@@ -49,20 +51,21 @@ env:
 ```
 
 **Replace with**:
+
 ```yaml
 on:
   push:
     branches:
-      - main        # Production deployments
-      - dev         # Staging deployments
-      - cursor/heroku-build-memory-e9e1  # Legacy: remove after merging to main
+      - main # Production deployments
+      - dev # Staging deployments
+      - cursor/heroku-build-memory-e9e1 # Legacy: remove after merging to main
   workflow_dispatch:
 
 env:
   # Use different Heroku app based on branch
   # Option A: Same app for both (dev deploys to production, overwrites it)
   # HEROKU_APP_NAME: dsl-kidsgpt-pilot-alt
-  
+
   # Option B: Separate staging app (recommended)
   # Requires creating a second Heroku app: dsl-kidsgpt-pilot-staging
   HEROKU_APP_NAME: ${{ github.ref == 'refs/heads/main' && 'dsl-kidsgpt-pilot-alt' || 'dsl-kidsgpt-pilot-alt' }}
@@ -75,6 +78,7 @@ env:
 ## Step 3: Update Other Workflows (Optional)
 
 The following workflows already trigger on both `main` and `dev`:
+
 - ✅ `format-build-frontend.yaml` - Already triggers on `main` and `dev`
 - ✅ `format-backend.yaml` - Already triggers on `main` and `dev`
 
@@ -135,6 +139,7 @@ Merge to main
 ### For New Features
 
 1. **Create feature branch from dev**:
+
    ```bash
    git checkout dev
    git pull origin dev
@@ -142,6 +147,7 @@ Merge to main
    ```
 
 2. **Develop and commit**:
+
    ```bash
    # Make changes
    git add .
@@ -167,12 +173,14 @@ Merge to main
 ### For Hotfixes
 
 1. **Create hotfix from main**:
+
    ```bash
    git checkout main
    git checkout -b hotfix/critical-fix
    ```
 
 2. **Fix and merge directly to main**:
+
    ```bash
    # Make fix
    git commit -m "Fix critical issue"
@@ -223,12 +231,14 @@ heroku logs --tail -a dsl-kidsgpt-pilot-alt
 If you want `dev` to deploy to a separate staging app:
 
 1. **Create staging app**:
+
    ```bash
    heroku create dsl-kidsgpt-pilot-staging
    heroku stack:set container -a dsl-kidsgpt-pilot-staging
    ```
 
 2. **Update workflow**:
+
    ```yaml
    env:
      HEROKU_APP_NAME: ${{ github.ref == 'refs/heads/main' && 'dsl-kidsgpt-pilot-alt' || 'dsl-kidsgpt-pilot-staging' }}

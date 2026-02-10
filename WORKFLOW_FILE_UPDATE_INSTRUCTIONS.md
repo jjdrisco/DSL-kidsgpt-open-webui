@@ -15,24 +15,26 @@ Go to: https://github.com/jjdrisco/DSL-kidsgpt-open-webui/blob/cursor/heroku-bui
 ### Step 3: Update the `on:` Section
 
 **Find** (lines 3-9):
+
 ```yaml
 on:
   push:
     branches:
-      - main        # Production deployments
+      - main # Production deployments
       # - dev       # Uncomment for staging deployments (requires separate Heroku app)
-      - cursor/heroku-build-memory-e9e1  # Legacy: remove after merging to main
+      - cursor/heroku-build-memory-e9e1 # Legacy: remove after merging to main
   workflow_dispatch:
 ```
 
 **Replace with**:
+
 ```yaml
 on:
   push:
     branches:
-      - main        # Production deployments
-      - dev         # Staging deployments
-      - cursor/heroku-build-memory-e9e1  # Legacy: remove after merging to main
+      - main # Production deployments
+      - dev # Staging deployments
+      - cursor/heroku-build-memory-e9e1 # Legacy: remove after merging to main
   workflow_dispatch:
 ```
 
@@ -70,9 +72,9 @@ name: Deploy to Heroku Container Registry
 on:
   push:
     branches:
-      - main        # Production deployments
-      - dev         # Staging deployments
-      - cursor/heroku-build-memory-e9e1  # Legacy: remove after merging to main
+      - main # Production deployments
+      - dev # Staging deployments
+      - cursor/heroku-build-memory-e9e1 # Legacy: remove after merging to main
   workflow_dispatch:
 
 env:
@@ -84,7 +86,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,6 +133,7 @@ jobs:
 ## After Updating Workflow
 
 1. **Create dev branch** (if not exists):
+
    ```bash
    git checkout main
    git checkout -b dev
@@ -138,6 +141,7 @@ jobs:
    ```
 
 2. **Merge feature branch to dev**:
+
    ```bash
    git checkout dev
    git merge cursor/heroku-build-memory-e9e1

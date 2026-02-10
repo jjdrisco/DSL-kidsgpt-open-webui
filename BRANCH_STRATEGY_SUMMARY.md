@@ -1,4 +1,4 @@
-# Branch Strategy Summary: feature/* → dev → main
+# Branch Strategy Summary: feature/\* → dev → main
 
 **Status**: Documentation complete, workflow update pending
 
@@ -24,6 +24,7 @@
 The workflow file `.github/workflows/heroku-container-deploy.yml` is updated locally but can't be pushed due to token scope.
 
 **Quick Fix via GitHub UI**:
+
 1. Go to: https://github.com/jjdrisco/DSL-kidsgpt-open-webui/blob/cursor/heroku-build-memory-e9e1/.github/workflows/heroku-container-deploy.yml
 2. Click "Edit" (pencil icon)
 3. Change line 7 from:
@@ -32,7 +33,7 @@ The workflow file `.github/workflows/heroku-container-deploy.yml` is updated loc
    ```
    To:
    ```yaml
-   - dev         # Staging deployments
+   - dev # Staging deployments
    ```
 4. Commit directly to branch
 
@@ -93,11 +94,13 @@ git push origin main
 ## Current Workflow Configuration
 
 **Triggers**:
+
 - ✅ `main` - Production deployments (needs workflow file update)
 - ⏳ `dev` - Staging deployments (needs workflow file update)
 - ✅ `cursor/heroku-build-memory-e9e1` - Legacy (remove after merge)
 
 **Deployment**:
+
 - Both `dev` and `main` deploy to: `dsl-kidsgpt-pilot-alt`
 - For separate staging app, see `DEV_MAIN_WORKFLOW_SETUP.md`
 
