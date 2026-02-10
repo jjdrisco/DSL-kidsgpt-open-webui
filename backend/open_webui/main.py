@@ -598,7 +598,9 @@ async def lifespan(app: FastAPI):
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
         try:
-            if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+            if create_admin_user(
+                WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME
+            ):
                 # Disable signup since we now have an admin
                 app.state.config.ENABLE_SIGNUP = False
         except Exception as e:
@@ -686,7 +688,9 @@ app.state.instance_id = None
 try:
     app.state.config = AppConfig(
         redis_url=REDIS_URL,
-        redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
         redis_cluster=REDIS_CLUSTER,
         redis_key_prefix=REDIS_KEY_PREFIX,
     )
@@ -694,6 +698,7 @@ except Exception as e:
     log.error(f"Failed to initialize AppConfig: {e}")
     # Create a minimal config to allow app to start
     from open_webui.config import AppConfig
+
     app.state.config = AppConfig()
 app.state.redis = None
 

@@ -11,10 +11,14 @@ import time
 import re
 
 from urllib.parse import quote
+
+
 # Lazy import huggingface_hub for Heroku slug size
 def snapshot_download(*args, **kwargs):
     from huggingface_hub import snapshot_download as _snapshot_download
+
     return _snapshot_download(*args, **kwargs)
+
 
 # Lazy imports for langchain (removed from requirements for Heroku slug size)
 def _get_langchain_imports():
@@ -24,7 +28,9 @@ def _get_langchain_imports():
     )
     from langchain_community.retrievers import BM25Retriever
     from langchain_core.documents import Document
+
     return ContextualCompressionRetriever, EnsembleRetriever, BM25Retriever, Document
+
 
 # Will be set on first use
 ContextualCompressionRetriever = None
@@ -69,15 +75,18 @@ log = logging.getLogger(__name__)
 
 from typing import Any
 
+
 # Lazy imports for langchain (removed from requirements for Heroku slug size)
 def _get_langchain_core_imports():
     try:
         from langchain_core.callbacks import CallbackManagerForRetrieverRun
         from langchain_core.retrievers import BaseRetriever
+
         return CallbackManagerForRetrieverRun, BaseRetriever
     except ImportError:
         # If langchain is not available, return None
         return None, None
+
 
 CallbackManagerForRetrieverRun = None
 BaseRetriever = None
@@ -88,6 +97,7 @@ try:
 except Exception as e:
     # If import fails, BaseRetriever will remain None
     import logging
+
     log = logging.getLogger(__name__)
     log.warning(f"Failed to import BaseRetriever: {e}")
     pass
@@ -123,6 +133,7 @@ def get_content_from_url(request, url: str) -> str:
 
 # Only define VectorSearchRetriever if BaseRetriever is available
 if BaseRetriever is not None:
+
     class VectorSearchRetriever(BaseRetriever):
         collection_name: Any
         embedding_function: Any
@@ -168,11 +179,14 @@ if BaseRetriever is not None:
                     )
                 )
             return results
+
 else:
     # Create a dummy class if BaseRetriever is not available
     class VectorSearchRetriever:
         def __init__(self, *args, **kwargs):
-            raise ImportError("langchain_core.retrievers.BaseRetriever is not available. Please install langchain-core.")
+            raise ImportError(
+                "langchain_core.retrievers.BaseRetriever is not available. Please install langchain-core."
+            )
 
 
 def query_doc(
@@ -1301,16 +1315,21 @@ BaseDocumentCompressor = None
 
 # Try to import BaseDocumentCompressor at module load time
 try:
-    from langchain_core.documents import BaseDocumentCompressor as _BaseDocumentCompressor
+    from langchain_core.documents import (
+        BaseDocumentCompressor as _BaseDocumentCompressor,
+    )
+
     BaseDocumentCompressor = _BaseDocumentCompressor
 except ImportError:
     import logging
+
     log = logging.getLogger(__name__)
     log.warning("Failed to import BaseDocumentCompressor from langchain_core.documents")
     BaseDocumentCompressor = None
 
 # Only define RerankCompressor if BaseDocumentCompressor is available
 if BaseDocumentCompressor is not None:
+
     class RerankCompressor(BaseDocumentCompressor):
         embedding_function: Any
         top_n: int
@@ -1350,7 +1369,9 @@ if BaseDocumentCompressor is not None:
 
             scores = None
             if reranking:
-                scores = await asyncio.to_thread(self.reranking_function, query, documents)
+                scores = await asyncio.to_thread(
+                    self.reranking_function, query, documents
+                )
             else:
                 from sentence_transformers import util
 
@@ -1358,7 +1379,8 @@ if BaseDocumentCompressor is not None:
                     query, RAG_EMBEDDING_QUERY_PREFIX
                 )
                 document_embedding = await self.embedding_function(
-                    [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
+                    [doc.page_content for doc in documents],
+                    RAG_EMBEDDING_CONTENT_PREFIX,
                 )
                 scores = util.cos_sim(query_embedding, document_embedding)[0]
 
@@ -1374,7 +1396,9 @@ if BaseDocumentCompressor is not None:
                         (d, s) for d, s in docs_with_scores if s >= self.r_score
                     ]
 
-                result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
+                result = sorted(
+                    docs_with_scores, key=operator.itemgetter(1), reverse=True
+                )
                 final_results = []
                 for doc, doc_score in result[: self.top_n]:
                     metadata = doc.metadata
@@ -1390,8 +1414,11 @@ if BaseDocumentCompressor is not None:
                     "No valid scores found, check your reranking function. Returning original documents."
                 )
                 return documents
+
 else:
     # Create a dummy class if BaseDocumentCompressor is not available
     class RerankCompressor:
         def __init__(self, *args, **kwargs):
-            raise ImportError("langchain_core.documents.BaseDocumentCompressor is not available. Please install langchain-core.")
+            raise ImportError(
+                "langchain_core.documents.BaseDocumentCompressor is not available. Please install langchain-core."
+            )
