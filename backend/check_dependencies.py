@@ -79,8 +79,9 @@ def install_package(package_spec):
 def check_and_install_missing():
     """Try to import the main module and install missing dependencies"""
     requirements = get_requirements_packages()
-    # In minimal images it can take several iterations to satisfy deep import chains.
-    max_attempts = 20
+    # In minimal images it can take many iterations to satisfy deep, chained imports.
+    # We keep this finite so a truly broken environment doesn't loop forever.
+    max_attempts = 60
     attempt = 0
 
     while attempt < max_attempts:
