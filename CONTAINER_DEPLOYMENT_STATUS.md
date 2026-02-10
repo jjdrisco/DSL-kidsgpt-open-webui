@@ -23,9 +23,9 @@
 
 ```
 remote: === Fetching app code.
-remote: 
+remote:
 remote: =!= Unknown error
-remote: !           
+remote: !
 remote: !   Build failed to complete. Please try pushing again.
 ```
 
@@ -41,29 +41,36 @@ remote: !   Build failed to complete. Please try pushing again.
 ## Next Steps to Try
 
 ### Option 1: Check Heroku Dashboard
+
 - Go to: https://dashboard.heroku.com/apps/dsl-kidsgpt-pilot/activity
 - Check the latest build logs for detailed error messages
 - Look for any warnings or additional context
 
 ### Option 2: Use Container Registry CLI (if available)
+
 If you have Heroku CLI with container plugin:
+
 ```bash
 heroku container:push web -a dsl-kidsgpt-pilot
 heroku container:release web -a dsl-kidsgpt-pilot
 ```
 
 ### Option 3: Wait and Retry
+
 The stack transition might need time to complete. Wait a few minutes and try:
+
 ```bash
 git push heroku cursor/heroku-build-memory-e9e1:main
 ```
 
 ### Option 4: Contact Heroku Support
+
 With Build ID `3e398f55-c027-4b1a-a4b8-c892b9891103`, Heroku support can investigate the "Unknown error"
 
 ## Verification Commands
 
 Check current app status:
+
 ```bash
 curl -s "https://api.heroku.com/apps/dsl-kidsgpt-pilot" \
   -H "Accept: application/vnd.heroku+json; version=3" \

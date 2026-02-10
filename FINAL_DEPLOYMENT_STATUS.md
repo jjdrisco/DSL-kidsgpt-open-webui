@@ -20,6 +20,7 @@
 ## Root Cause Analysis
 
 The app likely requires:
+
 1. **PostgreSQL Database** - No addons attached (0 addons)
 2. **Redis** - May be optional but used for sessions/caching
 3. **Other Config Vars** - May need additional environment variables
@@ -27,19 +28,25 @@ The app likely requires:
 ## Next Steps
 
 ### Option 1: Attach PostgreSQL Addon
+
 ```bash
 heroku addons:create heroku-postgresql:mini -a dsl-kidsgpt-pilot-alt
 ```
+
 This will automatically set `DATABASE_URL` config var.
 
 ### Option 2: Check Application Logs
+
 View dyno logs to see exact crash reason:
+
 ```bash
 heroku logs --tail -a dsl-kidsgpt-pilot-alt
 ```
 
 ### Option 3: Verify Required Config Vars
+
 Check what environment variables the app needs by reviewing:
+
 - `backend/open_webui/env.py`
 - Application startup code
 
@@ -57,6 +64,7 @@ Check what environment variables the app needs by reviewing:
 **Container Registry deployment method is working correctly!** The build, push, and release all succeeded. The issue is with application startup (missing database), not the deployment process.
 
 The Container Registry CLI approach successfully:
+
 - ✅ Built the Docker image locally (bypassed repo fetch)
 - ✅ Pushed only the built image (no 500MB limit)
 - ✅ Released the container on Heroku

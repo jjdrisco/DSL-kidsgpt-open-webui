@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Fág folamh chun an leid réamhshocraithe a úsáid, nó cuir isteach leid saincheaptha",
 	"Leave model field empty to use the default model.": "Fág an réimse samhail folamh chun an tsamhail réamhshocraithe a úsáid.",
 	"Legacy": "Oidhreacht",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "leicseach",
 	"License": "Ceadúnas",
 	"Lift List": "Liosta Ardaitheoirí",

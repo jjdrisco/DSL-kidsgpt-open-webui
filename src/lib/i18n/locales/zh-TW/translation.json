@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "留空以使用預設提示詞，或輸入自訂提示詞",
 	"Leave model field empty to use the default model.": "留空模型欄位以使用預設模型。",
 	"Legacy": "舊版",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "關鍵詞",
 	"License": "授權",
 	"Lift List": "上移清單",

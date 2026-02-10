@@ -3,7 +3,9 @@
 ## Why Container Registry CLI Works Better
 
 ### The Problem with API/Git Push Method
+
 When using `git push heroku` or API builds with Container Registry:
+
 1. **Heroku fetches entire repo first** (2.8GB in our case)
 2. **Then builds Docker image** on Heroku's servers
 3. **"Unknown error" occurs** during the fetch phase - likely due to:
@@ -12,7 +14,9 @@ When using `git push heroku` or API builds with Container Registry:
    - Network/transfer limits
 
 ### Why Container Registry CLI Works
+
 The `heroku container:push` command:
+
 1. **Builds Docker image locally** (or in CI) using your `.dockerignore`
 2. **Only sends the built image** to Heroku (not the entire repo)
 3. **Bypasses the code fetch step** entirely
@@ -34,6 +38,7 @@ The `heroku container:push` command:
 ## Deployment Steps
 
 ### 1. Login to Container Registry
+
 ```bash
 heroku container:login
 # Or set HEROKU_API_KEY environment variable
@@ -42,6 +47,7 @@ heroku container:login
 ```
 
 ### 2. Build and Push Image
+
 ```bash
 # Build and push the web process
 heroku container:push web -a dsl-kidsgpt-pilot-alt
@@ -51,6 +57,7 @@ heroku container:release web -a dsl-kidsgpt-pilot-alt
 ```
 
 ### 3. Verify Deployment
+
 ```bash
 # Check app status
 heroku ps -a dsl-kidsgpt-pilot-alt
@@ -62,6 +69,7 @@ heroku logs --tail -a dsl-kidsgpt-pilot-alt
 ## Configuration Files
 
 ### heroku.yml
+
 ```yaml
 build:
   docker:
@@ -75,11 +83,13 @@ run:
 ```
 
 ### Dockerfile
+
 - Already configured with `NODE_OPTIONS="--max-old-space-size=4096"`
 - Multi-stage build (Node.js frontend + Python backend)
 - Uses original `backend/requirements.txt` (no trimming needed)
 
 ### .dockerignore
+
 - Excludes `node_modules`, `.git`, `build/`, `.svelte-kit/`
 - Excludes `static/pyodide/` (generated during build)
 - Reduces build context size significantly
@@ -87,15 +97,18 @@ run:
 ## Troubleshooting
 
 ### If Docker is not available locally:
+
 - Use GitHub Actions or other CI/CD to build and push
 - Or use a remote Docker host
 
 ### If build fails:
+
 - Check Dockerfile syntax: `docker build -t test .`
 - Verify `.dockerignore` is working
 - Check build logs: `heroku logs --tail -a dsl-kidsgpt-pilot-alt`
 
 ### If release fails:
+
 - Check `heroku.yml` release command path
 - Verify database migrations work: `cd open_webui && python -m alembic upgrade head`
 

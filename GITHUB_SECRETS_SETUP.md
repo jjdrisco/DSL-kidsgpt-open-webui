@@ -1,9 +1,11 @@
 # GitHub Secrets Setup Required
 
 ## Issue
+
 The GitHub Actions workflow failed at the "Login to Heroku Container Registry" step because the `HEROKU_API_KEY` secret is not set in the repository.
 
 ## Solution
+
 You need to add the `HEROKU_API_KEY` secret to your GitHub repository:
 
 1. Go to: https://github.com/jjdrisco/DSL-kidsgpt-open-webui/settings/secrets/actions
@@ -24,6 +26,7 @@ Once the secret is added, the workflow will automatically run on the next push, 
 ## Workflow Steps
 
 The workflow will:
+
 1. ✅ Checkout code
 2. ✅ Login to Heroku Container Registry (needs HEROKU_API_KEY secret)
 3. ✅ Build Docker image locally
@@ -35,6 +38,7 @@ The workflow will:
 ## Why This Works
 
 Unlike the API/git push method that failed with "Unknown error":
+
 - **Container Registry CLI builds locally** - no need to fetch entire repo
 - **Only pushes built image** - bypasses the problematic code fetch step
 - **No 500MB slug size limit** - Container Registry has no size restrictions

@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "སྔོན་སྒྲིག་འགུལ་སློང་བེད་སྤྱོད་གཏོང་བར་སྟོང་པ་བཞག་པའམ། ཡང་ན་སྲོལ་བཟོས་འགུལ་སློང་འཇུག་པ།",
 	"Leave model field empty to use the default model.": "སྔོན་སྒྲིག་དཔེ་དབྱིབས་བེད་སྤྱོད་གཏོང་བར་དཔེ་དབྱིབས་ཀྱི་ཁོངས་སྟོང་པ་བཞག་པ།",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "ཆོག་མཆན།",
 	"Lift List": "",

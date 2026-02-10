@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Стандарт таклифдан фойдаланиш учун бўш қолдиринг ёки махсус таклифни киритинг",
 	"Leave model field empty to use the default model.": "Стандарт моделдан фойдаланиш учун модел майдонини бўш қолдиринг.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Литсензия",
 	"Lift List": "",

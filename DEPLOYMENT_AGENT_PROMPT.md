@@ -37,15 +37,15 @@ VERIFICATION: After applying the fix, `npm run build` must succeed locally. Then
 
 ## Files the agent should read
 
-| File | Purpose |
-|------|---------|
+| File                        | Purpose                                          |
+| --------------------------- | ------------------------------------------------ |
 | `PROJECT_CONTEXT_EXPORT.md` | Full context: fixes, blockers, config, debugging |
-| `docs/HEROKU_DEPLOYMENT.md` | Heroku deployment guide and troubleshooting |
-| `deployment-summary.txt` | Short deployment summary |
-| `vite.config.ts` | Vite resolve config and package aliases |
-| `package.json` | Build scripts, engines, dependencies |
-| `Procfile` | Release and web process commands |
-| `heroku.yml` | Docker config (if using container stack) |
+| `docs/HEROKU_DEPLOYMENT.md` | Heroku deployment guide and troubleshooting      |
+| `deployment-summary.txt`    | Short deployment summary                         |
+| `vite.config.ts`            | Vite resolve config and package aliases          |
+| `package.json`              | Build scripts, engines, dependencies             |
+| `Procfile`                  | Release and web process commands                 |
+| `heroku.yml`                | Docker config (if using container stack)         |
 
 ---
 

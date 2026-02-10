@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Lăsați gol pentru a utiliza promptul implicit sau introduceți un prompt personalizat",
 	"Leave model field empty to use the default model.": "",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "",
 	"Lift List": "",

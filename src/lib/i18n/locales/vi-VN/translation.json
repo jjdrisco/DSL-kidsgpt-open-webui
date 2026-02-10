@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Để trống để sử dụng prompt mặc định, hoặc nhập prompt tùy chỉnh",
 	"Leave model field empty to use the default model.": "Để trống trường mô hình để sử dụng mô hình mặc định.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Giấy phép",
 	"Lift List": "",

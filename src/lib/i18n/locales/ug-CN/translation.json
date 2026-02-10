@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "كۆڭۈلدىكى تۈرتكە ئۈچۈن بوش قالدۇرۇڭ ياكى ئۆزلۈك تۈرتكە كىرگۈزۈڭ",
 	"Leave model field empty to use the default model.": "كۆڭۈلدىكى مودېل ئۈچۈن مودېل رايونىنى بوش قالدۇرۇڭ.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "كېنىشكا",
 	"Lift List": "",

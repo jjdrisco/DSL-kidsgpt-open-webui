@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Jäta tühjaks, et kasutada vaikimisi vihjet, või sisesta kohandatud vihje",
 	"Leave model field empty to use the default model.": "Jäta mudeli väli tühjaks, et kasutada vaikimisi mudelit.",
 	"Legacy": "Pärand",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "leksikaalne",
 	"License": "Litsents",
 	"Lift List": "Liftide nimekiri",

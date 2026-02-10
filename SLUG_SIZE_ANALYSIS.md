@@ -7,6 +7,7 @@
 ## Findings
 
 ### Already Optimized
+
 - ✅ `.svelte-kit/` excluded (323MB saved)
 - ✅ `static/video/` excluded (95MB saved)
 - ✅ Heavy Python packages removed from root `requirements.txt`:
@@ -46,13 +47,16 @@
 ## Options to Reduce Slug Size
 
 ### Option 1: Further Dependency Reduction (Complex)
+
 - Make more packages lazy-import (unstructured, langchain, pandas)
 - Remove unused database clients (keep only pgvector)
 - Use lighter alternatives where possible
 - **Risk**: May break features if not carefully tested
 
 ### Option 2: Upgrade Heroku Instance (Recommended)
+
 Heroku slug size limits by tier:
+
 - **Free/Eco**: 500MB
 - **Basic**: 500MB
 - **Standard-1X/2X**: 500MB
@@ -61,6 +65,7 @@ Heroku slug size limits by tier:
 - **Container Registry**: No hard limit (recommended for large apps)
 
 **Note**: All Heroku dyno types have a 500MB slug limit. However, you can:
+
 1. **Use Container Registry** (no slug size limit)
    - Already have `Dockerfile` and `heroku.yml`
    - Switch to container stack: `heroku stack:set container -a dsl-kidsgpt-pilot`
@@ -72,6 +77,7 @@ Heroku slug size limits by tier:
    - Reduce static files in slug
 
 ### Option 3: Hybrid Approach
+
 - Keep essential packages
 - Move heavy static assets to CDN
 - Use Container Registry for deployment
@@ -79,12 +85,14 @@ Heroku slug size limits by tier:
 ## Recommendation
 
 **Use Container Registry** (Option 2):
+
 - Your project already has `Dockerfile` and `heroku.yml`
 - No slug size limit
 - More control over build process
 - Better for apps with heavy dependencies
 
 **Command to switch**:
+
 ```bash
 heroku stack:set container -a dsl-kidsgpt-pilot
 git push heroku cursor/heroku-build-memory-e9e1:main

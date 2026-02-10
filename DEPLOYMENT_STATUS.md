@@ -41,6 +41,7 @@ The workflow will automatically run on the next push, or you can manually trigge
 ## Why Container Registry CLI Works
 
 Unlike the API/git push method that failed:
+
 - **Builds locally** - No need for Heroku to fetch entire 2.8GB repo
 - **Only pushes image** - Bypasses the "Unknown error" during code fetch
 - **No size limits** - Container Registry has no 500MB slug size restriction
@@ -49,6 +50,7 @@ Unlike the API/git push method that failed:
 ## Monitoring
 
 Once the secret is set and workflow runs, you can monitor:
+
 - GitHub Actions: https://github.com/jjdrisco/DSL-kidsgpt-open-webui/actions
 - Heroku Dashboard: https://dashboard.heroku.com/apps/dsl-kidsgpt-pilot-alt
 

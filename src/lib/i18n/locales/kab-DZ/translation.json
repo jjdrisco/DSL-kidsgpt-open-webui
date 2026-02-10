@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Eǧǧ-it d ilem akken ad tesqedceḍ aneftaɣ-nni amezwaru, naɣ sekcem-d yiwen n uneftaɣ udmawan",
 	"Leave model field empty to use the default model.": "Eǧǧ urti n tmudemt d ilem i useqdec n tmudemt-nni tamezwarut.",
 	"Legacy": "Aqbur",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "Amawal",
 	"License": "Turagt",
 	"Lift List": "Tabdart n usali",

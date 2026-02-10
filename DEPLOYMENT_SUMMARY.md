@@ -38,7 +38,7 @@ The container is successfully built, pushed, and released, but the web dyno cras
 - **Latest Run**: 21773920975
 - **Status**: in_progress (at "Check deployment status" step)
 - **Container Build**: ✅ Success
-- **Container Push**: ✅ Success  
+- **Container Push**: ✅ Success
 - **Container Release**: ✅ Success
 - **Dyno Status**: ❌ Crashed
 

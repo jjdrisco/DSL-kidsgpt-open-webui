@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Αφήστε κενό για να χρησιμοποιήσετε την προεπιλεγμένη προτροπή, ή εισάγετε μια προσαρμοσμένη προτροπή",
 	"Leave model field empty to use the default model.": "",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Άδεια",
 	"Lift List": "",

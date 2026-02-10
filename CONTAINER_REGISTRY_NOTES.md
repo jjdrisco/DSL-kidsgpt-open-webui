@@ -5,6 +5,7 @@
 **No, `.slugignore` does NOT apply to Container Registry builds.**
 
 Container Registry uses:
+
 - **`.dockerignore`** - determines what gets sent to Docker build context
 - **Dockerfile COPY commands** - determines what actually gets included in the image
 
@@ -13,6 +14,7 @@ Container Registry uses:
 I've updated `.dockerignore` to exclude the same large files that were in `.slugignore`:
 
 ✅ **Now excluded in both:**
+
 - `.svelte-kit/` (323MB build artifacts)
 - `static/video/` (95MB demo videos)
 - `data-exports/` (data files)
@@ -38,6 +40,7 @@ The Dockerfile uses multi-stage builds:
 ## Result
 
 With the updated `.dockerignore`, Container Registry builds will:
+
 - ✅ Exclude the same large files as buildpack deployments
 - ✅ Not include `static/video/` (95MB saved)
 - ✅ Not include `.svelte-kit/` (323MB saved)
@@ -48,6 +51,7 @@ The Docker image will still be large due to Python dependencies, but unnecessary
 ## Next Steps
 
 To switch to Container Registry:
+
 ```bash
 heroku stack:set container -a dsl-kidsgpt-pilot
 git push heroku cursor/heroku-build-memory-e9e1:main

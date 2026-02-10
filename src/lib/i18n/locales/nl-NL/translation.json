@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Laat leeg om de standaard prompt te gebruiken, of selecteer een aangepaste prompt",
 	"Leave model field empty to use the default model.": "Laat modelveld leeg om het standaardmodel te gebruiken.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Licentie",
 	"Lift List": "",
