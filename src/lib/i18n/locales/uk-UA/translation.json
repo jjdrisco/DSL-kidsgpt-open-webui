@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Залиште порожнім для використання стандартного запиту, або введіть власний запит",
 	"Leave model field empty to use the default model.": "Залиште поле моделі порожнім, щоб використовувати модель за замовчуванням.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Ліцензія",
 	"Lift List": "",

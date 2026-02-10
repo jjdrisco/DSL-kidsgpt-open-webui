@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Deixe vazio para usar o prompt padrão, ou insira um prompt personalizado",
 	"Leave model field empty to use the default model.": "Deixe o campo do modelo vazio para usar o modelo padrão.",
 	"Legacy": "Legado",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Licença",
 	"Lift List": "",

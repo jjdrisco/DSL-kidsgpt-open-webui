@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Deixa-ho en blanc per utilitzar la indicació predeterminada o introdueix una indicació personalitzada",
 	"Leave model field empty to use the default model.": "Deixa el camp de model buit per utilitzar el model per defecte.",
 	"Legacy": "Llegat",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "lèxic",
 	"License": "Llicència",
 	"Lift List": "Aixecar la llista",

@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "برای استفاده از پرامپت پیش\u200cفرض خالی بگذارید، یا یک پرامپت سفارشی وارد کنید",
 	"Leave model field empty to use the default model.": "برای استفاده از مدل پیش\u200cفرض، فیلد مدل را خالی بگذارید.",
 	"Legacy": "قدیمی",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "لغوی",
 	"License": "مجوز",
 	"Lift List": "لیست ارتقا",

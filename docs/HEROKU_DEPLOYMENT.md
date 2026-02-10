@@ -56,12 +56,12 @@ git push heroku main
 
 ## Configuration Files
 
-| File | Purpose |
-|------|---------|
-| `Procfile` | Release phase (Alembic migrations) + web command. Used by buildpack deployment. |
-| `heroku.yml` | Docker build/run config. Used when `heroku stack:set container`. |
-| `app.json` | Buildpack order for new apps (nodejs → python). |
-| `.slugignore` | Excludes files from buildpack slug (keeps under 500MB). |
+| File               | Purpose                                                                           |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `Procfile`         | Release phase (Alembic migrations) + web command. Used by buildpack deployment.   |
+| `heroku.yml`       | Docker build/run config. Used when `heroku stack:set container`.                  |
+| `app.json`         | Buildpack order for new apps (nodejs → python).                                   |
+| `.slugignore`      | Excludes files from buildpack slug (keeps under 500MB).                           |
 | `requirements.txt` | Root-level; used by buildpack. Backend uses `backend/requirements.txt` in Docker. |
 
 ### Procfile
@@ -95,11 +95,11 @@ run:
 
 ### Recommended for Production
 
-| Variable | Example | Notes |
-|----------|---------|-------|
+| Variable            | Example                                               | Notes                                                          |
+| ------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
 | `CORS_ALLOW_ORIGIN` | `https://yourapp.herokuapp.com;http://localhost:8080` | **Do not use `*` in production.** Semicolon-separated origins. |
-| `WEBUI_URL` | `https://yourapp.herokuapp.com` | Required for OAuth/SSO. |
-| `VECTOR_DB` | `pgvector` | Use pgvector (chromadb removed for slug size). |
+| `WEBUI_URL`         | `https://yourapp.herokuapp.com`                       | Required for OAuth/SSO.                                        |
+| `VECTOR_DB`         | `pgvector`                                            | Use pgvector (chromadb removed for slug size).                 |
 
 ### Optional (Features Disabled for Heroku)
 
@@ -115,17 +115,17 @@ run:
 
 To reduce slug size and memory, several packages were removed from `requirements.txt` and made **lazy/conditional**. Install only if you need the feature:
 
-| Package | Install when | Command |
-|---------|--------------|---------|
-| `boto3` | STORAGE_PROVIDER=s3 | `pip install boto3` |
-| `google-cloud-storage` | STORAGE_PROVIDER=gcs | `pip install google-cloud-storage` |
-| `azure-identity` | STORAGE_PROVIDER=azure or Azure Document Intelligence | `pip install azure-identity` |
-| `azure-storage-blob` | STORAGE_PROVIDER=azure | `pip install azure-storage-blob` |
-| `azure-ai-documentintelligence` | document_intelligence loader | `pip install azure-ai-documentintelligence` |
-| `ddgs` | DuckDuckGo search | `pip install duckduckgo-search` |
-| `firecrawl-py` | WEB_LOADER_ENGINE=firecrawl | `pip install firecrawl-py` |
-| `tencentcloud-sdk-python` | Sogou search | `pip install tencentcloud-sdk-python` |
-| `opentelemetry-*` | ENABLE_OTEL=true | Multiple packages; see requirements.txt comments |
+| Package                         | Install when                                          | Command                                          |
+| ------------------------------- | ----------------------------------------------------- | ------------------------------------------------ |
+| `boto3`                         | STORAGE_PROVIDER=s3                                   | `pip install boto3`                              |
+| `google-cloud-storage`          | STORAGE_PROVIDER=gcs                                  | `pip install google-cloud-storage`               |
+| `azure-identity`                | STORAGE_PROVIDER=azure or Azure Document Intelligence | `pip install azure-identity`                     |
+| `azure-storage-blob`            | STORAGE_PROVIDER=azure                                | `pip install azure-storage-blob`                 |
+| `azure-ai-documentintelligence` | document_intelligence loader                          | `pip install azure-ai-documentintelligence`      |
+| `ddgs`                          | DuckDuckGo search                                     | `pip install duckduckgo-search`                  |
+| `firecrawl-py`                  | WEB_LOADER_ENGINE=firecrawl                           | `pip install firecrawl-py`                       |
+| `tencentcloud-sdk-python`       | Sogou search                                          | `pip install tencentcloud-sdk-python`            |
+| `opentelemetry-*`               | ENABLE_OTEL=true                                      | Multiple packages; see requirements.txt comments |
 
 **Code changes**: Storage provider (`backend/open_webui/storage/provider.py`), loaders (`retrieval/loaders/main.py`), web search (`retrieval/web/*.py`), logger (`utils/logger.py`), and `routers/openai.py` use lazy imports with clear error messages when packages are missing.
 
@@ -184,16 +184,16 @@ To reduce slug size and memory, several packages were removed from `requirements
 
 ## Troubleshooting
 
-| Symptom | Likely cause | See |
-|---------|--------------|-----|
-| 404 on `/` or frontend routes | Frontend not built (buildpack) or wrong stack | [HEROKU_404_FIX.md](HEROKU_404_FIX.md) |
-| `ModuleNotFoundError: No module named 'azure'` | azure-identity removed; lazy import in openai router | Ensure latest `routers/openai.py` |
-| Slug too large | Heavy deps or large files in slug | `.slugignore`, `requirements.txt` |
-| R14 Memory quota exceeded | Too many workers or heavy imports | `WEB_CONCURRENCY=1`, lazy imports |
-| Migration fails (UndefinedTable, InvalidTableDefinition) | Release phase or migration script | Procfile release, migration `38d63c18f30f` |
-| CORS errors in browser | `CORS_ALLOW_ORIGIN='*'` in production | Set explicit origins |
-| **Node OOM during build** | `npm run build` exceeds heap limit | Set `NODE_OPTIONS=--max-old-space-size=4096` |
-| `npm ci` "Missing from lock file" | package.json and package-lock.json out of sync | See [Lockfile Sync](#lockfile-sync) below |
+| Symptom                                                  | Likely cause                                         | See                                          |
+| -------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| 404 on `/` or frontend routes                            | Frontend not built (buildpack) or wrong stack        | [HEROKU_404_FIX.md](HEROKU_404_FIX.md)       |
+| `ModuleNotFoundError: No module named 'azure'`           | azure-identity removed; lazy import in openai router | Ensure latest `routers/openai.py`            |
+| Slug too large                                           | Heavy deps or large files in slug                    | `.slugignore`, `requirements.txt`            |
+| R14 Memory quota exceeded                                | Too many workers or heavy imports                    | `WEB_CONCURRENCY=1`, lazy imports            |
+| Migration fails (UndefinedTable, InvalidTableDefinition) | Release phase or migration script                    | Procfile release, migration `38d63c18f30f`   |
+| CORS errors in browser                                   | `CORS_ALLOW_ORIGIN='*'` in production                | Set explicit origins                         |
+| **Node OOM during build**                                | `npm run build` exceeds heap limit                   | Set `NODE_OPTIONS=--max-old-space-size=4096` |
+| `npm ci` "Missing from lock file"                        | package.json and package-lock.json out of sync       | See [Lockfile Sync](#lockfile-sync) below    |
 
 ### Lockfile Sync
 
@@ -222,10 +222,10 @@ heroku logs --tail -a YOUR_APP_NAME
 
 ## Known Heroku Apps
 
-| App | Stack | Notes |
-|-----|-------|-------|
-| `contextquiz-openwebui-kidsgpt` | container (Docker) | Primary production app |
-| `dsl-kidsgpt-pilot` | heroku-24 (buildpack) | Node.js + Python buildpacks |
+| App                             | Stack                 | Notes                       |
+| ------------------------------- | --------------------- | --------------------------- |
+| `contextquiz-openwebui-kidsgpt` | container (Docker)    | Primary production app      |
+| `dsl-kidsgpt-pilot`             | heroku-24 (buildpack) | Node.js + Python buildpacks |
 
 ---
 

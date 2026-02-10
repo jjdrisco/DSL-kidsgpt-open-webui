@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Hagyja üresen az alapértelmezett prompt használatához, vagy adjon meg egyéni promptot",
 	"Leave model field empty to use the default model.": "Hagyja üresen a modell mezőt az alapértelmezett modell használatához.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Licenc",
 	"Lift List": "",

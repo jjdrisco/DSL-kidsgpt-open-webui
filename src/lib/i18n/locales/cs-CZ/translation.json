@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Ponechte prázdné pro použití výchozích instrukcí, nebo zadejte vlastní instrukce.",
 	"Leave model field empty to use the default model.": "Ponechte pole modelu prázdné pro použití výchozího modelu.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "lexikální",
 	"License": "Licence",
 	"Lift List": "Zvýraznit seznam",

@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "기본 프롬프트를 사용하기 위해 빈칸으로 남겨두거나, 커스텀 프롬프트를 입력하세요",
 	"Leave model field empty to use the default model.": "기본 모델을 사용하려면 모델 필드를 비워 두세요.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "어휘적",
 	"License": "라이선스",
 	"Lift List": "리스트 올리기",

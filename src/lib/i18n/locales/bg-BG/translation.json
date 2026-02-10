@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Оставете празно, за да използвате промпта по подразбиране, или въведете персонализиран промпт",
 	"Leave model field empty to use the default model.": "Оставете полето за модел празно, за да използвате модела по подразбиране.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Лиценз",
 	"Lift List": "",

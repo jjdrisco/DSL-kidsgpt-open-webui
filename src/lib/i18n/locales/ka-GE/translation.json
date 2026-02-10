@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "",
 	"Leave model field empty to use the default model.": "",
 	"Legacy": "მოძველებული",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "ლექსიკური",
 	"License": "ლიცენზია",
 	"Lift List": "სიის აწევა",

@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "La stå tomt for å bruke standard ledetekst, eller angi en tilpasset ledetekst",
 	"Leave model field empty to use the default model.": "La modellfeltet stå tomt for å bruke standard modell.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "Lisens",
 	"Lift List": "",

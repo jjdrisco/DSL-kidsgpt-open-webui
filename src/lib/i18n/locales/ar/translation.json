@@ -1035,6 +1035,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "اتركه فارغًا لاستخدام التوجيه الافتراضي، أو أدخل توجيهًا مخصصًا",
 	"Leave model field empty to use the default model.": "اترك حقل النموذج فارغًا لاستخدام النموذج الافتراضي.",
 	"Legacy": "",
+	"Legacy .xls format is not supported. Please use .xlsx or .csv.": "",
 	"lexical": "",
 	"License": "الترخيص",
 	"Lift List": "",
