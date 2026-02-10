@@ -8,6 +8,23 @@ import sys
 import subprocess
 import importlib.util
 
+
+# Some Python imports don't match their pip package names.
+# Add common mappings here to avoid brute-force/manual fixes.
+MODULE_TO_PIP = {
+    "bs4": "beautifulsoup4",
+    "yaml": "PyYAML",
+    "dotenv": "python-dotenv",
+    "dateutil": "python-dateutil",
+    "PIL": "Pillow",
+    "cv2": "opencv-python-headless",
+    "sklearn": "scikit-learn",
+}
+
+
+def _norm(name: str) -> str:
+    return (name or "").strip().lower().replace("-", "_")
+
 def get_requirements_packages():
     """Read packages from requirements.txt"""
     packages = []
@@ -28,18 +45,29 @@ def install_package(package_spec):
     """Install a package using pip"""
     try:
         print(f"Installing {package_spec}...")
-        subprocess.check_call([
-            sys.executable, '-m', 'pip', 'install', '--no-cache-dir', package_spec
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return True
-    except subprocess.CalledProcessError as e:
+        p = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--no-cache-dir", package_spec],
+            text=True,
+            capture_output=True,
+        )
+        if p.returncode == 0:
+            return True
+        print(f"Failed to install {package_spec} (exit {p.returncode})")
+        if p.stdout:
+            print("pip stdout (tail):")
+            print("\n".join(p.stdout.splitlines()[-25:]))
+        if p.stderr:
+            print("pip stderr (tail):")
+            print("\n".join(p.stderr.splitlines()[-25:]))
+        return False
+    except Exception as e:
         print(f"Failed to install {package_spec}: {e}")
         return False
 
 def check_and_install_missing():
     """Try to import the main module and install missing dependencies"""
     requirements = get_requirements_packages()
-    max_attempts = 3
+    max_attempts = 5
     attempt = 0
     
     while attempt < max_attempts:
@@ -69,15 +97,23 @@ def check_and_install_missing():
             if missing_module:
                 print(f"Missing module: {missing_module}")
                 
-                # Try to find the package in requirements.txt
+                # Try to find the package in requirements.txt (including known module->pip mappings)
+                mapped_pip = MODULE_TO_PIP.get(missing_module) or MODULE_TO_PIP.get(missing_module.split(".")[0])
+                candidates = [missing_module]
+                if mapped_pip and mapped_pip not in candidates:
+                    candidates.append(mapped_pip)
+
                 package_spec = None
-                for req_name, req_spec in requirements.items():
-                    if req_name.lower().replace('-', '_') == missing_module.lower().replace('-', '_'):
-                        package_spec = req_spec
-                        break
-                    # Also check if the module name matches the package name
-                    if missing_module.lower() in req_name.lower() or req_name.lower() in missing_module.lower():
-                        package_spec = req_spec
+                for cand in candidates:
+                    for req_name, req_spec in requirements.items():
+                        if _norm(req_name) == _norm(cand):
+                            package_spec = req_spec
+                            break
+                        # best-effort fuzzy match
+                        if _norm(cand) in _norm(req_name) or _norm(req_name) in _norm(cand):
+                            package_spec = req_spec
+                            break
+                    if package_spec:
                         break
                 
                 if package_spec:
@@ -85,10 +121,17 @@ def check_and_install_missing():
                         continue  # Retry import
                     else:
                         print(f"Failed to install {package_spec}, trying package name only...")
+                        # Try installing mapped pip name first, then module name
+                        if mapped_pip and install_package(mapped_pip):
+                            continue
                         if install_package(missing_module):
                             continue
                 else:
                     # Try installing by module name
+                    if mapped_pip:
+                        print(f"Package not found in requirements.txt, trying to install {mapped_pip} for module {missing_module}...")
+                        if install_package(mapped_pip):
+                            continue
                     print(f"Package not found in requirements.txt, trying to install {missing_module}...")
                     if install_package(missing_module):
                         continue
