@@ -20,6 +20,8 @@ MODULE_TO_PIP = {
     "PIL": "Pillow",
     "cv2": "opencv-python-headless",
     "sklearn": "scikit-learn",
+    # Open WebUI-specific helpers
+    "langchain_text_splitters": "langchain-text-splitters",
 }
 
 
@@ -120,19 +122,27 @@ def check_and_install_missing():
                     candidates.append(mapped_pip)
 
                 package_spec = None
+
+                # Pass 1: prefer exact normalized matches from requirements
                 for cand in candidates:
                     for req_name, req_spec in requirements.items():
                         if _norm(req_name) == _norm(cand):
                             package_spec = req_spec
                             break
-                        # best-effort fuzzy match
-                        if _norm(cand) in _norm(req_name) or _norm(req_name) in _norm(
-                            cand
-                        ):
-                            package_spec = req_spec
-                            break
                     if package_spec:
                         break
+
+                # Pass 2: only if no exact match, fall back to fuzzy contains()
+                if not package_spec:
+                    for cand in candidates:
+                        for req_name, req_spec in requirements.items():
+                            if _norm(cand) in _norm(req_name) or _norm(
+                                req_name
+                            ) in _norm(cand):
+                                package_spec = req_spec
+                                break
+                        if package_spec:
+                            break
 
                 if package_spec:
                     if install_package(package_spec):
