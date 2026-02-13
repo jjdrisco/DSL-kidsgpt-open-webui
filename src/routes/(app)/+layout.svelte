@@ -14,6 +14,8 @@
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 	import { getUserType } from '$lib/utils';
+	import { getWorkflowState } from '$lib/apis/workflow';
+	import { getStepFromRoute } from '$lib/utils/workflow';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -323,14 +325,31 @@
 
 		try {
 			const currentPath = $page.url.pathname;
-			const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '0'); // Start with 0 for new users
-			const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-			const instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+
+			// Get workflow state from backend API (single source of truth)
+			let workflowState = null;
+			try {
+				if (localStorage.token) {
+					workflowState = await getWorkflowState(localStorage.token);
+				}
+			} catch (error) {
+				console.error('Failed to fetch workflow state:', error);
+				// Continue with navigation logic even if API fails
+			}
 
 			// Check if this is a Prolific user
 			const isProlificUser = $user?.prolific_pid !== undefined && $user?.prolific_pid !== null;
 			const prolificSessionId = localStorage.getItem('prolificSessionId');
 			const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
+			
+			// Get completion status from backend workflow state
+			const assignmentCompleted = workflowState?.progress_by_section?.exit_survey_completed || false;
+			// Instructions completed is determined by whether user can access /kids/profile
+			const instructionsCompleted = workflowState?.progress_by_section?.has_child_profile || 
+				workflowState?.next_route === '/kids/profile' || 
+				workflowState?.next_route === '/moderation-scenario' || 
+				workflowState?.next_route === '/exit-survey' || 
+				workflowState?.next_route === '/completion' || false;
 
 			// For Prolific users on new sessions, reset workflow to instructions
 			if (isProlificUser) {
@@ -444,29 +463,29 @@
 				return;
 			}
 
-			// Define step-to-route mapping (for interviewees only)
-			// Skip step 2 (moderation-scenario) is handled by backend, but we still need the mapping
-			const stepRoutes: { [key: number]: string } = {
-				1: '/kids/profile',
-				2: '/moderation-scenario',
-				3: '/exit-survey',
-				4: '/completion'
-			};
+			// Use backend workflow state to determine navigation
+			if (workflowState?.next_route) {
+				const nextRoute = workflowState.next_route;
+				const currentStep = getStepFromRoute(currentPath);
+				const nextStep = getStepFromRoute(nextRoute);
 
-			// Allow users to access their current step or any previous steps
-			const allowedRoutes: string[] = [];
-			for (let step = 1; step <= assignmentStep; step++) {
-				if (stepRoutes[step]) {
-					allowedRoutes.push(stepRoutes[step]);
+				// Define valid workflow routes
+				const workflowRoutes = ['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion', '/assignment-instructions'];
+				const isWorkflowRoute = workflowRoutes.some(route => currentPath.startsWith(route));
+
+				// If user is on a workflow route but not the correct one, redirect
+				if (isWorkflowRoute && currentPath !== nextRoute && !currentPath.startsWith(nextRoute)) {
+					// Check if user is trying to access a future step
+					if (currentStep > 0 && nextStep > 0 && currentStep > nextStep) {
+						// User is ahead of where they should be, redirect to next_route
+						await goto(nextRoute);
+						return;
+					} else if (currentStep === 0 || (nextStep > 0 && currentStep !== nextStep)) {
+						// User is on wrong workflow route, redirect to next_route
+						await goto(nextRoute);
+						return;
+					}
 				}
-			}
-
-			// Check if current route is allowed
-			const isAllowed = allowedRoutes.some((route) => currentPath.startsWith(route));
-
-			// If not allowed, redirect to current step
-			if (!isAllowed && stepRoutes[assignmentStep]) {
-				await goto(stepRoutes[assignmentStep]);
 			}
 		} finally {
 			isEnforcingNavigation = false;
