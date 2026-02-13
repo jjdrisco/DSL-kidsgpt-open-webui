@@ -32,18 +32,26 @@ export function getStepFromRoute(route: string): number {
 /**
  * Determine if a step is accessible based on workflow state
  * Uses the backend workflow state response structure
+ * Users can navigate to:
+ * - Their current step (next_route)
+ * - Any previous completed steps
+ * - Not future steps
  */
 export function canAccessStep(
 	step: number,
 	workflowState: WorkflowStateResponse
 ): boolean {
 	const { progress_by_section, next_route } = workflowState;
+	const stepRoute = getStepRoute(step);
 
-	// Step 1: Child Profile - accessible if instructions completed or already has profile
+	// If this is the next_route, it's always accessible
+	if (next_route === stepRoute || next_route.startsWith(stepRoute)) {
+		return true;
+	}
+
+	// Step 1: Child Profile - accessible if it's completed or if next_route is a later step
 	if (step === 1) {
-		// Check if next_route indicates step 1 is available or already completed
 		return (
-			next_route === '/kids/profile' ||
 			progress_by_section.has_child_profile ||
 			next_route === '/moderation-scenario' ||
 			next_route === '/exit-survey' ||
@@ -51,26 +59,34 @@ export function canAccessStep(
 		);
 	}
 
-	// Step 2: Moderation - accessible if child profile completed
+	// Step 2: Moderation - accessible if child profile is completed and (moderation is current/next or completed)
 	if (step === 2) {
+		if (!progress_by_section.has_child_profile) {
+			return false; // Can't access moderation without child profile
+		}
+		// Accessible if it's the next route, or if moderation is completed, or if we're on a later step
 		return (
-			progress_by_section.has_child_profile &&
-			(next_route === '/moderation-scenario' ||
-				progress_by_section.moderation_completed_count >= progress_by_section.moderation_total ||
-				next_route === '/exit-survey' ||
-				next_route === '/completion')
+			next_route === '/moderation-scenario' ||
+			progress_by_section.moderation_completed_count >= progress_by_section.moderation_total ||
+			next_route === '/exit-survey' ||
+			next_route === '/completion'
 		);
 	}
 
-	// Step 3: Exit Survey - accessible if moderation completed
+	// Step 3: Exit Survey - accessible if moderation is completed and (exit survey is current/next or completed)
 	if (step === 3) {
+		if (progress_by_section.moderation_completed_count < progress_by_section.moderation_total) {
+			return false; // Can't access exit survey without completing moderation
+		}
+		// Accessible if it's the next route, or if exit survey is completed, or if we're on completion
 		return (
-			progress_by_section.moderation_completed_count >= progress_by_section.moderation_total &&
-			(next_route === '/exit-survey' || next_route === '/completion' || progress_by_section.exit_survey_completed)
+			next_route === '/exit-survey' ||
+			progress_by_section.exit_survey_completed ||
+			next_route === '/completion'
 		);
 	}
 
-	// Step 4: Completion - accessible if exit survey completed
+	// Step 4: Completion - accessible if exit survey is completed
 	if (step === 4) {
 		return progress_by_section.exit_survey_completed || next_route === '/completion';
 	}
