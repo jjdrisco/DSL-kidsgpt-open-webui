@@ -3,6 +3,7 @@ name: Deploy to Heroku Container Registry
 on:
   push:
     branches:
+      - dev
       - cursor/heroku-build-memory-e9e1
   workflow_dispatch:
 
