@@ -49,39 +49,43 @@ export function canAccessStep(
 		return true;
 	}
 
-	// Step 1: Child Profile - accessible if it's completed or if next_route is a later step
+	// Check if step is completed - completed steps are always accessible
+	const isCompleted = isStepCompleted(step, workflowState);
+	if (isCompleted) {
+		return true;
+	}
+
+	// Step 1: Child Profile - accessible if next_route indicates we're past this step
 	if (step === 1) {
+		// Accessible if next_route is a later step (meaning we've completed step 1)
 		return (
-			progress_by_section.has_child_profile ||
 			next_route === '/moderation-scenario' ||
 			next_route === '/exit-survey' ||
 			next_route === '/completion'
 		);
 	}
 
-	// Step 2: Moderation - accessible if child profile is completed and (moderation is current/next or completed)
+	// Step 2: Moderation - accessible if child profile is completed and (moderation is current/next or we're past it)
 	if (step === 2) {
 		if (!progress_by_section.has_child_profile) {
 			return false; // Can't access moderation without child profile
 		}
-		// Accessible if it's the next route, or if moderation is completed, or if we're on a later step
+		// Accessible if it's the next route, or if we're on a later step (meaning moderation is done or in progress)
 		return (
 			next_route === '/moderation-scenario' ||
-			progress_by_section.moderation_completed_count >= progress_by_section.moderation_total ||
 			next_route === '/exit-survey' ||
 			next_route === '/completion'
 		);
 	}
 
-	// Step 3: Exit Survey - accessible if moderation is completed and (exit survey is current/next or completed)
+	// Step 3: Exit Survey - accessible if moderation is completed and (exit survey is current/next or we're past it)
 	if (step === 3) {
 		if (progress_by_section.moderation_completed_count < progress_by_section.moderation_total) {
 			return false; // Can't access exit survey without completing moderation
 		}
-		// Accessible if it's the next route, or if exit survey is completed, or if we're on completion
+		// Accessible if it's the next route, or if we're on completion (meaning exit survey is done)
 		return (
 			next_route === '/exit-survey' ||
-			progress_by_section.exit_survey_completed ||
 			next_route === '/completion'
 		);
 	}

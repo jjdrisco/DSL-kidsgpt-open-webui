@@ -32,16 +32,27 @@
 
 	// Navigation function
 	async function goToStep(step: number) {
+		console.log('goToStep called with step:', step);
+		
 		if (!workflowState) {
 			await fetchWorkflowProgress();
 		}
 
-		if (!workflowState || !canAccessStep(step, workflowState)) {
+		if (!workflowState) {
+			toast.error('Workflow state not available. Please try again.');
+			return;
+		}
+
+		const canAccess = canAccessStep(step, workflowState);
+		console.log('canAccessStep result:', canAccess, 'for step:', step, 'workflowState:', workflowState);
+
+		if (!canAccess) {
 			toast.error('This step is not yet available');
 			return;
 		}
 
 		const route = getStepRoute(step);
+		console.log('Navigating to route:', route);
 		await goto(route);
 
 		// Refresh state after navigation
@@ -189,14 +200,21 @@
 								{@const step1 = getStepInfo(1)}
 								<button
 									data-step="1"
-									on:click={() => goToStep(1)}
-									disabled={!step1.canAccess}
+									on:click|preventDefault|stopPropagation={() => {
+										console.log('Step 1 button clicked, canAccess:', step1.canAccess);
+										if (step1.canAccess) {
+											goToStep(1);
+										} else {
+											toast.error('This step is not yet available');
+										}
+									}}
 									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step1.isCurrentStep
 										? 'bg-blue-100 dark:bg-blue-900'
 										: step1.canAccess
 											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
 											: 'opacity-50 cursor-not-allowed'}"
 									aria-label="Navigate to {step1.label}"
+									aria-disabled={!step1.canAccess}
 								>
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step1.isCompleted
@@ -232,14 +250,20 @@
 								{@const step2 = getStepInfo(2)}
 								<button
 									data-step="2"
-									on:click={() => goToStep(2)}
-									disabled={!step2.canAccess}
+									on:click|preventDefault|stopPropagation={() => {
+										if (step2.canAccess) {
+											goToStep(2);
+										} else {
+											toast.error('This step is not yet available');
+										}
+									}}
 									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step2.isCurrentStep
 										? 'bg-blue-100 dark:bg-blue-900'
 										: step2.canAccess
 											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
 											: 'opacity-50 cursor-not-allowed'}"
 									aria-label="Navigate to {step2.label}"
+									aria-disabled={!step2.canAccess}
 								>
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step2.isCompleted
@@ -282,14 +306,20 @@
 								{@const step3 = getStepInfo(3)}
 								<button
 									data-step="3"
-									on:click={() => goToStep(3)}
-									disabled={!step3.canAccess}
+									on:click|preventDefault|stopPropagation={() => {
+										if (step3.canAccess) {
+											goToStep(3);
+										} else {
+											toast.error('This step is not yet available');
+										}
+									}}
 									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step3.isCurrentStep
 										? 'bg-blue-100 dark:bg-blue-900'
 										: step3.canAccess
 											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
 											: 'opacity-50 cursor-not-allowed'}"
 									aria-label="Navigate to {step3.label}"
+									aria-disabled={!step3.canAccess}
 								>
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step3.isCompleted
@@ -321,19 +351,25 @@
 									</span>
 								</button>
 
-								<!-- Step 4: Completion -->
-								{@const step4 = getStepInfo(4)}
-								<button
-									data-step="4"
-									on:click={() => goToStep(4)}
-									disabled={!step4.canAccess}
-									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step4.isCurrentStep
-										? 'bg-blue-100 dark:bg-blue-900'
-										: step4.canAccess
-											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
-											: 'opacity-50 cursor-not-allowed'}"
-									aria-label="Navigate to {step4.label}"
-								>
+							<!-- Step 4: Completion -->
+							{@const step4 = getStepInfo(4)}
+							<button
+								data-step="4"
+								on:click|preventDefault|stopPropagation={() => {
+									if (step4.canAccess) {
+										goToStep(4);
+									} else {
+										toast.error('This step is not yet available');
+									}
+								}}
+								class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step4.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step4.canAccess
+										? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step4.label}"
+								aria-disabled={!step4.canAccess}
+							>
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step4.isCompleted
 											? 'bg-green-500'
