@@ -1051,7 +1051,7 @@
 							<!-- Is Only Child -->
 							<div class="mb-6">
 								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Is this child an only child?
+									Is this child an only child? <span class="text-red-500">*</span>
 								</div>
 								<div class="space-y-2">
 									<label class="flex items-center">
@@ -1072,13 +1072,22 @@
 										/>
 										<span class="text-gray-900 dark:text-white">No</span>
 									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.isOnlyChild}
+											value="prefer_not_to_say"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Prefer not to say</span>
+									</label>
 								</div>
 							</div>
 
 							<!-- Child Has AI Use -->
 							<div class="mb-6">
 								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Has this child used ChatGPT or similar AI tools?
+									Has this child used ChatGPT or similar AI tools? <span class="text-red-500">*</span>
 								</div>
 								<div class="space-y-2">
 									<label class="flex items-center">
@@ -1106,7 +1115,16 @@
 											value="unsure"
 											class="mr-3"
 										/>
-										<span class="text-gray-900 dark:text-white">Unsure</span>
+										<span class="text-gray-900 dark:text-white">Not sure</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.childHasAIUse}
+											value="prefer_not_to_say"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Prefer not to say</span>
 									</label>
 								</div>
 							</div>
@@ -1115,44 +1133,44 @@
 							{#if surveyResponses.childHasAIUse === 'yes'}
 								<div class="mb-6">
 									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										In what contexts has this child used AI tools? (Select all that apply)
+										In what contexts has this child used these tools? <span class="text-red-500">*</span>
 									</div>
 									<div class="space-y-2">
 										<label class="flex items-center">
 											<input
 												type="checkbox"
 												bind:group={surveyResponses.childAIUseContexts}
-												value="schoolwork"
+												value="school_homework"
 												class="mr-3"
 											/>
-											<span class="text-gray-900 dark:text-white">Schoolwork</span>
+											<span class="text-gray-900 dark:text-white">For school or homework</span>
 										</label>
 										<label class="flex items-center">
 											<input
 												type="checkbox"
 												bind:group={surveyResponses.childAIUseContexts}
-												value="creative_writing"
+												value="general_knowledge"
 												class="mr-3"
 											/>
-											<span class="text-gray-900 dark:text-white">Creative writing</span>
+											<span class="text-gray-900 dark:text-white">For general knowledge or casual questions</span>
 										</label>
 										<label class="flex items-center">
 											<input
 												type="checkbox"
 												bind:group={surveyResponses.childAIUseContexts}
-												value="homework_help"
+												value="games_chatting"
 												class="mr-3"
 											/>
-											<span class="text-gray-900 dark:text-white">Homework help</span>
+											<span class="text-gray-900 dark:text-white">For playing games or chatting with the AI</span>
 										</label>
 										<label class="flex items-center">
 											<input
 												type="checkbox"
 												bind:group={surveyResponses.childAIUseContexts}
-												value="entertainment"
+												value="personal_advice"
 												class="mr-3"
 											/>
-											<span class="text-gray-900 dark:text-white">Entertainment</span>
+											<span class="text-gray-900 dark:text-white">For advice on personal or social issues</span>
 										</label>
 										<label class="flex items-center">
 											<input
@@ -1167,7 +1185,7 @@
 											<input
 												type="text"
 												bind:value={surveyResponses.childAIUseContextsOther}
-												placeholder="Please specify"
+												placeholder="Please specify the context"
 												class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mt-2"
 											/>
 										{/if}
@@ -1178,35 +1196,35 @@
 							<!-- Parent LLM Monitoring Level -->
 							<div class="mb-6">
 								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									How have you monitored or adjusted this child's AI use?
+									Have you monitored or adjusted your child's use of Large Language Models like ChatGPT? <span class="text-red-500">*</span>
 								</div>
 								<div class="space-y-2">
 									<label class="flex items-center">
 										<input
 											type="radio"
 											bind:group={surveyResponses.parentLLMMonitoringLevel}
-											value="strict_rules"
+											value="active_rules"
 											class="mr-3"
 										/>
-										<span class="text-gray-900 dark:text-white">I have set strict rules about AI use</span>
+										<span class="text-gray-900 dark:text-white">Yes — I actively monitor and set rules/limits</span>
 									</label>
 									<label class="flex items-center">
 										<input
 											type="radio"
 											bind:group={surveyResponses.parentLLMMonitoringLevel}
-											value="discussions"
+											value="occasional_guidance"
 											class="mr-3"
 										/>
-										<span class="text-gray-900 dark:text-white">I have had discussions about responsible AI use</span>
+										<span class="text-gray-900 dark:text-white">Yes — occasional reminders or guidance</span>
 									</label>
 									<label class="flex items-center">
 										<input
 											type="radio"
 											bind:group={surveyResponses.parentLLMMonitoringLevel}
-											value="limited_access"
+											value="plan_to"
 											class="mr-3"
 										/>
-										<span class="text-gray-900 dark:text-white">I have limited their access to AI tools</span>
+										<span class="text-gray-900 dark:text-white">Not yet, but I plan to</span>
 									</label>
 									<label class="flex items-center">
 										<input
@@ -1215,7 +1233,7 @@
 											value="no_monitoring"
 											class="mr-3"
 										/>
-										<span class="text-gray-900 dark:text-white">I have not monitored their AI use</span>
+										<span class="text-gray-900 dark:text-white">No — I have not monitored or adjusted</span>
 									</label>
 									<label class="flex items-center">
 										<input
@@ -1226,11 +1244,20 @@
 										/>
 										<span class="text-gray-900 dark:text-white">Other</span>
 									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="prefer_not_to_say"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Prefer not to say</span>
+									</label>
 									{#if surveyResponses.parentLLMMonitoringLevel === 'other'}
 										<input
 											type="text"
 											bind:value={surveyResponses.parentLLMMonitoringOther}
-											placeholder="Please specify"
+											placeholder="Please specify how you have monitored or adjusted your child's AI use"
 											class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mt-2"
 										/>
 									{/if}
