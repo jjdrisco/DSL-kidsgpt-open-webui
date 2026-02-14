@@ -145,6 +145,7 @@
 
 	let selectedScenarioIndex: number = 0;
 	let scenarioList: Array<[string, string]> = []; // Initialized empty - populated by personality-based scenarios
+	let scenarioIdentifiers: string[] = []; // Parallel to scenarioList, stores stable identifiers (assignment_id or scenario_id)
 	let sessionNumber: number = 1; // Default session number for non-Prolific users
 
 	// Workflow state for Next Task button (exit survey access)
@@ -464,32 +465,35 @@
 	 * @returns Promise resolving to the complete scenario list with attention check and custom scenario
 	 */
 	async function buildScenarioList(
-		basePairs: Array<[string, string]>
-	): Promise<Array<[string, string]>> {
+		basePairs: Array<[string, string]>,
+		baseIdentifiers: string[]
+	): Promise<{ list: Array<[string, string]>; identifiers: string[] }> {
 		let list: Array<[string, string]> = basePairs.slice();
+		let identifiers: string[] = baseIdentifiers.slice();
 
 		// Load one attention check question from the database via API
 		try {
 			const token = localStorage.getItem('token');
-			if (!token) {
-				console.warn('⚠️ No authentication token available, skipping attention check');
-			} else {
-				const attentionCheck = await getRandomAttentionCheck(token);
-				if (attentionCheck) {
-					// Apply instruction suffix to the attention check question
-					const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
-					const attentionCheckPair: [string, string] = [
-						attentionCheck.question,
-						attentionCheckResponse
-					];
+			const attentionCheck = await getRandomAttentionCheck(token || undefined);
+			if (attentionCheck) {
+				// Apply instruction suffix to the attention check question
+				const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
+				const attentionCheckPair: [string, string] = [
+					attentionCheck.question,
+					attentionCheckResponse
+				];
 
-					// Shuffle attention check into the list (not at index 0, not at last position)
-					list = shuffleAttentionCheckIntoList(list, attentionCheckPair);
-				} else {
-					console.warn(
-						'⚠️ No attention check question available, proceeding without attention check'
-					);
-				}
+				// Get scenarioId from attention check (API or fallback)
+				const attentionCheckId = attentionCheck.scenarioId || `ac_fallback_${Date.now()}`;
+
+				// Shuffle attention check into the list (not at index 0, not at last position)
+				const result = shuffleAttentionCheckIntoList(list, attentionCheckPair, identifiers, attentionCheckId);
+				list = result.list;
+				identifiers = result.identifiers;
+			} else {
+				console.warn(
+					'⚠️ No attention check question available, proceeding without attention check'
+				);
 			}
 		} catch (error) {
 			console.error('Error loading attention check:', error);
@@ -501,12 +505,18 @@
 		//const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
 		//if (!hasCustom) {
 		//	list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//	identifiers.push('custom');
 		//} else {
 		//	// Move existing custom to the end
-		//	list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
-		//	list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//	const customIndex = list.findIndex(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+		//	if (customIndex >= 0) {
+		//		list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
+		//		identifiers = identifiers.filter((id, idx) => idx !== customIndex);
+		//		list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//		identifiers.push('custom');
+		//	}
 		//}
-		return list;
+		return { list, identifiers };
 	}
 
 	/**
@@ -515,20 +525,24 @@
 	 *
 	 * @param list - The base scenario list
 	 * @param attentionCheckPair - The attention check question/response pair with instructions already appended
-	 * @returns The list with attention check shuffled in
+	 * @param identifiers - The base identifiers array (parallel to list)
+	 * @param attentionCheckId - The identifier for the attention check (scenarioId from API or fallback)
+	 * @returns Object with list and identifiers, both with attention check inserted
 	 */
 	function shuffleAttentionCheckIntoList(
 		list: Array<[string, string]>,
-		attentionCheckPair: [string, string]
-	): Array<[string, string]> {
+		attentionCheckPair: [string, string],
+		identifiers: string[],
+		attentionCheckId: string
+	): { list: Array<[string, string]>; identifiers: string[] } {
 		if (!Array.isArray(list) || list.length === 0) {
 			// If list is empty, just add the attention check
-			return [attentionCheckPair];
+			return { list: [attentionCheckPair], identifiers: [attentionCheckId] };
 		}
 
 		// Skip if attention check already exists in list
 		if (list.some(([, res]) => (res || '').includes(ATTENTION_CHECK_MARKER))) {
-			return list;
+			return { list, identifiers };
 		}
 
 		// Valid positions: 1 through list.length (not 0, not last)
@@ -540,17 +554,26 @@
 
 		if (validPositions.length === 0) {
 			// If no valid positions (shouldn't happen), just append
-			return [...list, attentionCheckPair];
+			return {
+				list: [...list, attentionCheckPair],
+				identifiers: [...identifiers, attentionCheckId]
+			};
 		}
 
 		// Randomly select a position
 		const randomPosition = validPositions[Math.floor(Math.random() * validPositions.length)];
 
-		// Insert at the selected position
-		const updated = [...list];
-		updated.splice(randomPosition, 0, attentionCheckPair);
+		// Insert at the selected position in both list and identifiers
+		const updatedList = [...list];
+		updatedList.splice(randomPosition, 0, attentionCheckPair);
 
-		return updated;
+		const updatedIdentifiers = [
+			...identifiers.slice(0, randomPosition),
+			attentionCheckId,
+			...identifiers.slice(randomPosition)
+		];
+
+		return { list: updatedList, identifiers: updatedIdentifiers };
 	}
 
 	// Current scenario selection is persisted via saveCurrentScenarioState -> saveWorkflowDraft
@@ -718,6 +741,7 @@
 	function resetAllScenarioStates() {
 		console.log('Resetting all scenario states for new child profile');
 		scenarioStates.clear();
+		scenarioIdentifiers = [];
 		versions = [];
 		currentVersionIndex = -1;
 		confirmedVersionIndex = null;
@@ -884,6 +908,7 @@
 			if (existingAssignments.length > 0) {
 				console.log('✅ Using existing assignments from backend');
 				const basePairs: Array<[string, string]> = [];
+				const baseIdentifiers: string[] = [];
 				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> =
 					new Map();
 
@@ -895,6 +920,7 @@
 				for (const assignment of existingAssignments) {
 					basePairs.push([assignment.prompt_text, assignment.response_text]);
 					const position = assignment.assignment_position || 0;
+					baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
 					assignmentMap.set(position, {
 						assignment_id: assignment.assignment_id,
 						scenario_id: assignment.scenario_id
@@ -904,34 +930,42 @@
 				console.log(`✅ Loaded ${basePairs.length} existing scenarios from backend`);
 
 				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
-				scenarioList = await buildScenarioList(basePairs);
+				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+				scenarioList = list;
+				scenarioIdentifiers = identifiers;
 
-				// Store assignment IDs in scenario states
-				assignmentMap.forEach((assignment, index) => {
-					const existingState = scenarioStates.get(index) || {
-						versions: [],
-						currentVersionIndex: -1,
-						confirmedVersionIndex: null,
-						highlightedTexts1: [],
-						selectedModerations: new Set(),
-						customInstructions: [],
-						showOriginal1: false,
-						showComparisonView: false,
-						attentionCheckSelected: false,
-						attentionCheckPassed: false,
-						markedNotApplicable: false,
-						step1Completed: false,
-						step2Completed: false,
-						step3Completed: false,
-						concernLevel: null,
-						concernReason: '',
-						satisfactionLevel: null,
-						satisfactionReason: '',
-						nextAction: null
-					};
-					existingState.assignment_id = assignment.assignment_id;
-					existingState.scenario_id = assignment.scenario_id;
-					scenarioStates.set(index, existingState);
+				// Store assignment IDs in scenario states (keyed by identifier)
+				scenarioIdentifiers.forEach((identifier, index) => {
+					// Find the assignment for this identifier (if it's a base scenario)
+					const assignment = Array.from(assignmentMap.values()).find(
+						(a) => a.assignment_id === identifier
+					);
+					if (assignment) {
+						const existingState = scenarioStates.get(identifier) || {
+							versions: [],
+							currentVersionIndex: -1,
+							confirmedVersionIndex: null,
+							highlightedTexts1: [],
+							selectedModerations: new Set(),
+							customInstructions: [],
+							showOriginal1: false,
+							showComparisonView: false,
+							attentionCheckSelected: false,
+							attentionCheckPassed: false,
+							markedNotApplicable: false,
+							step1Completed: false,
+							step2Completed: false,
+							step3Completed: false,
+							concernLevel: null,
+							concernReason: '',
+							satisfactionLevel: null,
+							satisfactionReason: '',
+							nextAction: null
+						};
+						existingState.assignment_id = assignment.assignment_id;
+						existingState.scenario_id = assignment.scenario_id;
+						scenarioStates.set(identifier, existingState);
+					}
 				});
 
 				if (scenarioList.length > 0) {
@@ -953,6 +987,7 @@
 
 				// Assign scenarios one by one using weighted sampling
 				const basePairs: Array<[string, string]> = [];
+				const baseIdentifiers: string[] = [];
 				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> =
 					new Map();
 
@@ -966,6 +1001,7 @@
 						});
 
 						basePairs.push([assignResponse.prompt_text, assignResponse.response_text]);
+						baseIdentifiers.push(assignResponse.assignment_id); // Use assignment_id as identifier
 						assignmentMap.set(i, {
 							assignment_id: assignResponse.assignment_id,
 							scenario_id: assignResponse.scenario_id
@@ -999,34 +1035,42 @@
 				console.log(`✅ Created ${basePairs.length} new scenarios from backend`);
 
 				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
-				scenarioList = await buildScenarioList(basePairs);
+				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+				scenarioList = list;
+				scenarioIdentifiers = identifiers;
 
-				// Store assignment IDs in scenario states
-				assignmentMap.forEach((assignment, index) => {
-					const existingState = scenarioStates.get(index) || {
-						versions: [],
-						currentVersionIndex: -1,
-						confirmedVersionIndex: null,
-						highlightedTexts1: [],
-						selectedModerations: new Set(),
-						customInstructions: [],
-						showOriginal1: false,
-						showComparisonView: false,
-						attentionCheckSelected: false,
-						attentionCheckPassed: false,
-						markedNotApplicable: false,
-						step1Completed: false,
-						step2Completed: false,
-						step3Completed: false,
-						concernLevel: null,
-						concernReason: '',
-						satisfactionLevel: null,
-						satisfactionReason: '',
-						nextAction: null
-					};
-					existingState.assignment_id = assignment.assignment_id;
-					existingState.scenario_id = assignment.scenario_id;
-					scenarioStates.set(index, existingState);
+				// Store assignment IDs in scenario states (keyed by identifier)
+				scenarioIdentifiers.forEach((identifier, index) => {
+					// Find the assignment for this identifier (if it's a base scenario)
+					const assignment = Array.from(assignmentMap.values()).find(
+						(a) => a.assignment_id === identifier
+					);
+					if (assignment) {
+						const existingState = scenarioStates.get(identifier) || {
+							versions: [],
+							currentVersionIndex: -1,
+							confirmedVersionIndex: null,
+							highlightedTexts1: [],
+							selectedModerations: new Set(),
+							customInstructions: [],
+							showOriginal1: false,
+							showComparisonView: false,
+							attentionCheckSelected: false,
+							attentionCheckPassed: false,
+							markedNotApplicable: false,
+							step1Completed: false,
+							step2Completed: false,
+							step3Completed: false,
+							concernLevel: null,
+							concernReason: '',
+							satisfactionLevel: null,
+							satisfactionReason: '',
+							nextAction: null
+						};
+						existingState.assignment_id = assignment.assignment_id;
+						existingState.scenario_id = assignment.scenario_id;
+						scenarioStates.set(identifier, existingState);
+					}
 				});
 
 				if (scenarioList.length > 0) {
@@ -1173,7 +1217,8 @@
 	 * @returns true if scenario is completed, false otherwise
 	 */
 	function isScenarioCompleted(index: number): boolean {
-		const state = scenarioStates.get(index);
+		const identifier = getScenarioId(index);
+		const state = scenarioStates.get(identifier);
 		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
 
 		if (state) {
@@ -1263,25 +1308,33 @@
 		promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
 	}
 
-	let scenarioStates: Map<number, ScenarioState> = new Map();
+	let scenarioStates: Map<string, ScenarioState> = new Map(); // Keyed by identifier (assignment_id or scenario_id), not index
+
+	/**
+	 * Helper function to get the identifier for a scenario at a given index.
+	 * Falls back to stringified index if identifier is missing (edge case).
+	 */
+	function getScenarioId(index: number): string {
+		return scenarioIdentifiers[index] ?? String(index);
+	}
 
 	// Reactive variable to trigger sidebar updates when scenario states change
 	// This forces the sidebar to re-render when scenarios are completed
 	$: scenarioStatesUpdateTrigger = (() => {
 		// Access scenarioStates to make this reactive
-		scenarioStates.forEach((state, index) => {
+		scenarioStates.forEach((state, identifier) => {
 			// Just accessing the Map makes this reactive
 		});
 		return Date.now(); // Return timestamp to force update
 	})();
 
 	// Timer state - track time spent on each scenario
-	let scenarioTimers: Map<number, number> = new Map(); // Store accumulated time in seconds
+	let scenarioTimers: Map<string, number> = new Map(); // Store accumulated time in seconds (keyed by identifier)
 	let timerInterval: NodeJS.Timeout | null = null;
 	let currentTimerStart: number | null = null;
 
 	// Abandonment detection state
-	let scenarioStartTimes: Map<number, number> = new Map(); // Track when each scenario was started
+	let scenarioStartTimes: Map<string, number> = new Map(); // Track when each scenario was started (keyed by identifier)
 	let abandonmentTimeout: NodeJS.Timeout | null = null;
 	const ABANDONMENT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -1325,7 +1378,7 @@
 	$: completionCount = (() => {
 		const _ = scenarioStatesUpdateTrigger;
 		let completedInMap = 0;
-		scenarioStates.forEach((state, index) => {
+		scenarioList.forEach((_, index) => {
 			if (isScenarioCompleted(index)) completedInMap++;
 		});
 		const isCurrentAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
@@ -1334,7 +1387,8 @@
 		const currentCompleted = isCurrentAttentionCheck
 			? attentionCheckSelected && attentionCheckPassed
 			: markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
-		const currentNotInMap = !scenarioStates.has(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const currentNotInMap = !scenarioStates.has(currentIdentifier);
 		const completedCount = completedInMap + (currentCompleted && currentNotInMap ? 1 : 0);
 		return `${completedCount}/${scenarioList.length}`;
 	})();
@@ -1918,7 +1972,8 @@
 
 			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
-				const state = scenarioStates.get(selectedScenarioIndex);
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const state = scenarioStates.get(currentIdentifier);
 				const assignmentId = state?.assignment_id;
 
 				if (!assignmentId) {
@@ -2393,16 +2448,17 @@
 		currentTimerStart = Date.now();
 
 		// Initialize timer for this scenario if it doesn't exist
-		if (!scenarioTimers.has(scenarioIndex)) {
-			scenarioTimers.set(scenarioIndex, 0);
+		const identifier = getScenarioId(scenarioIndex);
+		if (!scenarioTimers.has(identifier)) {
+			scenarioTimers.set(identifier, 0);
 		}
 
 		// Update timer every second
 		timerInterval = setInterval(() => {
 			if (currentTimerStart) {
 				const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
-				const existingTime = scenarioTimers.get(scenarioIndex) || 0;
-				scenarioTimers = new Map(scenarioTimers.set(scenarioIndex, existingTime + elapsed));
+				const existingTime = scenarioTimers.get(identifier) || 0;
+				scenarioTimers = new Map(scenarioTimers.set(identifier, existingTime + elapsed));
 				currentTimerStart = Date.now(); // Reset start for next interval
 			}
 		}, 1000);
@@ -2417,8 +2473,9 @@
 		// Save final elapsed time before stopping
 		if (currentTimerStart !== null) {
 			const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
-			const existingTime = scenarioTimers.get(selectedScenarioIndex) || 0;
-			scenarioTimers = new Map(scenarioTimers.set(selectedScenarioIndex, existingTime + elapsed));
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const existingTime = scenarioTimers.get(currentIdentifier) || 0;
+			scenarioTimers = new Map(scenarioTimers.set(currentIdentifier, existingTime + elapsed));
 			currentTimerStart = null;
 		}
 	}
@@ -2434,7 +2491,8 @@
 	 * A scenario is abandoned if it's been started but not completed within the timeout period.
 	 */
 	async function checkAndAbandonScenario(index: number) {
-		const state = scenarioStates.get(index);
+		const identifier = getScenarioId(index);
+		const state = scenarioStates.get(identifier);
 		if (!state?.assignment_id) return;
 
 		// Check if scenario is completed
@@ -2451,7 +2509,8 @@
 		}
 
 		// Check timeout
-		const startTime = scenarioStartTimes.get(index);
+		const identifier = getScenarioId(index);
+		const startTime = scenarioStartTimes.get(identifier);
 		if (!startTime) return;
 
 		const elapsed = Date.now() - startTime;
@@ -2491,7 +2550,7 @@
 				state.assignment_id = abandonResponse.new_assignment_id;
 				state.scenario_id = abandonResponse.new_scenario_id;
 				state.assignmentStarted = false; // Reset so /start will be called again
-				scenarioStates.set(index, state);
+				scenarioStates.set(identifier, state);
 
 				console.log('✅ Scenario reassigned:', abandonResponse.new_assignment_id);
 			}
@@ -2508,7 +2567,8 @@
 		}
 
 		// Get existing customPrompt if we're saving state for a custom scenario
-		const existingState = scenarioStates.get(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const existingState = scenarioStates.get(currentIdentifier);
 		const currentState: ScenarioState = {
 			versions: [...versions],
 			currentVersionIndex,
@@ -2541,7 +2601,7 @@
 			scenario_id: existingState?.scenario_id,
 			assignmentStarted: existingState?.assignmentStarted
 		};
-		scenarioStates.set(selectedScenarioIndex, currentState);
+		scenarioStates.set(currentIdentifier, currentState);
 		// Force reactive update by reassigning the Map
 		// This ensures the sidebar updates when scenario completion state changes
 		scenarioStates = new Map(scenarioStates);
@@ -2551,20 +2611,26 @@
 			try {
 				const token = localStorage.token || '';
 				if (token) {
-					const serializedStates: [number, unknown][] = [];
-					scenarioStates.forEach((state, index) => {
+					const serializedStates: [string, unknown][] = [];
+					scenarioStates.forEach((state, identifier) => {
 						serializedStates.push([
-							index,
+							identifier,
 							{
 								...state,
 								selectedModerations: Array.from(state.selectedModerations)
 							}
 						]);
 					});
+					// Convert timers to identifier-based format
+					const serializedTimers: [string, number][] = [];
+					scenarioTimers.forEach((seconds, index) => {
+						const identifier = getScenarioId(index);
+						serializedTimers.push([identifier, seconds]);
+					});
 					const data = {
 						states: serializedStates,
-						timers: Array.from(scenarioTimers.entries()),
-						current: selectedScenarioIndex
+						timers: serializedTimers,
+						current: currentIdentifier // Save identifier instead of index
 					};
 					await saveWorkflowDraft(token, selectedChildId, 'moderation', data);
 					console.log(`Saved moderation states to backend for child: ${selectedChildId}`);
@@ -2690,7 +2756,8 @@
 		// Handle custom scenario specially
 		if (prompt === CUSTOM_SCENARIO_PROMPT) {
 			// Check if custom scenario was already generated (response is not placeholder)
-			const savedState = scenarioStates.get(index);
+			const identifier = getScenarioId(index);
+			const savedState = scenarioStates.get(identifier);
 			const isGenerated = response && response !== CUSTOM_SCENARIO_PLACEHOLDER;
 			console.log(
 				'📋 Custom scenario check - Is generated:',
@@ -2747,7 +2814,8 @@
 			}
 		}
 
-		const savedState = scenarioStates.get(index);
+		const identifier = getScenarioId(index);
+		const savedState = scenarioStates.get(identifier);
 
 		// Call /start endpoint if this scenario has an assignment_id and hasn't been started yet
 		// Skip for custom scenarios and attention checks (they don't have assignments)
@@ -2763,10 +2831,10 @@
 				// Mark as started in state
 				if (savedState) {
 					savedState.assignmentStarted = true;
-					scenarioStates.set(index, savedState);
+					scenarioStates.set(identifier, savedState);
 				}
-				// Track start time for abandonment detection
-				scenarioStartTimes.set(index, Date.now());
+				// Track start time for abandonment detection (key by identifier)
+				scenarioStartTimes.set(identifier, Date.now());
 				// Reset abandonment timeout
 				if (abandonmentTimeout) {
 					clearTimeout(abandonmentTimeout);
@@ -3204,26 +3272,68 @@
 				const token = localStorage.token || '';
 				if (token) {
 						const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
-						const data = draftRes?.data as { states?: [number, unknown][]; timers?: [number, number][]; current?: number } | undefined;
+						const data = draftRes?.data as { states?: [number | string, unknown][]; timers?: [number | string, number][]; current?: number | string } | undefined;
 						if (data?.states) {
 							scenarioStates.clear();
-							data.states.forEach(([index, state]: [number, any]) => {
-								scenarioStates.set(index, {
-									...state,
-									selectedModerations: new Set(state.selectedModerations || [])
+							// Check if this is legacy format (numeric keys) or new format (string identifiers)
+							const isLegacyFormat = data.states.length > 0 && typeof data.states[0][0] === 'number';
+							
+							if (isLegacyFormat) {
+								// Legacy format: map numeric indices to identifiers
+								console.log('⚠️ Loading legacy draft format, migrating to identifier-based');
+								data.states.forEach(([index, state]: [number, any]) => {
+									const identifier = getScenarioId(index);
+									scenarioStates.set(identifier, {
+										...state,
+										selectedModerations: new Set(state.selectedModerations || [])
+									});
 								});
-							});
+							} else {
+								// New format: use identifiers directly
+								data.states.forEach(([identifier, state]: [string, any]) => {
+									scenarioStates.set(identifier, {
+										...state,
+										selectedModerations: new Set(state.selectedModerations || [])
+									});
+								});
+							}
 							scenarioStates = new Map(scenarioStates);
 							console.log(`Loaded saved scenario states from backend for child: ${selectedChildId}`);
 						}
 						if (data?.timers) {
-							scenarioTimers = new Map(data.timers);
+							// Check if timers are legacy format (numeric) or new format (string identifiers)
+							const isLegacyTimers = data.timers.length > 0 && typeof data.timers[0][0] === 'number';
+							
+							if (isLegacyTimers) {
+								// Legacy format: map numeric indices to identifiers
+								scenarioTimers.clear();
+								data.timers.forEach(([index, seconds]: [number, number]) => {
+									const identifier = getScenarioId(index);
+									scenarioTimers.set(identifier, seconds);
+								});
+							} else {
+								// New format: use identifiers directly
+								scenarioTimers = new Map(data.timers as [string, number][]);
+							}
 							console.log(`Loaded saved timers from backend for child: ${selectedChildId}`);
 						}
-						if (data?.current != null && data.current >= 0 && data.current < scenarioList.length) {
-							const scenarioIndex = data.current;
-							selectedScenarioIndex = scenarioIndex;
-					const [prompt, response] = scenarioList[scenarioIndex];
+						if (data?.current != null) {
+							let scenarioIndex: number;
+							if (typeof data.current === 'number') {
+								// Legacy format: current is an index
+								scenarioIndex = data.current;
+							} else {
+								// New format: current is an identifier, find the index
+								scenarioIndex = scenarioIdentifiers.indexOf(data.current);
+								if (scenarioIndex === -1) {
+									console.warn(`⚠️ Current identifier ${data.current} not found in scenarioIdentifiers, defaulting to 0`);
+									scenarioIndex = 0;
+								}
+							}
+							
+							if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
+								selectedScenarioIndex = scenarioIndex;
+								const [prompt, response] = scenarioList[scenarioIndex];
 
 					// If this is a custom scenario, restore the custom prompt first
 					if (
@@ -3231,7 +3341,8 @@
 						response &&
 						response !== CUSTOM_SCENARIO_PLACEHOLDER
 					) {
-						const state = scenarioStates.get(scenarioIndex);
+						const identifier = getScenarioId(scenarioIndex);
+						const state = scenarioStates.get(identifier);
 						if (state?.customPrompt) {
 							customScenarioPrompt = state.customPrompt;
 							customScenarioResponse = response;
@@ -3758,7 +3869,8 @@
 			step3Completed = true;
 
 			// Call /skip endpoint for new assignment tracking system
-			const state = scenarioStates.get(selectedScenarioIndex);
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const state = scenarioStates.get(currentIdentifier);
 			const [prompt] = scenarioList[selectedScenarioIndex] || [];
 			if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
 				try {
@@ -3896,7 +4008,8 @@
 		saveCurrentScenarioState();
 
 		// Call /complete endpoint for new assignment tracking system
-		const state = scenarioStates.get(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const state = scenarioStates.get(currentIdentifier);
 		if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
 			try {
 				const completeResponse = await completeScenario(localStorage.token, {
@@ -4829,7 +4942,8 @@
 		}
 
 		// Load the current scenario state if it exists
-		const savedState = scenarioStates.get(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const savedState = scenarioStates.get(currentIdentifier);
 		if (savedState) {
 			versions = [...savedState.versions];
 			currentVersionIndex = savedState.currentVersionIndex;
@@ -5460,7 +5574,8 @@
 									<div></div>
 								{/if}
 
-								{#if scenarioTimers.has(index) && (scenarioTimers.get(index) || 0) > 0}
+								{@const timerIdentifier = getScenarioId(index)}
+								{#if scenarioTimers.has(timerIdentifier) && (scenarioTimers.get(timerIdentifier) || 0) > 0}
 									<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
 										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 											<path
@@ -5469,7 +5584,7 @@
 												clip-rule="evenodd"
 											></path>
 										</svg>
-										<span>{formatTime(scenarioTimers.get(index) || 0)}</span>
+										<span>{formatTime(scenarioTimers.get(timerIdentifier) || 0)}</span>
 									</div>
 								{/if}
 							</div>
