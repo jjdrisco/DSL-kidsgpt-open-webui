@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate synthetic child–LLM interaction scenarios using the OpenAI API.
+Generate synthetic child prompts for LLM interaction scenarios using the OpenAI API.
 Run from command line; does not require Jupyter.
 """
 
@@ -169,7 +169,7 @@ def _generate_batch(
     batch_size: int,
     start_id: int,
 ) -> list:
-    """Generate one batch of scenarios using Responses API (for gpt-5.2-pro)."""
+    """Generate one batch of prompts using Responses API (for gpt-5.2-pro)."""
     end_id = start_id + batch_size - 1
     user_msg = (
         f"Generate {batch_size} scenarios. "
@@ -188,16 +188,16 @@ def _generate_batch(
     return parse_response(content)
 
 
-def generate_scenarios(
+def generate_prompts(
     client: OpenAI,
-    num_scenarios: int,
+    num_prompts: int,
     model: str,
     batch_size: int = 25,
 ) -> list:
-    """Generate scenarios in batches, with progress bar."""
+    """Generate prompts in batches, with progress bar."""
     batches = [
-        (i, min(batch_size, num_scenarios - i))
-        for i in range(0, num_scenarios, batch_size)
+        (i, min(batch_size, num_prompts - i))
+        for i in range(0, num_prompts, batch_size)
     ]
     all_data = []
     start_id = 1
@@ -206,7 +206,7 @@ def generate_scenarios(
 
     for i, (_, size) in enumerate(iterator, 1):
         if not tqdm:
-            print(f"Batch {i}/{len(batches)} ({size} scenarios)...", flush=True)
+            print(f"Batch {i}/{len(batches)} ({size} prompts)...", flush=True)
         batch = _generate_batch(client, model, size, start_id)
         all_data.extend(batch)
         start_id += size
@@ -216,27 +216,27 @@ def generate_scenarios(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate synthetic child–LLM interaction scenarios"
+        description="Generate synthetic child prompts for LLM interaction scenarios"
     )
     parser.add_argument(
         "-n",
-        "--num-scenarios",
+        "--num-prompts",
         type=int,
         default=175,
-        help="Number of scenarios to generate (default: 175)",
+        help="Number of prompts to generate (default: 175)",
     )
     parser.add_argument(
         "-b",
         "--batch-size",
         type=int,
         default=25,
-        help="Scenarios per API call (default: 25); smaller = more progress updates",
+        help="Prompts per API call (default: 25); smaller = more progress updates",
     )
     parser.add_argument(
         "-o",
         "--output",
-        default="child_llm_scenarios.json",
-        help="Output JSON file path (default: child_llm_scenarios.json)",
+        default="child_llm_prompts.json",
+        help="Output JSON file path (default: child_llm_prompts.json)",
     )
     parser.add_argument(
         "-m",
@@ -269,18 +269,18 @@ def main() -> None:
 
     client = OpenAI(**client_kwargs)
 
-    print(f"Generating {args.num_scenarios} scenarios with model {args.model}...")
+    print(f"Generating {args.num_prompts} prompts with model {args.model}...")
     try:
-        data = generate_scenarios(
+        data = generate_prompts(
             client,
-            num_scenarios=args.num_scenarios,
+            num_prompts=args.num_prompts,
             model=args.model,
             batch_size=args.batch_size,
         )
     except Exception as e:
         sys.exit(f"Generation failed: {e}")
 
-    print(f"Parsed {len(data)} scenarios")
+    print(f"Parsed {len(data)} prompts")
 
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
