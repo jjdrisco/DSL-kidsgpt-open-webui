@@ -26,7 +26,11 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t registry.heroku.com/$HEROKU_APP_NAME/web .
+          # Heroku Container Registry rejects manifest lists/attestations (error: unsupported).
+          # Build a single-platform image with attestations disabled so push succeeds.
+          docker build --provenance=false --sbom=false -t registry.heroku.com/$HEROKU_APP_NAME/web .
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
 
       - name: Push to Heroku Container Registry
         run: |
