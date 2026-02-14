@@ -15,29 +15,40 @@ This plan covers updates to attention check flow, child profile, scenario review
 
 #### 1.1 Frontend Changes (`src/routes/(app)/moderation-scenario/+page.svelte`)
 
-**Step 1: Highlight Requirement**
-- Modify Step 1 validation to require at least one highlight for attention checks
-- Add validation: `if (isAttentionCheckScenario && highlightedTexts1.length === 0) { show error }`
-- Update `step1Completed` logic to check highlights for attention checks
+**IMPORTANT: Attention checks should NOT block progress. Users can proceed regardless of completion. The check only tracks whether they passed.**
 
-**Step 2: "attention check" Text Requirement**
-- Modify Step 2 validation to check if `concernReason` contains "attention check" (case-insensitive)
-- Add validation: `if (isAttentionCheckScenario && !concernReason.toLowerCase().includes('attention check')) { show error }`
-- Update `step2Completed` logic for attention checks
+**Step 1: Highlight Tracking (Non-blocking)**
+- Track if user highlighted anything in the response for attention checks
+- Do NOT block progress if no highlights - allow user to continue
+- Update `step1Completed` logic to check highlights for attention checks (for tracking only)
+- Store highlight status in state: `attentionCheckStep1Passed: boolean`
 
-**Step 3: "I read the instructions" Selection**
+**Step 2: "attention check" Text Tracking (Non-blocking)**
+- Track if `concernReason` contains "attention check" (case-insensitive)
+- Do NOT block progress if text is missing - allow user to continue
+- Update `step2Completed` logic for attention checks (for tracking only)
+- Store text status in state: `attentionCheckStep2Passed: boolean`
+
+**Step 3: "I read the instructions" Selection Tracking (Non-blocking)**
 - Ensure "I read the instructions" option exists in Attention Check dropdown
-- Modify Step 3 validation to require this selection for attention checks
-- Add validation: `if (isAttentionCheckScenario && !selectedModerations.has('I read the instructions')) { show error }`
-- Update `step3Completed` logic for attention checks
+- Track if this selection is made for attention checks
+- Do NOT block progress if not selected - allow user to continue
+- Update `step3Completed` logic for attention checks (for tracking only)
+- Store selection status in state: `attentionCheckStep3Passed: boolean`
+
+**Overall Attention Check Pass/Fail Logic:**
+- Calculate `attentionCheckPassed = attentionCheckStep1Passed && attentionCheckStep2Passed && attentionCheckStep3Passed`
+- This is for tracking/analytics only - does NOT affect user's ability to proceed
+- Users can complete the scenario and move to next scenario even if attention check is failed
 
 **Files to Modify:**
 - `src/routes/(app)/moderation-scenario/+page.svelte`
-  - Update Step 1 completion logic (around line 1060-1200)
-  - Update Step 2 completion logic (around line 1200-1400)
-  - Update Step 3 completion logic (around line 1400-1600)
-  - Update validation functions
-  - Update `isScenarioCompleted` function to check all 3 steps for attention checks
+  - Update Step 1 completion logic (around line 1060-1200) - track highlights but don't block
+  - Update Step 2 completion logic (around line 1200-1400) - track text but don't block
+  - Update Step 3 completion logic (around line 1400-1600) - track selection but don't block
+  - Remove any blocking validation for attention checks
+  - Update `isScenarioCompleted` function - attention checks complete when user proceeds (not based on pass/fail)
+  - Add tracking fields to `ScenarioState` interface: `attentionCheckStep1Passed`, `attentionCheckStep2Passed`, `attentionCheckStep3Passed`
 
 #### 1.2 Backend Changes
 
@@ -198,11 +209,12 @@ This plan covers updates to attention check flow, child profile, scenario review
 ## Testing Checklist
 
 ### Attention Check
-- [ ] Step 1: Cannot proceed without highlighting
-- [ ] Step 2: Cannot proceed without "attention check" in concern reason
-- [ ] Step 3: Cannot proceed without selecting "I read the instructions"
-- [ ] All 3 steps must be completed for attention check to be marked complete
-- [ ] Validation errors show appropriate messages
+- [ ] Step 1: User can proceed with or without highlighting (tracking only)
+- [ ] Step 2: User can proceed with or without "attention check" text (tracking only)
+- [ ] Step 3: User can proceed with or without selecting "I read the instructions" (tracking only)
+- [ ] Attention check pass/fail is calculated but does NOT block progress
+- [ ] Users can complete scenario and move to next scenario regardless of attention check result
+- [ ] Pass/fail status is stored for analytics but doesn't affect workflow
 
 ### Child Profile
 - [ ] Instructional message displays at top
@@ -226,7 +238,9 @@ This plan covers updates to attention check flow, child profile, scenario review
 
 ## Notes
 
+- **CRITICAL: Attention checks are non-blocking** - users can proceed regardless of whether they follow the instructions. The check only tracks pass/fail for analytics.
 - All changes should maintain backward compatibility where possible
 - Consider data migration for existing users if schema changes are needed
 - Update Cypress tests after implementation
 - Ensure all validation messages are clear and user-friendly
+- Regular scenario flow should be completely unaffected by attention check changes
