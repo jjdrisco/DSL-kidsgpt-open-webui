@@ -61,6 +61,10 @@
 	let deactivatePreviousAttentionChecks = false;
 	let scenarioSetName = 'pilot';
 	let attentionCheckSetName = 'default';
+	
+	// File input references
+	let scenarioFileInput: HTMLInputElement;
+	let attentionCheckFileInput: HTMLInputElement;
 
 	// Active set management
 	let scenarioSetNames: (string | null)[] = [];
@@ -118,8 +122,12 @@
 	async function handleScenarioUpload(e: Event) {
 		const input = e.target as HTMLInputElement;
 		const file = input.files?.[0];
-		if (!file) return;
+		if (!file) {
+			console.warn('No file selected for scenario upload');
+			return;
+		}
 
+		console.log('Uploading scenario file:', file.name, 'Size:', file.size, 'bytes');
 		uploadingScenarios = true;
 		try {
 			const result = await uploadScenariosAdmin(
@@ -136,22 +144,34 @@
 			toast.success(message);
 			if (result.error_details && result.error_details.length > 0) {
 				console.warn('Upload errors:', result.error_details);
+				// Show error details in console for debugging
+				result.error_details.forEach((err: string, idx: number) => {
+					console.warn(`Error ${idx + 1}:`, err);
+				});
 			}
 			await loadStats();
 			await loadScenarios();
 		} catch (error: any) {
-			toast.error(`Failed to upload scenarios: ${error.message || error}`);
+			console.error('Scenario upload error:', error);
+			const errorMessage = error?.detail || error?.message || String(error);
+			toast.error(`Failed to upload scenarios: ${errorMessage}`);
 		} finally {
 			uploadingScenarios = false;
-			input.value = ''; // Reset input
+			if (input) {
+				input.value = ''; // Reset input
+			}
 		}
 	}
 
 	async function handleAttentionCheckUpload(e: Event) {
 		const input = e.target as HTMLInputElement;
 		const file = input.files?.[0];
-		if (!file) return;
+		if (!file) {
+			console.warn('No file selected for attention check upload');
+			return;
+		}
 
+		console.log('Uploading attention check file:', file.name, 'Size:', file.size, 'bytes');
 		uploadingAttentionChecks = true;
 		try {
 			const result = await uploadAttentionChecksAdmin(
@@ -168,13 +188,21 @@
 			toast.success(message);
 			if (result.error_details && result.error_details.length > 0) {
 				console.warn('Upload errors:', result.error_details);
+				// Show error details in console for debugging
+				result.error_details.forEach((err: string, idx: number) => {
+					console.warn(`Error ${idx + 1}:`, err);
+				});
 			}
 			await loadAttentionChecks();
 		} catch (error: any) {
-			toast.error(`Failed to upload attention checks: ${error.message || error}`);
+			console.error('Attention check upload error:', error);
+			const errorMessage = error?.detail || error?.message || String(error);
+			toast.error(`Failed to upload attention checks: ${errorMessage}`);
 		} finally {
 			uploadingAttentionChecks = false;
-			input.value = ''; // Reset input
+			if (input) {
+				input.value = ''; // Reset input
+			}
 		}
 	}
 
@@ -415,7 +443,7 @@
 						<span class="text-xs">Deactivate previous scenarios with same set name</span>
 					</label>
 					<input
-						id="scenarios-upload-input"
+						bind:this={scenarioFileInput}
 						type="file"
 						accept=".json"
 						hidden
@@ -425,7 +453,7 @@
 					<button
 						type="button"
 						class="flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50"
-						on:click={() => document.getElementById('scenarios-upload-input')?.click()}
+						on:click={() => scenarioFileInput?.click()}
 						disabled={uploadingScenarios}
 					>
 						<div class="self-center mr-3">
@@ -663,7 +691,7 @@
 						<span class="text-xs">Deactivate previous attention checks with same set name</span>
 					</label>
 					<input
-						id="attention-checks-upload-input"
+						bind:this={attentionCheckFileInput}
 						type="file"
 						accept=".json"
 						hidden
@@ -673,7 +701,7 @@
 					<button
 						type="button"
 						class="flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50"
-						on:click={() => document.getElementById('attention-checks-upload-input')?.click()}
+						on:click={() => attentionCheckFileInput?.click()}
 						disabled={uploadingAttentionChecks}
 					>
 						<div class="self-center mr-3">
