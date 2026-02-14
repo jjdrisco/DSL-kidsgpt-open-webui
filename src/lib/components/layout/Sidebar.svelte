@@ -106,7 +106,7 @@
 
 	// Fetch workflow state from backend
 	async function fetchWorkflowState() {
-		if (!isInterviewee || !localStorage.token) return;
+		if (userType !== 'interviewee' || !localStorage.token) return;
 
 		loadingWorkflow = true;
 		try {
@@ -166,6 +166,11 @@
 
 	$: if ($selectedFolder) {
 		initFolders();
+	}
+
+	// Refresh workflow state when route changes (must be at top level)
+	$: if (isInterviewee && $page.url.pathname) {
+		fetchWorkflowState();
 	}
 
 	const initFolders = async () => {
@@ -504,7 +509,7 @@
 		// Determine user type and fetch workflow state if interviewee
 		if ($user) {
 			userType = await getUserType($user);
-			if (isInterviewee) {
+			if (userType === 'interviewee') {
 				await fetchWorkflowState();
 			}
 		}
@@ -568,16 +573,21 @@
 		window.addEventListener('focus', onFocus);
 		window.addEventListener('blur', onBlur);
 
-		// Refresh workflow state when route changes
-		$: if (isInterviewee && $page.url.pathname) {
-			fetchWorkflowState();
-		}
-
 		const dropZone = document.getElementById('sidebar');
 
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+
+		const onWorkflowUpdate = () => {
+			if (userType === 'interviewee') fetchWorkflowState();
+		};
+		window.addEventListener('workflow-updated', onWorkflowUpdate);
+		window.addEventListener('storage', onWorkflowUpdate);
+		unsubscribers.push(() => {
+			window.removeEventListener('workflow-updated', onWorkflowUpdate);
+			window.removeEventListener('storage', onWorkflowUpdate);
+		});
 	});
 
 	onDestroy(() => {
@@ -1061,6 +1071,13 @@
 			>
 				<!-- Workflow Navigation Section (for interviewee users only) -->
 				{#if isInterviewee && !loadingWorkflow && workflowState}
+					{@const step0 = getStepInfo(0)}
+					{@const step1 = getStepInfo(1)}
+					{@const step2 = getStepInfo(2)}
+					{@const step3 = getStepInfo(3)}
+					{@const step4 = getStepInfo(4)}
+					{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
+					{@const step1Clickable = step1.canAccess && !onInstructionsPage}
 					<div class="px-[0.4375rem] mb-3 pb-3 border-b border-gray-200 dark:border-gray-800">
 						<div
 							class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2"
@@ -1068,15 +1085,54 @@
 							{$i18n.t('Assignment Workflow')}
 						</div>
 						<div class="space-y-1.5">
-							<!-- Step 1: Child Profile -->
-							{@const step1 = getStepInfo(1)}
+							<!-- Step 0: Assignment Instructions -->
+							<button
+								data-step="0"
+								on:click={() => goToStep(0)}
+								disabled={!step0.canAccess}
+								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step0.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step0.canAccess
+										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step0.label}"
+							>
+								<div
+									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step0.isCompleted
+										? 'bg-green-500'
+										: step0.isCurrentStep
+											? 'bg-blue-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+								>
+									{#if step0.isCompleted}
+										<svg
+											class="size-2.5 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{:else}
+										<span class="text-[10px] font-bold text-white">0</span>
+									{/if}
+								</div>
+								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Assignment Instructions')}</span>
+							</button>
+
+							<!-- Step 1: Child Profile (not clickable while on assignment-instructions) -->
 							<button
 								data-step="1"
 								on:click={() => goToStep(1)}
-								disabled={!step1.canAccess}
+								disabled={!step1Clickable}
 								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step1.isCurrentStep
 									? 'bg-blue-100 dark:bg-blue-900'
-									: step1.canAccess
+									: step1Clickable
 										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
 										: 'opacity-50 cursor-not-allowed'}"
 								aria-label="Navigate to {step1.label}"
@@ -1110,7 +1166,6 @@
 							</button>
 
 							<!-- Step 2: Moderation -->
-							{@const step2 = getStepInfo(2)}
 							<button
 								data-step="2"
 								on:click={() => goToStep(2)}
@@ -1125,7 +1180,7 @@
 								<div
 									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step2.isCompleted
 										? 'bg-green-500'
-										: workflowState.progress_by_section.moderation_completed_count > 0
+										: (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0
 											? 'bg-yellow-500'
 											: step2.isCurrentStep
 												? 'bg-blue-500'
@@ -1145,22 +1200,21 @@
 												d="M5 13l4 4L19 7"
 											></path>
 										</svg>
-									{:else if workflowState.progress_by_section.moderation_completed_count > 0}
+									{:else if (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0}
 										<span class="text-[9px] text-white font-semibold">
-											{workflowState.progress_by_section.moderation_completed_count}/{workflowState.progress_by_section.moderation_total}
+											{workflowState?.progress_by_section?.moderation_completed_count ?? 0}/{workflowState?.progress_by_section?.moderation_total ?? 0}
 										</span>
 									{:else}
 										<span class="text-[10px] font-bold text-white">2</span>
 									{/if}
 								</div>
 								<span class="text-xs text-gray-700 dark:text-gray-300">
-									{$i18n.t('Moderation')} ({workflowState.progress_by_section.moderation_completed_count}/
-									{workflowState.progress_by_section.moderation_total})
+									{$i18n.t('Moderation')} ({workflowState?.progress_by_section?.moderation_completed_count ?? 0}/
+									{workflowState?.progress_by_section?.moderation_total ?? 0})
 								</span>
 							</button>
 
 							<!-- Step 3: Exit Survey -->
-							{@const step3 = getStepInfo(3)}
 							<button
 								data-step="3"
 								on:click={() => goToStep(3)}
@@ -1201,7 +1255,6 @@
 							</button>
 
 							<!-- Step 4: Completion -->
-							{@const step4 = getStepInfo(4)}
 							<button
 								data-step="4"
 								on:click={() => goToStep(4)}

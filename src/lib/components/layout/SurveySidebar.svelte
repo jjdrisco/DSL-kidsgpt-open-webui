@@ -8,7 +8,6 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getWorkflowState, type WorkflowStateResponse } from '$lib/apis/workflow';
 	import { getStepRoute, canAccessStep, getStepLabel, isStepCompleted } from '$lib/utils/workflow';
-	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
 	import { tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -88,6 +87,15 @@
 
 	onMount(() => {
 		fetchWorkflowProgress();
+		const onWorkflowUpdate = () => {
+			fetchWorkflowProgress();
+		};
+		window.addEventListener('workflow-updated', onWorkflowUpdate);
+		window.addEventListener('storage', onWorkflowUpdate);
+		return () => {
+			window.removeEventListener('workflow-updated', onWorkflowUpdate);
+			window.removeEventListener('storage', onWorkflowUpdate);
+		};
 	});
 
 	// Refresh when route changes
@@ -156,7 +164,8 @@
 					<button
 						class="flex items-center justify-center w-8 h-8 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 						on:click={() => {
-							showSidebar.set(false);
+							// Defer to avoid re-entrant updates during Svelte render/teardown
+							setTimeout(() => showSidebar.set(false), 0);
 						}}
 						aria-label="Hide Sidebar"
 					>
@@ -189,6 +198,13 @@
 
 					<!-- Assignment Progress -->
 					{#if !loadingProgress && workflowState}
+						{@const step0 = getStepInfo(0)}
+						{@const step1 = getStepInfo(1)}
+						{@const step2 = getStepInfo(2)}
+						{@const step3 = getStepInfo(3)}
+						{@const step4 = getStepInfo(4)}
+						{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
+						{@const step1Clickable = step1.canAccess && !onInstructionsPage}
 						<div class="mb-6">
 							<div
 								class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3"
@@ -196,13 +212,59 @@
 								{$i18n.t('Assignment Progress')}
 							</div>
 							<div class="space-y-2">
-								<!-- Step 1: Child Profile -->
-								{@const step1 = getStepInfo(1)}
+								<!-- Step 0: Assignment Instructions -->
+								<button
+									data-step="0"
+									on:click|preventDefault|stopPropagation={() => {
+										if (step0.canAccess) {
+											goToStep(0);
+										} else {
+											toast.error('This step is not yet available');
+										}
+									}}
+									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step0.isCurrentStep
+										? 'bg-blue-100 dark:bg-blue-900'
+										: step0.canAccess
+											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+											: 'opacity-50 cursor-not-allowed'}"
+									aria-label="Navigate to {step0.label}"
+									aria-disabled={!step0.canAccess}
+								>
+									<div
+										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step0.isCompleted
+											? 'bg-green-500'
+											: step0.isCurrentStep
+												? 'bg-blue-500'
+												: 'bg-gray-300 dark:bg-gray-600'}"
+									>
+										{#if step0.isCompleted}
+											<svg
+												class="size-3 text-white"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												></path>
+											</svg>
+										{:else}
+											<span class="text-xs font-bold text-white">0</span>
+										{/if}
+									</div>
+									<span class="text-sm text-gray-700 dark:text-gray-300 text-left">
+										{$i18n.t('Assignment Instructions')}
+									</span>
+								</button>
+
+								<!-- Step 1: Child Profile (not clickable while on assignment-instructions) -->
 								<button
 									data-step="1"
 									on:click|preventDefault|stopPropagation={() => {
-										console.log('Step 1 button clicked, canAccess:', step1.canAccess);
-										if (step1.canAccess) {
+										if (step1Clickable) {
 											goToStep(1);
 										} else {
 											toast.error('This step is not yet available');
@@ -210,11 +272,11 @@
 									}}
 									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step1.isCurrentStep
 										? 'bg-blue-100 dark:bg-blue-900'
-										: step1.canAccess
+										: step1Clickable
 											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
 											: 'opacity-50 cursor-not-allowed'}"
 									aria-label="Navigate to {step1.label}"
-									aria-disabled={!step1.canAccess}
+									aria-disabled={!step1Clickable}
 								>
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step1.isCompleted
@@ -247,7 +309,6 @@
 								</button>
 
 								<!-- Step 2: Moderation -->
-								{@const step2 = getStepInfo(2)}
 								<button
 									data-step="2"
 									on:click|preventDefault|stopPropagation={() => {
@@ -268,7 +329,7 @@
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step2.isCompleted
 											? 'bg-green-500'
-											: workflowState.progress_by_section.moderation_completed_count > 0
+											: (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0
 												? 'bg-yellow-500'
 												: step2.isCurrentStep
 													? 'bg-blue-500'
@@ -288,22 +349,21 @@
 													d="M5 13l4 4L19 7"
 												></path>
 											</svg>
-										{:else if workflowState.progress_by_section.moderation_completed_count > 0}
+										{:else if (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0}
 											<span class="text-xs text-white font-semibold">
-												{workflowState.progress_by_section.moderation_completed_count}/{workflowState.progress_by_section.moderation_total}
+												{workflowState?.progress_by_section?.moderation_completed_count ?? 0}/{workflowState?.progress_by_section?.moderation_total ?? 0}
 											</span>
 										{:else}
 											<span class="text-xs font-bold text-white">2</span>
 										{/if}
 									</div>
 									<span class="text-sm text-gray-700 dark:text-gray-300 text-left">
-										{$i18n.t('Moderation')} ({workflowState.progress_by_section.moderation_completed_count}/
-										{workflowState.progress_by_section.moderation_total})
+										{$i18n.t('Moderation')} ({workflowState?.progress_by_section?.moderation_completed_count ?? 0}/
+										{workflowState?.progress_by_section?.moderation_total ?? 0})
 									</span>
 								</button>
 
 								<!-- Step 3: Exit Survey -->
-								{@const step3 = getStepInfo(3)}
 								<button
 									data-step="3"
 									on:click|preventDefault|stopPropagation={() => {
@@ -352,7 +412,6 @@
 								</button>
 
 							<!-- Step 4: Completion -->
-							{@const step4 = getStepInfo(4)}
 							<button
 								data-step="4"
 								on:click|preventDefault|stopPropagation={() => {
@@ -402,23 +461,6 @@
 							</div>
 						</div>
 					{/if}
-
-					<!-- Chat View Button -->
-					<button
-						class="flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
-						on:click={async () => {
-							await goto('/');
-							if ($mobile) {
-								await tick();
-								showSidebar.set(false);
-							}
-						}}
-					>
-						<div class="self-center">
-							<DocumentChartBar className="size-5" strokeWidth="1.5" />
-						</div>
-						<div class="self-center truncate text-sm">{$i18n.t('Chat View')}</div>
-					</button>
 				</div>
 			</div>
 		</div>

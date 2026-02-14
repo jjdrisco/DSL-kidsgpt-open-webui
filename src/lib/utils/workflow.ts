@@ -5,6 +5,8 @@ import type { WorkflowStateResponse } from '$lib/apis/workflow/index';
  */
 export function getStepRoute(step: number): string {
 	switch (step) {
+		case 0:
+			return '/assignment-instructions';
 		case 1:
 			return '/kids/profile';
 		case 2:
@@ -22,6 +24,7 @@ export function getStepRoute(step: number): string {
  * Get step number from route
  */
 export function getStepFromRoute(route: string): number {
+	if (route.startsWith('/assignment-instructions')) return 0;
 	if (route.startsWith('/kids/profile')) return 1;
 	if (route.startsWith('/moderation-scenario')) return 2;
 	if (route.startsWith('/exit-survey')) return 3;
@@ -41,7 +44,10 @@ export function canAccessStep(
 	step: number,
 	workflowState: WorkflowStateResponse
 ): boolean {
-	const { progress_by_section, next_route } = workflowState;
+	const progress = workflowState?.progress_by_section;
+	const next_route = workflowState?.next_route ?? '';
+	if (!progress || !next_route) return false;
+
 	const stepRoute = getStepRoute(step);
 
 	// If this is the next_route, it's always accessible
@@ -55,10 +61,15 @@ export function canAccessStep(
 		return true;
 	}
 
-	// Step 1: Child Profile - accessible if next_route indicates we're past this step
+	// Step 0: Assignment Instructions - always accessible
+	if (step === 0) {
+		return true;
+	}
+
+	// Step 1: Child Profile - accessible if next_route is /kids/profile or later
 	if (step === 1) {
-		// Accessible if next_route is a later step (meaning we've completed step 1)
 		return (
+			next_route === '/kids/profile' ||
 			next_route === '/moderation-scenario' ||
 			next_route === '/exit-survey' ||
 			next_route === '/completion'
@@ -67,10 +78,9 @@ export function canAccessStep(
 
 	// Step 2: Moderation - accessible if child profile is completed and (moderation is current/next or we're past it)
 	if (step === 2) {
-		if (!progress_by_section.has_child_profile) {
-			return false; // Can't access moderation without child profile
+		if (!progress.has_child_profile) {
+			return false;
 		}
-		// Accessible if it's the next route, or if we're on a later step (meaning moderation is done or in progress)
 		return (
 			next_route === '/moderation-scenario' ||
 			next_route === '/exit-survey' ||
@@ -78,12 +88,17 @@ export function canAccessStep(
 		);
 	}
 
-	// Step 3: Exit Survey - accessible if moderation is completed and (exit survey is current/next or we're past it)
+	// Step 3: Exit Survey - only accessible after all moderation scenarios are done (or exit survey already completed)
 	if (step === 3) {
-		if (progress_by_section.moderation_completed_count < progress_by_section.moderation_total) {
-			return false; // Can't access exit survey without completing moderation
+		if (progress.exit_survey_completed) {
+			return true;
 		}
-		// Accessible if it's the next route, or if we're on completion (meaning exit survey is done)
+		const count = progress.moderation_completed_count ?? 0;
+		const total = progress.moderation_total ?? 0;
+		// Require at least one scenario and all completed before allowing exit survey
+		if (total === 0 || count < total) {
+			return false;
+		}
 		return (
 			next_route === '/exit-survey' ||
 			next_route === '/completion'
@@ -92,7 +107,7 @@ export function canAccessStep(
 
 	// Step 4: Completion - accessible if exit survey is completed
 	if (step === 4) {
-		return progress_by_section.exit_survey_completed || next_route === '/completion';
+		return !!progress.exit_survey_completed || next_route === '/completion';
 	}
 
 	return false;
@@ -103,6 +118,8 @@ export function canAccessStep(
  */
 export function getStepLabel(step: number): string {
 	switch (step) {
+		case 0:
+			return 'Assignment Instructions';
 		case 1:
 			return 'Child Profile';
 		case 2:
@@ -120,21 +137,28 @@ export function getStepLabel(step: number): string {
  * Check if a step is completed based on workflow state
  */
 export function isStepCompleted(step: number, workflowState: WorkflowStateResponse): boolean {
-	const { progress_by_section } = workflowState;
+	const progress = workflowState?.progress_by_section;
+	const next_route = workflowState?.next_route ?? '';
 
-	if (step === 1) {
-		return progress_by_section.has_child_profile;
-	}
-	if (step === 2) {
+	if (step === 0) {
+		// Instructions "completed" when backend says user can proceed to child profile or later
 		return (
-			progress_by_section.moderation_completed_count >= progress_by_section.moderation_total
+			next_route === '/kids/profile' ||
+			next_route === '/moderation-scenario' ||
+			next_route === '/exit-survey' ||
+			next_route === '/completion'
 		);
 	}
-	if (step === 3) {
-		return progress_by_section.exit_survey_completed;
+	if (step === 1) {
+		return !!progress?.has_child_profile;
 	}
-	if (step === 4) {
-		return progress_by_section.exit_survey_completed;
+	if (step === 2) {
+		const count = progress.moderation_completed_count ?? 0;
+		const total = progress.moderation_total ?? 0;
+		return count >= total;
+	}
+	if (step === 3 || step === 4) {
+		return !!progress.exit_survey_completed;
 	}
 	return false;
 }
