@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { showSidebar, user, mobile, WEBUI_NAME } from '$lib/stores';
+	import { showSidebar, user, mobile } from '$lib/stores';
 	import { getContext } from 'svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -166,7 +166,7 @@
 				class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800"
 			>
 				<div class="flex items-center gap-2">
-					<h2 class="text-lg font-semibold">{$WEBUI_NAME}</h2>
+					<h2 class="text-lg font-semibold">Child-AI Survey</h2>
 				</div>
 				{#if $mobile}
 					<button
@@ -198,21 +198,15 @@
 			<!-- Navigation Items -->
 			<div class="flex-1 p-4">
 				<div class="space-y-2">
-					<div
-						class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4"
-					>
-						{$i18n.t('Survey Navigation')}
-					</div>
-
 					<!-- Assignment Progress -->
 					{#if !loadingProgress && workflowState}
-						{@const step0 = getStepInfo(0)}
-						{@const step1 = getStepInfo(1)}
-						{@const step2 = getStepInfo(2)}
-						{@const step3 = getStepInfo(3)}
-						{@const step4 = getStepInfo(4)}
-						{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
-						{@const step1Clickable = step1.canAccess && !onInstructionsPage}
+					{@const step0 = getStepInfo(0)}
+					{@const step1 = getStepInfo(1)}
+					{@const step2 = getStepInfo(2)}
+					{@const step3 = getStepInfo(3)}
+					{@const step4 = getStepInfo(4)}
+					{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
+					{@const step1Clickable = step1.canAccess && (!onInstructionsPage || step1.isCompleted)}
 						<div class="mb-6">
 							<div
 								class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3"
@@ -223,6 +217,7 @@
 								<!-- Step 0: Assignment Instructions -->
 								<button
 									data-step="0"
+									disabled={!step0.canAccess}
 									on:click|preventDefault|stopPropagation={() => {
 										if (step0.canAccess) {
 											goToStep(0);
@@ -271,6 +266,7 @@
 								<!-- Step 1: Child Profile (not clickable while on assignment-instructions) -->
 								<button
 									data-step="1"
+									disabled={!step1Clickable}
 									on:click|preventDefault|stopPropagation={() => {
 										if (step1Clickable) {
 											goToStep(1);
@@ -316,9 +312,10 @@
 									</span>
 								</button>
 
-								<!-- Step 2: Moderation -->
+								<!-- Step 2: Scenario Review (Moderation) -->
 								<button
 									data-step="2"
+									disabled={!step2.canAccess}
 									on:click|preventDefault|stopPropagation={() => {
 										if (step2.canAccess) {
 											goToStep(2);
@@ -364,13 +361,14 @@
 										{/if}
 									</div>
 									<span class="text-sm text-gray-700 dark:text-gray-300 text-left">
-										{$i18n.t('Moderation')}
+										{$i18n.t('Scenario Review')}
 									</span>
 								</button>
 
 								<!-- Step 3: Exit Survey -->
 								<button
 									data-step="3"
+									disabled={!step3.canAccess}
 									on:click|preventDefault|stopPropagation={() => {
 										if (step3.canAccess) {
 											goToStep(3);
@@ -419,6 +417,7 @@
 							<!-- Step 4: Completion -->
 							<button
 								data-step="4"
+								disabled={!step4.canAccess}
 								on:click|preventDefault|stopPropagation={() => {
 									if (step4.canAccess) {
 										goToStep(4);

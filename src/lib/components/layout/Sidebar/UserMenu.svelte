@@ -350,6 +350,8 @@
 							await resetUserWorkflow(localStorage.token);
 							toast.success($i18n.t('Survey reset successfully.'));
 							window.dispatchEvent(new Event('workflow-updated'));
+							// Allow sidebar to refetch workflow state before navigating so button states update
+							await new Promise((r) => setTimeout(r, 400));
 							await goto('/assignment-instructions');
 							} catch (e) {
 								console.error('Failed to reset survey:', e);

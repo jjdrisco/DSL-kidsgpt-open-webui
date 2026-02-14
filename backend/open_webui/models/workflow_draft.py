@@ -5,7 +5,7 @@ import uuid
 from typing import Any, Optional
 
 from open_webui.internal.db import Base, get_db
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, JSON, Text
 
 
@@ -21,6 +21,8 @@ class WorkflowDraft(Base):
 
 
 class WorkflowDraftModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: str
     user_id: str
     child_id: str

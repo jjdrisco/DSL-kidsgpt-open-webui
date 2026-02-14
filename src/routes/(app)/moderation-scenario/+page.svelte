@@ -32,7 +32,9 @@
 		getWorkflowState,
 		getWorkflowDraft,
 		saveWorkflowDraft,
-		deleteWorkflowDraft
+		deleteWorkflowDraft,
+		resetUserWorkflow,
+		getCurrentAttempt
 	} from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -150,11 +152,10 @@
 
 	// Workflow state for Next Task button (exit survey access)
 	let workflowStateForModeration: { progress_by_section?: { moderation_completed_count?: number; moderation_total?: number; exit_survey_completed?: boolean } } | null = null;
-	$: canAccessExitSurvey =
-		workflowStateForModeration?.progress_by_section?.exit_survey_completed ||
-		((workflowStateForModeration?.progress_by_section?.moderation_completed_count ?? 0) >=
-			(workflowStateForModeration?.progress_by_section?.moderation_total ?? 0)) ||
-		false;
+	// Track if user has clicked "Done" button - only enable Next Task after Done is pressed
+	let moderationFinalized = false;
+	// Next Task button is ONLY shown after Done button is pressed (or exit survey already completed)
+	$: canAccessExitSurvey = moderationFinalized || (workflowStateForModeration?.progress_by_section?.exit_survey_completed || false);
 
 	// Track current session ID to detect changes
 	let trackedSessionId: string | null = null;
@@ -749,6 +750,7 @@
 		selectedModerations = new Set();
 		customInstructions = [];
 		showComparisonView = false;
+		moderationFinalized = false;
 		// showOriginal1 and moderationPanelVisible are now derived
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
@@ -1222,26 +1224,25 @@
 		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
 
 		if (state) {
-			// Check if this is an attention check scenario and if it's been passed
-			if (isAttentionCheck && state.attentionCheckSelected && state.attentionCheckPassed) {
+			// For attention checks: completed if selected AND result is known (passed or failed)
+			if (isAttentionCheck && state.attentionCheckSelected && state.attentionCheckPassed !== null && state.attentionCheckPassed !== undefined) {
 				return true;
 			}
-			// Completed if: marked not applicable or confirmed a moderated version
+			// Completed if: marked not applicable or confirmed a version (including accept original = -1)
 			const completed =
-				state.markedNotApplicable ||
-				(state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0);
+				state.markedNotApplicable || state.confirmedVersionIndex !== null;
 			return completed;
 		}
 		// Check current scenario
 		if (index === selectedScenarioIndex) {
-			// Check if this is an attention check scenario and if it's been passed
-			if (isAttentionCheck && attentionCheckSelected && attentionCheckPassed) {
+			// For attention checks: completed if selected AND result is known (passed or failed)
+			if (isAttentionCheck && attentionCheckSelected && attentionCheckPassed !== null && attentionCheckPassed !== undefined) {
 				return true;
 			}
 			// For current scenario, check if they've made a decision
-			// Scenario is completed if: marked as not applicable OR a version has been confirmed
+			// Scenario is completed if: marked as not applicable OR a version has been confirmed (including -1 = accept original)
 			const completed =
-				markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+				markedNotApplicable || confirmedVersionIndex !== null;
 			console.log('Current scenario completion check:', {
 				index,
 				markedNotApplicable,
@@ -1356,14 +1357,14 @@
 	let confirmedVersionIndex: number | null = null;
 
 	// Reactive computation for current scenario completion
-	// Scenario is completed if: marked as not applicable OR a version has been confirmed OR attention check passed
+	// Scenario is completed if: marked as not applicable OR a version has been confirmed (including accept original = -1) OR attention check passed
 	$: currentScenarioCompleted = (() => {
 		const isAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
 			ATTENTION_CHECK_MARKER
 		);
 		const completed = isAttentionCheck
 			? attentionCheckSelected && attentionCheckPassed
-			: markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+			: markedNotApplicable || confirmedVersionIndex !== null;
 		console.log('Reactive: currentScenarioCompleted =', completed, {
 			isAttentionCheck,
 			attentionCheckSelected,
@@ -1385,8 +1386,8 @@
 			ATTENTION_CHECK_MARKER
 		);
 		const currentCompleted = isCurrentAttentionCheck
-			? attentionCheckSelected && attentionCheckPassed
-			: markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+			? (attentionCheckSelected && attentionCheckPassed !== null && attentionCheckPassed !== undefined)
+			: markedNotApplicable || confirmedVersionIndex !== null;
 		const currentIdentifier = getScenarioId(selectedScenarioIndex);
 		const currentNotInMap = !scenarioStates.has(currentIdentifier);
 		const completedCount = completedInMap + (currentCompleted && currentNotInMap ? 1 : 0);
@@ -2509,7 +2510,6 @@
 		}
 
 		// Check timeout
-		const identifier = getScenarioId(index);
 		const startTime = scenarioStartTimes.get(identifier);
 		if (!startTime) return;
 
@@ -2622,17 +2622,29 @@
 						]);
 					});
 					// Convert timers to identifier-based format
-					const serializedTimers: [string, number][] = [];
-					scenarioTimers.forEach((seconds, index) => {
-						const identifier = getScenarioId(index);
-						serializedTimers.push([identifier, seconds]);
-					});
-					const data = {
-						states: serializedStates,
-						timers: serializedTimers,
-						current: currentIdentifier // Save identifier instead of index
-					};
-					await saveWorkflowDraft(token, selectedChildId, 'moderation', data);
+				const serializedTimers: [string, number][] = [];
+				scenarioTimers.forEach((seconds, index) => {
+					const identifier = getScenarioId(index);
+					serializedTimers.push([identifier, seconds]);
+				});
+				
+				// Get current attempt number to store with draft
+				const attemptInfo = await getCurrentAttempt(token);
+				const currentAttemptNumber = attemptInfo?.current_attempt || 1;
+				
+				const data: Record<string, unknown> = {
+					attempt_number: currentAttemptNumber, // Store attempt number so we can ignore old drafts
+					moderation_finalized: moderationFinalized, // Store if Done was clicked
+					states: serializedStates,
+					timers: serializedTimers,
+					current: currentIdentifier // Save identifier instead of index
+				};
+				// Persist scenario list so it can be restored on navigation (stable for attempt)
+				if (scenariosLockedForSession && scenarioList.length > 0 && scenarioIdentifiers.length === scenarioList.length) {
+					data.scenario_list = scenarioList;
+					data.scenario_identifiers = scenarioIdentifiers;
+				}
+				await saveWorkflowDraft(token, selectedChildId, 'moderation', data);
 					console.log(`Saved moderation states to backend for child: ${selectedChildId}`);
 				}
 			} catch (e) {
@@ -2735,8 +2747,25 @@
 					)
 					.sort((a, b) => a.version_number - b.version_number);
 
+				// Only use backend session if it matches THIS scenario's content (not just index).
+				// Prevents old DB session at same index (e.g. from before reset) from applying skip/state to a new scenario.
+				const promptForMatch = prompt;
+				const responseForMatch = response;
 				if (backendSession) {
-					console.log('✅ Found backend session for scenario', index, backendSession);
+					const contentMatches =
+						backendSession.scenario_prompt === promptForMatch &&
+						backendSession.original_response === responseForMatch;
+					if (!contentMatches) {
+						backendSession = null;
+						versionSessions = [];
+						console.log(
+							'⚠️ Backend session at index',
+							index,
+							'has different prompt/response (likely old assignment) - ignoring to avoid skip leakage'
+						);
+					} else {
+						console.log('✅ Found backend session for scenario', index, backendSession);
+					}
 				} else {
 					console.log(
 						'ℹ️ No backend session found for scenario',
@@ -3258,12 +3287,34 @@
 		saveCurrentScenarioState();
 	}
 
-	// Local restart removed; use global sidebar reset
-	function showResetConfirmation() {}
+	// Local restart removed; use global sidebar reset (modal still used if shown from UI)
+	function showResetConfirmation() {
+		showResetConfirmationModal = true;
+	}
 
-	function confirmReset() {}
+	async function confirmReset() {
+		showResetConfirmationModal = false;
+		const token = localStorage.token;
+		if (!token) {
+			toast.error('Not signed in.');
+			return;
+		}
+		try {
+			await resetUserWorkflow(token);
+			toast.success('Survey reset successfully.');
+			window.dispatchEvent(new Event('workflow-updated'));
+			await tick();
+			await new Promise((r) => setTimeout(r, 400));
+			await goto('/assignment-instructions');
+		} catch (e) {
+			console.error('Failed to reset survey:', e);
+			toast.error('Failed to reset survey. Please try again.');
+		}
+	}
 
-	function cancelReset() {}
+	function cancelReset() {
+		showResetConfirmationModal = false;
+	}
 
 	async function loadSavedStates() {
 		try {
@@ -3272,7 +3323,16 @@
 				const token = localStorage.token || '';
 				if (token) {
 						const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
-						const data = draftRes?.data as { states?: [number | string, unknown][]; timers?: [number | string, number][]; current?: number | string } | undefined;
+						const data = draftRes?.data as { moderation_finalized?: boolean; states?: [number | string, unknown][]; timers?: [number | string, number][]; current?: number | string } | undefined;
+						
+						// Restore moderation_finalized flag
+						if (data?.moderation_finalized) {
+							moderationFinalized = true;
+							console.log('✅ Restored moderationFinalized = true from loadSavedStates');
+							// Notify sidebar to update the checkmark
+							window.dispatchEvent(new Event('workflow-updated'));
+						}
+						
 						if (data?.states) {
 							scenarioStates.clear();
 							// Check if this is legacy format (numeric keys) or new format (string identifiers)
@@ -3366,6 +3426,7 @@
 						}
 					}
 				}
+			}
 		} catch (e) {
 			console.error('Failed to load saved states from backend:', e);
 		}
@@ -3382,6 +3443,7 @@
 		showComparisonView = false;
 		// showOriginal1 and moderationPanelVisible are now derived
 		attentionCheckSelected = false;
+		moderationFinalized = false;
 		attentionCheckPassed = false;
 		attentionCheckProcessing = false;
 		markedNotApplicable = false;
@@ -3509,6 +3571,7 @@
 						isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
 				});
 				console.log('Final version confirmed and saved to backend');
+				window.dispatchEvent(new Event('workflow-updated'));
 			} catch (e) {
 				console.error('Failed to save final version to backend', e);
 			}
@@ -3914,6 +3977,7 @@
 					attention_check_selected: false,
 					attention_check_passed: false
 				});
+				window.dispatchEvent(new Event('workflow-updated'));
 			} catch (e) {
 				console.error('Failed to save skip decision', e);
 			}
@@ -4055,6 +4119,7 @@
 				attention_check_passed: false
 			});
 			console.log('✅ Identification complete - scenario marked as final');
+			window.dispatchEvent(new Event('workflow-updated'));
 		} catch (e) {
 			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
@@ -4253,6 +4318,7 @@
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: false
 			});
+			window.dispatchEvent(new Event('workflow-updated'));
 		} catch (e) {
 			console.error('Failed to save moderation session', e);
 		}
@@ -4489,17 +4555,28 @@
 		showConfirmationModal = true;
 	}
 
-	function proceedToNextStep() {
-		window.dispatchEvent(new Event('workflow-updated'));
+	async function proceedToNextStep() {
+		// Set flag to enable Next Task button (persisted in draft)
+		moderationFinalized = true;
+		showConfirmationModal = false; // Close modal
+		
+		// Save the finalized flag to draft before navigating - AWAIT to ensure it completes
+		await saveCurrentScenarioState();
+		
 		// Ask backend to mark latest per-scenario submission as final for this child/session
 		try {
-			finalizeModeration(localStorage.token, {
+			await finalizeModeration(localStorage.token, {
 				child_id: selectedChildId,
 				session_number: sessionNumber
-			}).catch((e) => console.error('Finalize moderation failed:', e));
+			});
 		} catch (e) {
 			console.error('Finalize moderation error:', e);
 		}
+		
+		// Now that the draft is saved and moderation is finalized, trigger workflow update
+		window.dispatchEvent(new Event('workflow-updated'));
+		
+		// Navigate to exit survey
 		goto('/exit-survey');
 	}
 
@@ -4765,31 +4842,153 @@
 		}
 
 		// Automatically generate personality-based scenarios if child profiles exist
+		// Only run scenario population when there are no scenarios for this attempt (draft first, then existing assignments).
 		console.log('Child profiles loaded:', childProfiles.length);
 		if (childProfiles.length > 0) {
-			console.log('Generating personality-based scenarios...');
-			console.log(
-				'Before generation - scenarioList.length:',
-				scenarioList.length,
-				'selectedChildId:',
-				selectedChildId,
-				'usePersonalityScenarios:',
-				usePersonalityScenarios,
-				'scenariosLockedForSession:',
-				scenariosLockedForSession
-			);
+			let haveScenariosForAttempt = false;
 
-			// On hard refresh, if scenarioList is empty, clear any stale locks
-			if (scenarioList.length === 0 && scenariosLockedForSession) {
-				console.warn(
-					'Hard refresh detected: scenarioList is empty but lock is set. Clearing lock to allow regeneration...'
-				);
-				scenariosLockedForSession = false;
+		// 1) Try to restore scenario list from draft first (stable across navigation for same attempt)
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					// Get current attempt number
+					const attemptInfo = await getCurrentAttempt(token);
+					const currentAttemptNumber = attemptInfo?.current_attempt || 1;
+					
+					const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
+					const data = draftRes?.data as { attempt_number?: number; moderation_finalized?: boolean; scenario_list?: [string, string][]; scenario_identifiers?: string[] } | undefined;
+					
+					// Check if draft is from current attempt
+					const draftAttemptNumber = data?.attempt_number || 1;
+					if (draftAttemptNumber !== currentAttemptNumber) {
+						console.log(`🔄 Ignoring draft from attempt ${draftAttemptNumber}, current attempt is ${currentAttemptNumber}`);
+						// Clear the old draft
+						await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+					} else {
+						// Restore moderation_finalized flag from draft
+						if (data?.moderation_finalized) {
+							moderationFinalized = true;
+							console.log('✅ Restored moderationFinalized = true from draft');
+							// Notify sidebar to update the checkmark
+							window.dispatchEvent(new Event('workflow-updated'));
+						}
+						
+						const list = data?.scenario_list;
+						const identifiers = data?.scenario_identifiers;
+						if (
+							Array.isArray(list) &&
+							Array.isArray(identifiers) &&
+							list.length > 0 &&
+							identifiers.length === list.length
+						) {
+							scenarioList = list;
+							scenarioIdentifiers = identifiers;
+							scenariosLockedForSession = true;
+							haveScenariosForAttempt = true;
+							console.log('✅ Restored scenario list from draft for stable navigation, length:', scenarioList.length, 'attempt:', currentAttemptNumber);
+							await loadSavedStates();
+							const idx = selectedScenarioIndex >= 0 && selectedScenarioIndex < scenarioList.length ? selectedScenarioIndex : 0;
+							selectedScenarioIndex = idx;
+							await loadScenario(idx, true);
+						}
+					}
+					}
+				} catch (e) {
+					console.warn('Failed to restore scenario list from draft', e);
+				}
 			}
 
-			try {
-				console.log('Calling loadRandomScenarios()...');
-				await loadRandomScenarios();
+			// 2) If no draft list, try existing assignments from backend (do not create new ones if any exist)
+			if (!haveScenariosForAttempt && selectedChildId) {
+				try {
+					const token = localStorage.token || '';
+					if (token) {
+						const existingAssignments = await getAssignmentsForChild(token, selectedChildId);
+						if (existingAssignments.length > 0) {
+							existingAssignments.sort(
+								(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
+							);
+							const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
+								a.prompt_text,
+								a.response_text
+							]);
+							const baseIdentifiers: string[] = existingAssignments.map((a) => a.assignment_id);
+							const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+							scenarioList = list;
+							scenarioIdentifiers = identifiers;
+							scenarioIdentifiers.forEach((identifier, index) => {
+								const assignment = existingAssignments[index];
+								if (assignment) {
+									const existingState = scenarioStates.get(identifier) || {
+										versions: [],
+										currentVersionIndex: -1,
+										confirmedVersionIndex: null,
+										highlightedTexts1: [],
+										selectedModerations: new Set(),
+										customInstructions: [],
+										showOriginal1: false,
+										showComparisonView: false,
+										attentionCheckSelected: false,
+										attentionCheckPassed: false,
+										markedNotApplicable: false,
+										step1Completed: false,
+										step2Completed: false,
+										step3Completed: false,
+										concernLevel: null,
+										concernReason: '',
+										satisfactionLevel: null,
+										satisfactionReason: '',
+										nextAction: null
+									};
+									existingState.assignment_id = assignment.assignment_id;
+									existingState.scenario_id = assignment.scenario_id;
+									scenarioStates.set(identifier, existingState);
+								}
+							});
+							if (scenarioList.length > 0) {
+								scenariosLockedForSession = true;
+								haveScenariosForAttempt = true;
+								console.log('✅ Using existing assignments from backend (no draft), scenarioList length:', scenarioList.length);
+								await loadSavedStates();
+								const idx = selectedScenarioIndex >= 0 && selectedScenarioIndex < scenarioList.length ? selectedScenarioIndex : 0;
+								selectedScenarioIndex = idx;
+								await loadScenario(idx, true);
+							}
+						}
+					}
+				} catch (e) {
+					console.warn('Failed to load existing assignments for attempt', e);
+				}
+			}
+
+			// 3) Only run loadRandomScenarios (and filter/top-up) when we have no scenarios for this attempt
+			if (haveScenariosForAttempt) {
+				// Skip: we already have list from draft or existing assignments
+			} else {
+				console.log('Generating personality-based scenarios...');
+				console.log(
+					'Before generation - scenarioList.length:',
+					scenarioList.length,
+					'selectedChildId:',
+					selectedChildId,
+					'usePersonalityScenarios:',
+					usePersonalityScenarios,
+					'scenariosLockedForSession:',
+					scenariosLockedForSession
+				);
+
+				// On hard refresh, if scenarioList is empty, clear any stale locks
+				if (scenarioList.length === 0 && scenariosLockedForSession) {
+					console.warn(
+						'Hard refresh detected: scenarioList is empty but lock is set. Clearing lock to allow regeneration...'
+					);
+					scenariosLockedForSession = false;
+				}
+
+				try {
+					console.log('Calling loadRandomScenarios()...');
+					await loadRandomScenarios();
 				console.log('Random scenarios loaded. Current scenarioList length:', scenarioList.length);
 				if (scenarioList.length === 0) {
 					console.warn(
@@ -4928,6 +5127,7 @@
 						);
 					}
 				}
+			}
 			}
 
 			// If no scenarios were loaded from backend, show error
@@ -5492,6 +5692,7 @@
 
 				<div class="flex-1 overflow-y-auto p-3 space-y-2">
 					{#each scenarioList as [prompt, response], index}
+					{@const timerIdentifier = getScenarioId(index)}
 						<button
 							on:click={() => loadScenario(index)}
 							class="w-full text-left p-3 rounded-lg border transition-all duration-200 {selectedScenarioIndex ===
@@ -5574,7 +5775,6 @@
 									<div></div>
 								{/if}
 
-								{@const timerIdentifier = getScenarioId(index)}
 								{#if scenarioTimers.has(timerIdentifier) && (scenarioTimers.get(timerIdentifier) || 0) > 0}
 									<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
 										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -7222,10 +7422,14 @@
 										></path>
 									</svg>
 								</button>
-							{:else if currentScenarioCompleted}
+							{:else}
+								<!-- Last scenario: always show Done; disabled until current scenario is completed -->
 								<button
 									on:click={completeModeration}
-									class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
+									disabled={!currentScenarioCompleted}
+									class="px-6 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
+										? 'shadow-lg bg-purple-500 text-white hover:bg-purple-600 cursor-pointer'
+										: 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'}"
 								>
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.models.users import UserModel
+from open_webui.routers.workflow import get_current_attempt_number
 from open_webui.models.moderation import (
     ModerationSessions,
     ModerationSessionForm,
@@ -643,13 +644,26 @@ async def get_assignments_for_child(
         if not child_profile:
             raise HTTPException(status_code=404, detail="Child profile not found")
 
-        # Get assignments for this child, filtered to assigned/started status
+        # Get current attempt number for the user
+        current_attempt = get_current_attempt_number(user.id)
+        
+        log.info(
+            f"Getting assignments for child {child_id}, user {user.id}, "
+            f"current_attempt: {current_attempt}"
+        )
+        
+        # Get assignments for this child, filtered to assigned/started status and current attempt
         assignments = ScenarioAssignments.get_assignments_by_child(
             child_id,
             status_filter=[
                 AssignmentStatus.ASSIGNED.value,
                 AssignmentStatus.STARTED.value,
             ],
+            attempt_number=current_attempt,
+        )
+        
+        log.info(
+            f"Found {len(assignments)} assignments for child {child_id}, attempt {current_attempt}"
         )
 
         # Join with scenarios table to get prompt_text and response_text

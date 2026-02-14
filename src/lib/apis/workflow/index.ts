@@ -122,8 +122,23 @@ export const getWorkflowDraft = async (
 			}
 		}
 	);
-	if (!res.ok) throw await res.json();
-	return res.json();
+	const text = await res.text();
+	if (!res.ok) {
+		let msg = 'Failed to get draft';
+		try {
+			const err = JSON.parse(text) as { detail?: string };
+			if (err.detail) msg = err.detail;
+		} catch {
+			// Server may have returned HTML (e.g. 500 error page)
+		}
+		throw new Error(msg);
+	}
+	try {
+		return JSON.parse(text) as WorkflowDraftResponse;
+	} catch {
+		// Response was not JSON (e.g. HTML); return empty so callers don't break
+		return { data: null, updated_at: null };
+	}
 };
 
 export const saveWorkflowDraft = async (
@@ -140,8 +155,22 @@ export const saveWorkflowDraft = async (
 		},
 		body: JSON.stringify({ child_id: childId, draft_type: draftType, data })
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	const text = await res.text();
+	if (!res.ok) {
+		let msg = 'Failed to save draft';
+		try {
+			const err = JSON.parse(text) as { detail?: string };
+			if (err.detail) msg = err.detail;
+		} catch {
+			// Server may have returned HTML (e.g. 500 error page)
+		}
+		throw new Error(msg);
+	}
+	try {
+		return JSON.parse(text) as WorkflowDraftResponse;
+	} catch {
+		throw new Error('Invalid response from server');
+	}
 };
 
 export const deleteWorkflowDraft = async (

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { onMount, tick } from 'svelte';
+	import { goto, afterNavigate } from '$app/navigation';
 	import { showSidebar, user, mobile } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
@@ -8,13 +8,6 @@
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
-
-	// Ensure sidebar is visible on survey pages (unless on mobile)
-	onMount(() => {
-		if (!$mobile) {
-			showSidebar.set(true);
-		}
-	});
 
 	// Survey responses
 	let surveyResponses = {
@@ -86,7 +79,20 @@
 		return child_id;
 	}
 
-	onMount(async () => {
+	/** Apply loaded answers into surveyResponses in place so bind:group and other bindings update. */
+	function applyAnswersToForm(ans: Record<string, unknown>) {
+		surveyResponses.parentGender = (ans.parentGender as string) || '';
+		surveyResponses.parentAge = (ans.parentAge as string) || '';
+		surveyResponses.areaOfResidency = (ans.areaOfResidency as string) || '';
+		surveyResponses.parentEducation = (ans.parentEducation as string) || '';
+		surveyResponses.parentEthnicity = Array.isArray(ans.parentEthnicity) ? [...ans.parentEthnicity] : [];
+		surveyResponses.genaiFamiliarity = (ans.genaiFamiliarity as string) || '';
+		surveyResponses.genaiUsageFrequency = (ans.genaiUsageFrequency as string) || '';
+		surveyResponses.parentingStyle = (ans.parentingStyle as string) || '';
+	}
+
+	/** Load saved responses from backend (exit quiz rows or draft) so the form repopulates when revisiting the page after completion. */
+	async function loadSavedResponses() {
 		const token = localStorage.token || '';
 		const childId = await resolveChildId(token);
 
@@ -102,48 +108,49 @@
 			console.warn('Failed to get attempt number or child ID', e);
 		}
 
-		// Rehydrate from backend if any saved rows exist
-		if (childId && token) {
+		// Rehydrate from backend: only use responses for the current attempt (after reset, this returns [] so form stays empty)
+		if (token) {
 			try {
-				const rows = await listExitQuiz(token, childId);
+				const rows = await listExitQuiz(token, childId || undefined, true);
 				if (rows && Array.isArray(rows) && rows.length > 0) {
 					const latest = [...rows].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0];
-					const ans: any = latest?.answers || {};
-					surveyResponses = {
-						parentGender: ans.parentGender || '',
-						parentAge: ans.parentAge || '',
-						areaOfResidency: ans.areaOfResidency || '',
-						parentEducation: ans.parentEducation || '',
-						parentEthnicity: Array.isArray(ans.parentEthnicity) ? ans.parentEthnicity : [],
-						genaiFamiliarity: ans.genaiFamiliarity || '',
-						genaiUsageFrequency: ans.genaiUsageFrequency || '',
-						parentingStyle: ans.parentingStyle || ''
-					};
+					const ans: Record<string, unknown> = (latest?.answers as Record<string, unknown>) || {};
+					applyAnswersToForm(ans);
 					isSaved = true;
+					await tick(); // flush so bind:group and DOM see the updated values
 					window.dispatchEvent(new Event('workflow-updated'));
 					return;
 				}
-			} catch {}
+			} catch (e) {
+				console.warn('Failed to load exit quiz responses for repopulation', e);
+			}
 		}
 
-		// Load draft from backend
+		// Load draft from backend when no submitted response exists
 		if (childId && token) {
 			try {
 				const draftRes = await getWorkflowDraft(token, childId, 'exit_survey');
 				if (draftRes?.data && typeof draftRes.data === 'object') {
 					const d = draftRes.data as Record<string, unknown>;
-					surveyResponses = {
-						parentGender: (d.parentGender as string) || '',
-						parentAge: (d.parentAge as string) || '',
-						areaOfResidency: (d.areaOfResidency as string) || '',
-						parentEducation: (d.parentEducation as string) || '',
-						parentEthnicity: Array.isArray(d.parentEthnicity) ? d.parentEthnicity : [],
-						genaiFamiliarity: (d.genaiFamiliarity as string) || '',
-						genaiUsageFrequency: (d.genaiUsageFrequency as string) || '',
-						parentingStyle: (d.parentingStyle as string) || ''
-					};
+					applyAnswersToForm(d);
+					await tick();
 				}
 			} catch {}
+		}
+	}
+
+	onMount(async () => {
+		// Ensure sidebar is visible on survey pages (unless on mobile)
+		if (!$mobile) {
+			showSidebar.set(true);
+		}
+		await loadSavedResponses();
+	});
+
+	// Repopulate when navigating back to exit survey (e.g. from completion) so the form shows saved data for the session
+	afterNavigate(async ({ to }) => {
+		if (to?.pathname && to.pathname.startsWith('/exit-survey')) {
+			await loadSavedResponses();
 		}
 	});
 

@@ -17,6 +17,7 @@ from open_webui.utils.misc import throttle
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     BigInteger,
+    Integer,
     JSON,
     Column,
     String,
@@ -88,6 +89,7 @@ class User(Base):
     created_at = Column(BigInteger)
     workflow_reset_at = Column(BigInteger, nullable=True)
     instructions_completed_at = Column(BigInteger, nullable=True)
+    current_attempt_number = Column(Integer, nullable=True)  # set on workflow reset; used for next session
 
 
 class UserModel(BaseModel):
@@ -132,6 +134,7 @@ class UserModel(BaseModel):
     created_at: int  # timestamp in epoch
     workflow_reset_at: Optional[int] = None  # timestamp of last workflow reset
     instructions_completed_at: Optional[int] = None  # when user completed assignment instructions
+    current_attempt_number: Optional[int] = None  # set on reset; next moderation/exit_quiz use this attempt
 
     model_config = ConfigDict(from_attributes=True)
 

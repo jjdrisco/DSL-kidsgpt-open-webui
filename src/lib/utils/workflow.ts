@@ -66,9 +66,9 @@ export function canAccessStep(
 		return true;
 	}
 
-	// Step 1: Child Profile - accessible when instructions completed
+	// Step 1: Child Profile - accessible when instructions completed OR if a child profile already exists
 	if (step === 1) {
-		return !!progress?.instructions_completed;
+		return !!progress?.instructions_completed || !!progress?.has_child_profile;
 	}
 
 	// Step 2: Moderation - accessible if child profile is completed and (moderation is current/next or we're past it)
@@ -118,7 +118,7 @@ export function getStepLabel(step: number): string {
 		case 1:
 			return 'Child Profile';
 		case 2:
-			return 'Moderation';
+			return 'Scenario Review';
 		case 3:
 			return 'Exit Survey';
 		case 4:
@@ -143,9 +143,8 @@ export function isStepCompleted(step: number, workflowState: WorkflowStateRespon
 		return !!progress?.has_child_profile;
 	}
 	if (step === 2) {
-		const count = progress.moderation_completed_count ?? 0;
-		const total = progress.moderation_total ?? 0;
-		return count >= total;
+		// Step 2 is completed when the user has clicked "Done" (moderation_finalized)
+		return !!(progress as any).moderation_finalized;
 	}
 	if (step === 3 || step === 4) {
 		return !!progress.exit_survey_completed;
