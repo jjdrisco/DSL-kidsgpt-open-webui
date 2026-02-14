@@ -10,7 +10,7 @@
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
 
 	// Survey responses
-	let surveyResponses = {
+	let 		surveyResponses = {
 		parentGender: '',
 		parentAge: '',
 		areaOfResidency: '',
@@ -18,7 +18,7 @@
 		parentEthnicity: [],
 		genaiFamiliarity: '',
 		genaiUsageFrequency: '',
-		parentingStyle: ''
+		parentingStyle: [] // Changed to array for multi-select
 	};
 
 	// API
@@ -88,7 +88,16 @@
 		surveyResponses.parentEthnicity = Array.isArray(ans.parentEthnicity) ? [...ans.parentEthnicity] : [];
 		surveyResponses.genaiFamiliarity = (ans.genaiFamiliarity as string) || '';
 		surveyResponses.genaiUsageFrequency = (ans.genaiUsageFrequency as string) || '';
-		surveyResponses.parentingStyle = (ans.parentingStyle as string) || '';
+		surveyResponses.parentingStyle = Array.isArray(ans.parentingStyle) ? [...ans.parentingStyle] : (ans.parentingStyle ? [ans.parentingStyle] : []);
+		// Child profile research fields
+		surveyResponses.isOnlyChild = (ans.isOnlyChild as string) || '';
+		surveyResponses.childHasAIUse = (ans.childHasAIUse as string) || '';
+		surveyResponses.childAIUseContexts = Array.isArray(ans.childAIUseContexts) ? [...ans.childAIUseContexts] : [];
+		surveyResponses.parentLLMMonitoringLevel = (ans.parentLLMMonitoringLevel as string) || '';
+		surveyResponses.childEmail = (ans.childEmail as string) || '';
+		surveyResponses.childGenderOther = (ans.childGenderOther as string) || '';
+		surveyResponses.childAIUseContextsOther = (ans.childAIUseContextsOther as string) || '';
+		surveyResponses.parentLLMMonitoringOther = (ans.parentLLMMonitoringOther as string) || '';
 	}
 
 	/** Load saved responses from backend (exit quiz rows or draft) so the form repopulates when revisiting the page after completion. */
@@ -181,8 +190,8 @@
 				toast.error('Please select your personal AI use frequency');
 				return;
 			}
-			if (!surveyResponses.parentingStyle) {
-				toast.error('Please select your parenting style');
+			if (!surveyResponses.parentingStyle || surveyResponses.parentingStyle.length === 0) {
+				toast.error('Please select at least one parenting style');
 				return;
 			}
 			if (!surveyResponses.parentEthnicity || surveyResponses.parentEthnicity.length === 0) {
@@ -210,7 +219,16 @@
 				parentEthnicity: surveyResponses.parentEthnicity,
 				genaiFamiliarity: surveyResponses.genaiFamiliarity,
 				genaiUsageFrequency: surveyResponses.genaiUsageFrequency,
-				parentingStyle: surveyResponses.parentingStyle
+				parentingStyle: surveyResponses.parentingStyle, // Now an array
+				// Child profile research fields
+				isOnlyChild: surveyResponses.isOnlyChild,
+				childHasAIUse: surveyResponses.childHasAIUse,
+				childAIUseContexts: surveyResponses.childAIUseContexts,
+				parentLLMMonitoringLevel: surveyResponses.parentLLMMonitoringLevel,
+				childEmail: surveyResponses.childEmail,
+				childGenderOther: surveyResponses.childGenderOther,
+				childAIUseContextsOther: surveyResponses.childAIUseContextsOther,
+				parentLLMMonitoringOther: surveyResponses.parentLLMMonitoringOther
 			};
 
 			// Persist to backend (exit quiz)
@@ -378,20 +396,18 @@
 								Parenting Style
 							</div>
 							<p class="text-gray-900 dark:text-white">
-								{surveyResponses.parentingStyle
-									? surveyResponses.parentingStyle === 'A'
-										? "I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence."
-										: surveyResponses.parentingStyle === 'B'
-											? "I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed."
-											: surveyResponses.parentingStyle === 'C'
-												? "I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits."
-												: surveyResponses.parentingStyle === 'D'
-													? 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.'
-													: surveyResponses.parentingStyle === 'E'
-														? 'None of these fits me / It depends on the situation.'
-														: surveyResponses.parentingStyle === 'prefer-not-to-answer'
-															? 'Prefer not to answer'
-															: surveyResponses.parentingStyle
+								{surveyResponses.parentingStyle && surveyResponses.parentingStyle.length > 0
+									? surveyResponses.parentingStyle.map((style: string) => {
+											const styleLabels: Record<string, string> = {
+												'A': "I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.",
+												'B': "I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.",
+												'C': "I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.",
+												'D': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.',
+												'E': 'None of these fits me / It depends on the situation.',
+												'prefer-not-to-answer': 'Prefer not to answer'
+											};
+											return styleLabels[style] || style;
+										}).join('; ')
 									: 'Not specified'}
 							</p>
 						</div>
@@ -1023,6 +1039,217 @@
 									/>
 									<span class="text-gray-900 dark:text-white">Prefer not to say</span>
 								</label>
+							</div>
+						</div>
+
+						<!-- Child Profile Research Fields (moved from child profile form) -->
+						<div class="pt-6 border-t border-gray-300 dark:border-gray-700">
+							<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+								Child Profile Information
+							</h3>
+							
+							<!-- Is Only Child -->
+							<div class="mb-6">
+								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Is this child an only child?
+								</div>
+								<div class="space-y-2">
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.isOnlyChild}
+											value="yes"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Yes</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.isOnlyChild}
+											value="no"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">No</span>
+									</label>
+								</div>
+							</div>
+
+							<!-- Child Has AI Use -->
+							<div class="mb-6">
+								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Has this child used ChatGPT or similar AI tools?
+								</div>
+								<div class="space-y-2">
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.childHasAIUse}
+											value="yes"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Yes</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.childHasAIUse}
+											value="no"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">No</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.childHasAIUse}
+											value="unsure"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Unsure</span>
+									</label>
+								</div>
+							</div>
+
+							<!-- Child AI Use Contexts (if yes) -->
+							{#if surveyResponses.childHasAIUse === 'yes'}
+								<div class="mb-6">
+									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										In what contexts has this child used AI tools? (Select all that apply)
+									</div>
+									<div class="space-y-2">
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={surveyResponses.childAIUseContexts}
+												value="schoolwork"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Schoolwork</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={surveyResponses.childAIUseContexts}
+												value="creative_writing"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Creative writing</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={surveyResponses.childAIUseContexts}
+												value="homework_help"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Homework help</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={surveyResponses.childAIUseContexts}
+												value="entertainment"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Entertainment</span>
+										</label>
+										<label class="flex items-center">
+											<input
+												type="checkbox"
+												bind:group={surveyResponses.childAIUseContexts}
+												value="other"
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white">Other</span>
+										</label>
+										{#if surveyResponses.childAIUseContexts.includes('other')}
+											<input
+												type="text"
+												bind:value={surveyResponses.childAIUseContextsOther}
+												placeholder="Please specify"
+												class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mt-2"
+											/>
+										{/if}
+									</div>
+								</div>
+							{/if}
+
+							<!-- Parent LLM Monitoring Level -->
+							<div class="mb-6">
+								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									How have you monitored or adjusted this child's AI use?
+								</div>
+								<div class="space-y-2">
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="strict_rules"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">I have set strict rules about AI use</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="discussions"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">I have had discussions about responsible AI use</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="limited_access"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">I have limited their access to AI tools</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="no_monitoring"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">I have not monitored their AI use</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="other"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white">Other</span>
+									</label>
+									{#if surveyResponses.parentLLMMonitoringLevel === 'other'}
+										<input
+											type="text"
+											bind:value={surveyResponses.parentLLMMonitoringOther}
+											placeholder="Please specify"
+											class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mt-2"
+										/>
+									{/if}
+								</div>
+							</div>
+
+							<!-- Child Email (optional) -->
+							<div class="mb-6">
+								<label
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+								>
+									Child Email (optional)
+								</label>
+								<input
+									type="email"
+									bind:value={surveyResponses.childEmail}
+									placeholder="child@example.com"
+									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+								/>
 							</div>
 						</div>
 

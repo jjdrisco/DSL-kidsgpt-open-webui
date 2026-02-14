@@ -952,12 +952,15 @@
 							customInstructions: [],
 							showOriginal1: false,
 							showComparisonView: false,
-							attentionCheckSelected: false,
-							attentionCheckPassed: false,
-							markedNotApplicable: false,
-							step1Completed: false,
-							step2Completed: false,
-							step3Completed: false,
+						attentionCheckSelected: false,
+						attentionCheckPassed: false,
+						attentionCheckStep1Passed: false,
+						attentionCheckStep2Passed: false,
+						attentionCheckStep3Passed: false,
+						markedNotApplicable: false,
+						step1Completed: false,
+						step2Completed: false,
+						step3Completed: false,
 							concernLevel: null,
 							concernReason: '',
 							satisfactionLevel: null,
@@ -1057,12 +1060,15 @@
 							customInstructions: [],
 							showOriginal1: false,
 							showComparisonView: false,
-							attentionCheckSelected: false,
-							attentionCheckPassed: false,
-							markedNotApplicable: false,
-							step1Completed: false,
-							step2Completed: false,
-							step3Completed: false,
+						attentionCheckSelected: false,
+						attentionCheckPassed: false,
+						attentionCheckStep1Passed: false,
+						attentionCheckStep2Passed: false,
+						attentionCheckStep3Passed: false,
+						markedNotApplicable: false,
+						step1Completed: false,
+						step2Completed: false,
+						step3Completed: false,
 							concernLevel: null,
 							concernReason: '',
 							satisfactionLevel: null,
@@ -1286,6 +1292,10 @@
 		// passed indicates the attention check scenario was successfully completed
 		attentionCheckSelected: boolean;
 		attentionCheckPassed: boolean;
+		// Attention check step tracking (non-blocking - for analytics only)
+		attentionCheckStep1Passed: boolean; // Step 1: Highlighted anything
+		attentionCheckStep2Passed: boolean; // Step 2: Entered "attention check" in concern reason
+		attentionCheckStep3Passed: boolean; // Step 3: Selected "I read the instructions"
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		// Unified initial decision flow state (3-step flow)
@@ -2580,6 +2590,9 @@
 			showComparisonView,
 			attentionCheckSelected,
 			attentionCheckPassed,
+			attentionCheckStep1Passed: existingState?.attentionCheckStep1Passed || false,
+			attentionCheckStep2Passed: existingState?.attentionCheckStep2Passed || false,
+			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			markedNotApplicable,
 			customPrompt:
 				isCustomScenario && customScenarioGenerated
@@ -2591,6 +2604,9 @@
 			step1Completed,
 			step2Completed,
 			step3Completed,
+			attentionCheckStep1Passed: existingState?.attentionCheckStep1Passed || false,
+			attentionCheckStep2Passed: existingState?.attentionCheckStep2Passed || false,
+			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			concernLevel,
 			concernReason,
 			satisfactionLevel,
@@ -2708,6 +2724,7 @@
 		showOriginal1 = false;
 		showComparisonView = false;
 		attentionCheckSelected = false;
+		attentionCheckPassed = false;
 		attentionCheckProcessing = false; // Reset processing flag when loading new scenario
 		// Reset Step 3 UI state fields
 		moderationPanelExpanded = false;
@@ -3628,14 +3645,58 @@
 				attentionCheckSelected = false;
 				attentionCheckPassed = false;
 				attentionCheckProcessing = false;
+				// Clear step 3 tracking
+				if (isAttentionCheckScenario) {
+					const currentIdentifier = getScenarioId(selectedScenarioIndex);
+					const state = scenarioStates.get(currentIdentifier);
+					if (state) {
+						state.attentionCheckStep3Passed = false;
+						state.attentionCheckPassed = false;
+						scenarioStates.set(currentIdentifier, state);
+					}
+				}
 				return;
 			}
 
 			// If selecting and this is an attention check scenario, handle specially
 			if (isAttentionCheckScenario) {
 				attentionCheckSelected = true;
-				attentionCheckPassed = true;
 				attentionCheckProcessing = true; // Lock button immediately
+				
+				// Track step 3: User selected "I read the instructions"
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const state = scenarioStates.get(currentIdentifier) || {
+					versions: [],
+					currentVersionIndex: -1,
+					confirmedVersionIndex: null,
+					highlightedTexts1: [],
+					selectedModerations: new Set(),
+					customInstructions: [],
+					showOriginal1: false,
+					showComparisonView: false,
+					attentionCheckSelected: false,
+					attentionCheckPassed: false,
+					attentionCheckStep1Passed: false,
+					attentionCheckStep2Passed: false,
+					attentionCheckStep3Passed: false,
+					markedNotApplicable: false,
+					step1Completed: false,
+					step2Completed: false,
+					step3Completed: false,
+					concernLevel: null,
+					concernReason: '',
+					satisfactionLevel: null,
+					satisfactionReason: '',
+					nextAction: null
+				};
+				state.attentionCheckStep3Passed = true;
+				
+				// Calculate overall pass/fail based on all 3 steps
+				state.attentionCheckPassed = state.attentionCheckStep1Passed && 
+				                             state.attentionCheckStep2Passed && 
+				                             state.attentionCheckStep3Passed;
+				attentionCheckPassed = state.attentionCheckPassed;
+				scenarioStates.set(currentIdentifier, state);
 				console.log(
 					'[ATTENTION_CHECK] Scenario:',
 					selectedScenarioIndex,
@@ -3984,15 +4045,47 @@
 
 			// showInitialDecisionPane is now derived
 		} else {
-			// **NEW VALIDATION**: Require at least one highlight to continue
-			if (highlightedTexts1.length === 0) {
-				toast.error('Please highlight at least one concern to continue, or skip this scenario');
-				return; // Cannot proceed without highlights
+			// For attention checks: track if highlighted (non-blocking)
+			if (isAttentionCheckScenario) {
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const state = scenarioStates.get(currentIdentifier) || {
+					versions: [],
+					currentVersionIndex: -1,
+					confirmedVersionIndex: null,
+					highlightedTexts1: [],
+					selectedModerations: new Set(),
+					customInstructions: [],
+					showOriginal1: false,
+					showComparisonView: false,
+					attentionCheckSelected: false,
+					attentionCheckPassed: false,
+					attentionCheckStep1Passed: false,
+					attentionCheckStep2Passed: false,
+					attentionCheckStep3Passed: false,
+					markedNotApplicable: false,
+					step1Completed: false,
+					step2Completed: false,
+					step3Completed: false,
+					concernLevel: null,
+					concernReason: '',
+					satisfactionLevel: null,
+					satisfactionReason: '',
+					nextAction: null
+				};
+				// Track if user highlighted anything (non-blocking)
+				state.attentionCheckStep1Passed = highlightedTexts1.length > 0;
+				scenarioStates.set(currentIdentifier, state);
 			}
 
-			// User has highlighted at least one concern
+			// **VALIDATION**: Require at least one highlight to continue (for regular scenarios only)
+			// Attention checks can proceed without highlights (non-blocking)
+			if (!isAttentionCheckScenario && highlightedTexts1.length === 0) {
+				toast.error('Please highlight at least one concern to continue, or skip this scenario');
+				return; // Cannot proceed without highlights for regular scenarios
+			}
+
+			// User has highlighted at least one concern (or it's an attention check)
 			step1Completed = true;
-			step1Completed = true; // Mark step 1 complete to move to step 2
 
 			// Save highlights to `moderation_session` table (batch save as JSON array)
 			// Note: Individual highlights were already saved to `selection` table via `saveSelection()`
@@ -4046,16 +4139,79 @@
 	 * Marks scenario as complete and navigates to next scenario if available.
 	 */
 	async function completeStep2() {
-		// Validate explanation field is filled
-		if (!concernReason.trim()) {
+		// Validate concern level is selected (for regular scenarios only)
+		// Attention checks can proceed without validation (non-blocking)
+		if (!isAttentionCheckScenario && concernLevel === null) {
+			toast.error('Please select your level of concern');
+			return;
+		}
+
+		// For attention checks: track step 2 (non-blocking)
+		if (isAttentionCheckScenario) {
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const state = scenarioStates.get(currentIdentifier) || {
+				versions: [],
+				currentVersionIndex: -1,
+				confirmedVersionIndex: null,
+				highlightedTexts1: [],
+				selectedModerations: new Set(),
+				customInstructions: [],
+				showOriginal1: false,
+				showComparisonView: false,
+				attentionCheckSelected: false,
+				attentionCheckPassed: false,
+				attentionCheckStep1Passed: false,
+				attentionCheckStep2Passed: false,
+				attentionCheckStep3Passed: false,
+				markedNotApplicable: false,
+				step1Completed: false,
+				step2Completed: false,
+				step3Completed: false,
+				concernLevel: null,
+				concernReason: '',
+				satisfactionLevel: null,
+				satisfactionReason: '',
+				nextAction: null
+			};
+			// Track if user entered "attention check" in concern reason (case-insensitive)
+			state.attentionCheckStep2Passed = concernReason.toLowerCase().includes('attention check');
+			scenarioStates.set(currentIdentifier, state);
+		}
+
+		// Validate explanation field is filled (for regular scenarios only)
+		// Attention checks can proceed without validation (non-blocking)
+		if (!isAttentionCheckScenario && !concernReason.trim()) {
 			toast.error('Please explain why this content concerns you');
 			return;
 		}
 
-		// Validate minimum length requirement
-		if (concernReason.trim().length < 10) {
+		// Validate minimum length requirement (for regular scenarios only)
+		// Attention checks can proceed without validation (non-blocking)
+		if (!isAttentionCheckScenario && concernReason.trim().length < 10) {
 			toast.error('Please provide at least 10 characters in your explanation');
 			return;
+		}
+
+		// For attention checks: Calculate overall pass/fail after step 2
+		if (isAttentionCheckScenario) {
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const state = scenarioStates.get(currentIdentifier);
+			if (state) {
+				// Step 3 may have been tracked already if user selected "I read the instructions"
+				// If not, it will be tracked when user selects it
+				// Calculate overall pass/fail based on all tracked steps
+				state.attentionCheckPassed = state.attentionCheckStep1Passed && 
+				                             state.attentionCheckStep2Passed && 
+				                             state.attentionCheckStep3Passed;
+				attentionCheckPassed = state.attentionCheckPassed;
+				scenarioStates.set(currentIdentifier, state);
+				console.log('Attention check tracking:', {
+					step1: state.attentionCheckStep1Passed,
+					step2: state.attentionCheckStep2Passed,
+					step3: state.attentionCheckStep3Passed,
+					overall: state.attentionCheckPassed
+				});
+			}
 		}
 
 		// Mark step 2 and step 3 as complete (simplified flow - no Step 3)
@@ -4116,7 +4272,7 @@
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_passed: isAttentionCheckScenario ? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false) : false
 			});
 			console.log('✅ Identification complete - scenario marked as final');
 			window.dispatchEvent(new Event('workflow-updated'));
@@ -4203,7 +4359,7 @@
 				is_final_version: action === 'move_on', // Mark as final if moving on
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_passed: isAttentionCheckScenario ? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false) : false
 			});
 
 			console.log('✅ Satisfaction check saved to backend');
@@ -4316,7 +4472,7 @@
 				decided_at: Date.now(),
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_passed: isAttentionCheckScenario ? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false) : false
 			});
 			window.dispatchEvent(new Event('workflow-updated'));
 		} catch (e) {
@@ -4929,12 +5085,15 @@
 										customInstructions: [],
 										showOriginal1: false,
 										showComparisonView: false,
-										attentionCheckSelected: false,
-										attentionCheckPassed: false,
-										markedNotApplicable: false,
-										step1Completed: false,
-										step2Completed: false,
-										step3Completed: false,
+						attentionCheckSelected: false,
+						attentionCheckPassed: false,
+						attentionCheckStep1Passed: false,
+						attentionCheckStep2Passed: false,
+						attentionCheckStep3Passed: false,
+						markedNotApplicable: false,
+						step1Completed: false,
+						step2Completed: false,
+						step3Completed: false,
 										concernLevel: null,
 										concernReason: '',
 										satisfactionLevel: null,
@@ -6379,8 +6538,44 @@
 												</div>
 											</div>
 
-											<!-- Explanation field -->
+											<!-- Concern Rating Likert Scale (before explain why) -->
 											<div class="space-y-4">
+												<div>
+													<label
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														To what extent, if any, are you concerned about this interaction? <span class="text-red-500">*</span>
+													</label>
+													<div class="space-y-2">
+														{#each [
+															{ value: 1, label: 'Not concerned at all' },
+															{ value: 2, label: 'Somewhat unconcerned' },
+															{ value: 3, label: 'Neutral' },
+															{ value: 4, label: 'Somewhat concerned' },
+															{ value: 5, label: 'Concerned' }
+														] as option}
+															<label
+																class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {concernLevel ===
+																option.value
+																	? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+																	: ''}"
+															>
+																<input
+																	type="radio"
+																	name="concernLevel"
+																	value={option.value}
+																	bind:group={concernLevel}
+																	class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+																/>
+																<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+																	{option.label}
+																</span>
+															</label>
+														{/each}
+													</div>
+												</div>
+
+												<!-- Explanation field -->
 												<div>
 													<label
 														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -6401,7 +6596,7 @@
 											<div>
 												<button
 													on:click={completeStep2}
-													disabled={!concernReason.trim() || concernReason.trim().length < 10}
+													disabled={concernLevel === null || !concernReason.trim() || concernReason.trim().length < 10}
 													class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 												>
 													Submit
