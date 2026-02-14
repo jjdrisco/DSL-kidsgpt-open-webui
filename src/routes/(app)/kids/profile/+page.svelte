@@ -6,6 +6,7 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
+	import { getWorkflowState } from '$lib/apis/workflow';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { assignScenariosForChild } from '$lib/services/scenarioAssignment';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
@@ -71,11 +72,7 @@
 			childSelectedForQuestions = index;
 			await childProfileSync.setCurrentChildId(profile.id);
 
-			// Unlock Step 2
-			localStorage.setItem('assignmentStep', '2');
-			localStorage.setItem('moderationScenariosAccessed', 'true');
-			localStorage.setItem('unlock_moderation', 'true');
-			window.dispatchEvent(new Event('storage'));
+			// Backend has child profile; sidebar will refetch workflow state
 			window.dispatchEvent(new Event('workflow-updated'));
 
 			// Show confirmation modal
@@ -91,11 +88,7 @@
 			childSelectedForQuestions = index;
 			await childProfileSync.setCurrentChildId(profile.id);
 
-			// Unlock Step 2
-			localStorage.setItem('assignmentStep', '2');
-			localStorage.setItem('moderationScenariosAccessed', 'true');
-			localStorage.setItem('unlock_moderation', 'true');
-			window.dispatchEvent(new Event('storage'));
+			// Backend has child profile; sidebar will refetch workflow state
 			window.dispatchEvent(new Event('workflow-updated'));
 
 			// Show confirmation modal
@@ -107,11 +100,7 @@
 		childSelectedForQuestions = index;
 		await childProfileSync.setCurrentChildId(profile.id);
 
-		// Unlock Step 2
-		localStorage.setItem('assignmentStep', '2');
-		localStorage.setItem('moderationScenariosAccessed', 'true');
-		localStorage.setItem('unlock_moderation', 'true');
-		window.dispatchEvent(new Event('storage'));
+		// Backend has child profile; sidebar will refetch workflow state
 		window.dispatchEvent(new Event('workflow-updated'));
 
 		// Show confirmation modal (as in original workflow)
@@ -119,9 +108,6 @@
 	}
 
 	async function proceedToNextStep() {
-		// Survey flow: child profile (step 1) → scenarios (step 2)
-		localStorage.setItem('assignmentStep', '2');
-		window.dispatchEvent(new Event('storage'));
 		window.dispatchEvent(new Event('workflow-updated'));
 		goto('/moderation-scenario');
 	}
@@ -131,10 +117,18 @@
 	}
 
 	onMount(async () => {
-		// Redirect if instructions not confirmed
-		if (localStorage.getItem('instructionsCompleted') !== 'true') {
-			goto('/assignment-instructions');
-			return;
+		// Redirect if instructions not completed (check backend)
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const state = await getWorkflowState(token);
+				if (!state?.progress_by_section?.instructions_completed) {
+					goto('/assignment-instructions');
+					return;
+				}
+			}
+		} catch {
+			// On error, allow access (fallback)
 		}
 
 		// Wait for user store to be loaded
@@ -253,10 +247,7 @@
 					<span>Previous Task</span>
 				</button>
 				<button
-					on:click={() => {
-						localStorage.setItem('assignmentStep', '2');
-						goto('/moderation-scenario');
-					}}
+					on:click={() => goto('/moderation-scenario')}
 					disabled={childSelectedForQuestions === -1}
 					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 {childSelectedForQuestions !==
 					-1

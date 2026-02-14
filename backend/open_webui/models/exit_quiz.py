@@ -62,7 +62,7 @@ class ExitQuizTable:
     ) -> Optional[ExitQuizModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
-            ts = int(time.time_ns())
+            ts = int(time.time() * 1000)
 
             model = ExitQuizModel(
                 **{
@@ -117,7 +117,7 @@ class ExitQuizTable:
             )
             if not row:
                 return None
-            ts = int(time.time_ns())
+            ts = int(time.time() * 1000)
             row.child_id = updated.child_id
             row.answers = updated.answers
             row.score = updated.score

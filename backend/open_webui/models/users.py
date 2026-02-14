@@ -86,6 +86,8 @@ class User(Base):
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+    workflow_reset_at = Column(BigInteger, nullable=True)
+    instructions_completed_at = Column(BigInteger, nullable=True)
 
 
 class UserModel(BaseModel):
@@ -128,6 +130,8 @@ class UserModel(BaseModel):
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+    workflow_reset_at: Optional[int] = None  # timestamp of last workflow reset
+    instructions_completed_at: Optional[int] = None  # when user completed assignment instructions
 
     model_config = ConfigDict(from_attributes=True)
 

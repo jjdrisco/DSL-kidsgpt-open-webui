@@ -104,13 +104,20 @@
 	let loadingWorkflow = false;
 	$: isInterviewee = userType === 'interviewee';
 
+	/** Get auth token from user store first, then localStorage. Always use backend as source of truth. */
+	function getToken(): string | null {
+		return ($user as { token?: string })?.token ?? localStorage.token ?? null;
+	}
+
 	// Fetch workflow state from backend
 	async function fetchWorkflowState() {
-		if (userType !== 'interviewee' || !localStorage.token) return;
+		if (userType !== 'interviewee') return;
+		const token = getToken();
+		if (!token) return;
 
 		loadingWorkflow = true;
 		try {
-			workflowState = await getWorkflowState(localStorage.token);
+			workflowState = await getWorkflowState(token);
 		} catch (error) {
 			console.error('Failed to fetch workflow state:', error);
 			workflowState = null;

@@ -23,6 +23,10 @@ from sqlalchemy.orm import relationship
 from open_webui.internal.db import Base, get_db
 import logging
 
+# Import Selection early so it's in the registry before ScenarioAssignment mapper config.
+# Must be before ScenarioAssignment class; avoids circular import (selections uses string ref).
+from open_webui.models.selections import Selection
+
 log = logging.getLogger(__name__)
 
 
@@ -151,9 +155,7 @@ class ScenarioAssignment(Base):
 
     # Relationships
     scenario = relationship("Scenario", back_populates="assignments")
-    # Bidirectional relationship to Selection (defined in selections.py).
-    # Use string class names so SQLAlchemy can resolve them without import cycles.
-    selections = relationship("Selection", back_populates="assignment")
+    selections = relationship(Selection, back_populates="assignment")
 
     __table_args__ = (
         Index("idx_assignments_participant_id", "participant_id"),

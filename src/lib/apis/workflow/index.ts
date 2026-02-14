@@ -70,6 +70,7 @@ export interface WorkflowStateResponse {
 	next_route: string;
 	substep: string | null;
 	progress_by_section: {
+		instructions_completed?: boolean;
 		has_child_profile: boolean;
 		moderation_completed_count: number;
 		moderation_total: number;
@@ -85,6 +86,79 @@ export const getWorkflowState = async (token: string): Promise<WorkflowStateResp
 			Authorization: `Bearer ${token}`
 		}
 	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const markInstructionsComplete = async (token: string): Promise<{ status: string; message: string }> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/instructions-complete`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export interface WorkflowDraftResponse {
+	data: Record<string, unknown> | null;
+	updated_at: number | null;
+}
+
+export const getWorkflowDraft = async (
+	token: string,
+	childId: string,
+	draftType: 'exit_survey' | 'moderation'
+): Promise<WorkflowDraftResponse> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/workflow/draft?child_id=${encodeURIComponent(childId)}&draft_type=${encodeURIComponent(draftType)}`,
+		{
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	);
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const saveWorkflowDraft = async (
+	token: string,
+	childId: string,
+	draftType: 'exit_survey' | 'moderation',
+	data: Record<string, unknown>
+): Promise<WorkflowDraftResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/draft`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ child_id: childId, draft_type: draftType, data })
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const deleteWorkflowDraft = async (
+	token: string,
+	childId: string,
+	draftType: 'exit_survey' | 'moderation'
+): Promise<{ status: string; deleted: boolean }> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/workflow/draft?child_id=${encodeURIComponent(childId)}&draft_type=${encodeURIComponent(draftType)}`,
+		{
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	);
 	if (!res.ok) throw await res.json();
 	return res.json();
 };

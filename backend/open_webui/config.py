@@ -2186,7 +2186,10 @@ Ensure that the tools are effectively utilized to achieve the highest-quality an
 # Vector Database
 ####################################
 
-VECTOR_DB = os.environ.get("VECTOR_DB", "pgvector")
+# When using SQLite, default to Chroma (pgvector requires Postgres)
+_use_sqlite = "sqlite" in (DATABASE_URL or "").lower()
+_default_vector_db = "chroma" if _use_sqlite else "pgvector"
+VECTOR_DB = os.environ.get("VECTOR_DB", _default_vector_db)
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"

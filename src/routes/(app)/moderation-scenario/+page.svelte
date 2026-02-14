@@ -26,8 +26,14 @@
 		getAssignmentsForChild,
 		type AssignmentWithScenario
 	} from '$lib/apis/moderation';
-	import { getChildProfileById, getChildProfilesForUser } from '$lib/apis/child-profiles';
-	import { finalizeModeration } from '$lib/apis/workflow';
+	import { getChildProfileById, getChildProfiles, getChildProfilesForUser } from '$lib/apis/child-profiles';
+	import {
+		finalizeModeration,
+		getWorkflowState,
+		getWorkflowDraft,
+		saveWorkflowDraft,
+		deleteWorkflowDraft
+	} from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -141,6 +147,14 @@
 	let scenarioList: Array<[string, string]> = []; // Initialized empty - populated by personality-based scenarios
 	let sessionNumber: number = 1; // Default session number for non-Prolific users
 
+	// Workflow state for Next Task button (exit survey access)
+	let workflowStateForModeration: { progress_by_section?: { moderation_completed_count?: number; moderation_total?: number; exit_survey_completed?: boolean } } | null = null;
+	$: canAccessExitSurvey =
+		workflowStateForModeration?.progress_by_section?.exit_survey_completed ||
+		((workflowStateForModeration?.progress_by_section?.moderation_completed_count ?? 0) >=
+			(workflowStateForModeration?.progress_by_section?.moderation_total ?? 0)) ||
+		false;
+
 	// Track current session ID to detect changes
 	let trackedSessionId: string | null = null;
 	let trackedUrlSessionId: string | null = null;
@@ -153,58 +167,21 @@
 	// Resolve session number as a function (not reactive) to avoid cyclical dependencies
 	// Note: This function should only be called during component initialization (onMount)
 	// to avoid accessing reactive stores outside component context
-	function resolveSessionNumber() {
+		function resolveSessionNumber() {
 		try {
-			if (typeof window === 'undefined' || !selectedChildId) {
-				// Fallback: try to get from user object (only if in component context)
-				try {
-					const userObj = $user as any;
-					const userSessionNumber = userObj?.session_number;
-					if (userSessionNumber && Number.isFinite(userSessionNumber)) {
-						sessionNumber = Number(userSessionNumber);
-					} else {
-						sessionNumber = 1;
-					}
-				} catch (e) {
-					// Not in component context, use default
-					sessionNumber = 1;
+			// Use session number from backend (user object)
+			try {
+				const userObj = $user as any;
+				const userSessionNumber = userObj?.session_number;
+				if (userSessionNumber && Number.isFinite(userSessionNumber)) {
+					sessionNumber = Number(userSessionNumber);
+					return;
 				}
-				return;
+			} catch (e) {
+				// Not in component context, use default
 			}
-
-			let resolvedSessionNumber: number | null = null;
-
-			// First, check localStorage for child-specific session number (most up-to-date)
-			const sessionKey = `moderationSessionNumber_${selectedChildId}`;
-			const storedSession = localStorage.getItem(sessionKey);
-			if (storedSession) {
-				const parsedSession = parseInt(storedSession);
-				if (!isNaN(parsedSession) && parsedSession > 0) {
-					resolvedSessionNumber = parsedSession;
-				}
-			}
-
-			// Fallback: try to get from user object if localStorage didn't have a value
-			if (resolvedSessionNumber === null) {
-				try {
-					const userObj = $user as any;
-					const userSessionNumber = userObj?.session_number;
-					if (userSessionNumber && Number.isFinite(userSessionNumber)) {
-						resolvedSessionNumber = Number(userSessionNumber);
-					}
-				} catch (e) {
-					// Not in component context, skip user object fallback
-				}
-			}
-
-			// Final fallback
-			if (resolvedSessionNumber === null || !Number.isFinite(resolvedSessionNumber)) {
-				resolvedSessionNumber = 1;
-			}
-
-			sessionNumber = resolvedSessionNumber;
+			sessionNumber = 1;
 		} catch (e) {
-			// If anything fails, use default
 			console.warn('Error resolving session number, using default:', e);
 			sessionNumber = 1;
 		}
@@ -286,13 +263,13 @@
 		}
 	}
 
-	function handleSessionChange(newSessionId: string) {
+	async function handleSessionChange(newSessionId: string) {
 		const lastLoadedSessionId = localStorage.getItem('lastLoadedModerationSessionId') || '';
 
 		if (newSessionId && newSessionId !== lastLoadedSessionId) {
 			console.log('🔄 New session detected in moderation page, resetting state');
 			resetAllScenarioStates();
-			clearModerationLocalKeys();
+			await clearModerationLocalKeys();
 			localStorage.setItem('lastLoadedModerationSessionId', newSessionId);
 
 			// Reset scenario index to start fresh
@@ -457,9 +434,6 @@
 		}
 	}
 
-	// Helper for current scenario key (still used for UI state)
-	const currentKeyFor = (childId: string | number) => `moderationCurrentScenario_${childId}`;
-
 	function shouldRepollScenarios(childId: string | number, session: number): boolean {
 		if (!childId || !Number.isFinite(session)) return false;
 		if (scenariosLockedForSession && lastPolledChildId === childId && lastPolledSession === session)
@@ -522,15 +496,16 @@
 			// Continue without attention check if loading fails
 		}
 
+		// disable custom scenario
 		// Ensure custom scenario is last
-		const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-		if (!hasCustom) {
-			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-		} else {
-			// Move existing custom to the end
-			list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
-			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-		}
+		//const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+		//if (!hasCustom) {
+		//	list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//} else {
+		//	// Move existing custom to the end
+		//	list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
+		//	list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//}
 		return list;
 	}
 
@@ -578,12 +553,7 @@
 		return updated;
 	}
 
-	// Persist current scenario selection whenever it changes
-	$: if (selectedChildId != null && typeof selectedScenarioIndex === 'number') {
-		try {
-			localStorage.setItem(currentKeyFor(selectedChildId), String(selectedScenarioIndex));
-		} catch {}
-	}
+	// Current scenario selection is persisted via saveCurrentScenarioState -> saveWorkflowDraft
 
 	// Custom scenario state
 	let customScenarioPrompt: string = '';
@@ -601,19 +571,13 @@
 
 	async function ensureSessionNumberForChild(childId: string) {
 		try {
-			const sessionKey = `moderationSessionNumber_${childId}`;
-			const existing = localStorage.getItem(sessionKey);
-			if (!existing) {
-				const sessions = await getModerationSessions(localStorage.token, childId);
-				const maxSession =
-					Array.isArray(sessions) && sessions.length > 0
-						? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
-						: 0;
-				localStorage.setItem(sessionKey, String(maxSession + 1));
-				// Prefer the freshly established session number immediately
-				sessionNumber = maxSession + 1;
-				console.log('✅ Started new session for child:', childId, 'session:', sessionNumber);
-			}
+			const sessions = await getModerationSessions(localStorage.token, childId);
+			const maxSession =
+				Array.isArray(sessions) && sessions.length > 0
+					? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
+					: 0;
+			sessionNumber = maxSession > 0 ? maxSession : ($user?.session_number ?? 1);
+			console.log('✅ Ensured session number for child:', childId, 'session:', sessionNumber);
 		} catch (e) {
 			console.warn('Failed to ensure session number for child', childId, e);
 		}
@@ -786,36 +750,38 @@
 		lastPolledChildId = null;
 		lastPolledSession = null;
 
-		// Clear child-specific localStorage states
-		try {
-			if (selectedChildId) {
-				const stateKey = `moderationScenarioStates_${selectedChildId}`;
-				const timerKey = `moderationScenarioTimers_${selectedChildId}`;
-				const currentKey = `moderationCurrentScenario_${selectedChildId}`;
-
-				localStorage.removeItem(stateKey);
-				localStorage.removeItem(timerKey);
-				localStorage.removeItem(currentKey);
-				console.log(`Cleared localStorage states for child: ${selectedChildId}`);
-			}
-		} catch (e) {
-			console.error('Failed to clear scenario states from localStorage:', e);
-		}
+		// Moderation draft is cleared by clearModerationLocalKeys when session changes
+		// resetAllScenarioStates just clears in-memory state
 	}
 
 	// Load child profiles and generate personality-based scenarios
+	// Uses API directly (not cache) to ensure fresh data on navigation - avoids race where
+	// user store or cache may not be ready when page mounts
 	async function loadChildProfiles() {
 		try {
+			const token = localStorage.getItem('token') || (typeof window !== 'undefined' && localStorage.token) || '';
+			if (!token) {
+				console.warn('No token available for loading child profiles');
+				return;
+			}
 			// Check if admin is viewing another user's quiz
 			const adminUserId = $page.url.searchParams.get('user_id');
 			if (adminUserId && $user?.role === 'admin') {
 				// Load child profiles for the target user
-				childProfiles = await getChildProfilesForUser(localStorage.token, adminUserId);
+				childProfiles = await getChildProfilesForUser(token, adminUserId);
 				console.log('Admin loaded child profiles for user:', adminUserId, childProfiles);
 			} else {
-				// Load child profiles for current user
-				childProfiles = await childProfileSync.getChildProfiles();
-				console.log('Loaded child profiles:', childProfiles);
+				// Load child profiles directly from API (bypass cache) so we always get fresh data
+				// when navigating to this page - fixes race where cache/user store may not be ready
+				let profiles = await getChildProfiles(token);
+				childProfiles = Array.isArray(profiles) ? profiles : [];
+				if (childProfiles.length === 0) {
+					// Fallback to cache in case API had a transient issue
+					profiles = await childProfileSync.getChildProfiles();
+					childProfiles = Array.isArray(profiles) ? profiles : [];
+					console.log('API returned empty, tried cache fallback:', childProfiles.length);
+				}
+				console.log('Loaded child profiles:', childProfiles.length, childProfiles);
 			}
 
 			if (childProfiles.length > 0) {
@@ -839,25 +805,19 @@
 		}
 	}
 
-	// Helper: aggressively clear moderation-related localStorage keys
-	function clearModerationLocalKeys() {
-		const keysToRemove: string[] = [];
-		for (let i = 0; i < localStorage.length; i++) {
-			const k = localStorage.key(i) || '';
-			if (
-				k.startsWith('scenario_') ||
-				k.startsWith('selection-') ||
-				k.startsWith('input-panel-state-') ||
-				k.startsWith('selection-dismissed-')
-			) {
-				keysToRemove.push(k);
+	// Helper: clear moderation draft when session changes (backend reset clears drafts on full reset)
+	async function clearModerationLocalKeys() {
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+					console.log(`Cleared moderation draft for child: ${selectedChildId}`);
+				}
+			} catch (e) {
+				console.error('Failed to clear moderation draft:', e);
 			}
 		}
-		keysToRemove.forEach((k) => localStorage.removeItem(k));
-
-		// Also reset workflow progress state for new session
-		localStorage.removeItem('assignmentStep');
-		localStorage.setItem('assignmentStep', '0');
 	}
 
 	/**
@@ -979,7 +939,7 @@
 					console.log('✅ Using existing assignments, scenarioList length:', scenarioList.length);
 
 					// Load saved states for this child after scenarios are loaded
-					loadSavedStates();
+					await loadSavedStates();
 
 					// Load the first scenario to ensure UI is updated (force reload)
 					await loadScenario(0, true);
@@ -1074,7 +1034,7 @@
 					console.log('✅ Created new assignments, scenarioList length:', scenarioList.length);
 
 					// Load saved states for this child after scenarios are loaded
-					loadSavedStates();
+					await loadSavedStates();
 
 					// Load the first scenario to ensure UI is updated (force reload)
 					await loadScenario(0, true);
@@ -1361,21 +1321,13 @@
 		return completed;
 	})();
 
-	// Reactive computation for completion count
-	// This updates when scenarioStates changes (via scenarioStatesUpdateTrigger)
+	// Reactive computation for completion count (used in scenarios sidebar)
 	$: completionCount = (() => {
-		// Access scenarioStatesUpdateTrigger to make this reactive to scenario state changes
 		const _ = scenarioStatesUpdateTrigger;
-
-		// Count only completed scenarios in scenarioStates
 		let completedInMap = 0;
 		scenarioStates.forEach((state, index) => {
-			if (isScenarioCompleted(index)) {
-				completedInMap++;
-			}
+			if (isScenarioCompleted(index)) completedInMap++;
 		});
-
-		// Add current scenario if it's completed but not yet in scenarioStates
 		const isCurrentAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
 			ATTENTION_CHECK_MARKER
 		);
@@ -1384,8 +1336,7 @@
 			: markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
 		const currentNotInMap = !scenarioStates.has(selectedScenarioIndex);
 		const completedCount = completedInMap + (currentCompleted && currentNotInMap ? 1 : 0);
-
-		return `${completedCount} of ${scenarioList.length} completed`;
+		return `${completedCount}/${scenarioList.length}`;
 	})();
 
 	// Reactive array of completion statuses for all scenarios
@@ -2549,7 +2500,7 @@
 		}
 	}
 
-	function saveCurrentScenarioState() {
+	async function saveCurrentScenarioState() {
 		// Guard: Don't save during scenario transitions to prevent saving old state to new scenario index
 		if (isLoadingScenario) {
 			console.log('⚠️ saveCurrentScenarioState skipped - isLoadingScenario is true');
@@ -2595,33 +2546,32 @@
 		// This ensures the sidebar updates when scenario completion state changes
 		scenarioStates = new Map(scenarioStates);
 
-		// Save to localStorage for persistence across navigation (child-specific)
-		try {
-			const serializedStates = new Map();
-			scenarioStates.forEach((state, index) => {
-				serializedStates.set(index, {
-					...state,
-					selectedModerations: Array.from(state.selectedModerations) // Convert Set to Array for JSON
-				});
-			});
-
-			// Use child-specific localStorage keys
-			const stateKey = selectedChildId
-				? `moderationScenarioStates_${selectedChildId}`
-				: 'moderationScenarioStates';
-			const timerKey = selectedChildId
-				? `moderationScenarioTimers_${selectedChildId}`
-				: 'moderationScenarioTimers';
-			const currentKey = selectedChildId
-				? `moderationCurrentScenario_${selectedChildId}`
-				: 'moderationCurrentScenario';
-
-			localStorage.setItem(stateKey, JSON.stringify(Array.from(serializedStates.entries())));
-			localStorage.setItem(timerKey, JSON.stringify(Array.from(scenarioTimers.entries())));
-			localStorage.setItem(currentKey, selectedScenarioIndex.toString());
-			console.log(`Saved moderation states to localStorage for child: ${selectedChildId}`);
-		} catch (e) {
-			console.error('Failed to save moderation states to localStorage:', e);
+		// Save to backend for persistence across navigation
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					const serializedStates: [number, unknown][] = [];
+					scenarioStates.forEach((state, index) => {
+						serializedStates.push([
+							index,
+							{
+								...state,
+								selectedModerations: Array.from(state.selectedModerations)
+							}
+						]);
+					});
+					const data = {
+						states: serializedStates,
+						timers: Array.from(scenarioTimers.entries()),
+						current: selectedScenarioIndex
+					};
+					await saveWorkflowDraft(token, selectedChildId, 'moderation', data);
+					console.log(`Saved moderation states to backend for child: ${selectedChildId}`);
+				}
+			} catch (e) {
+				console.error('Failed to save moderation states to backend:', e);
+			}
 		}
 	}
 
@@ -3247,48 +3197,32 @@
 
 	function cancelReset() {}
 
-	function loadSavedStates() {
+	async function loadSavedStates() {
 		try {
-			// Use child-specific localStorage keys
-			const stateKey = selectedChildId
-				? `moderationScenarioStates_${selectedChildId}`
-				: 'moderationScenarioStates';
-			const timerKey = selectedChildId
-				? `moderationScenarioTimers_${selectedChildId}`
-				: 'moderationScenarioTimers';
-			const currentKey = selectedChildId
-				? `moderationCurrentScenario_${selectedChildId}`
-				: 'moderationCurrentScenario';
-
-			// Load scenario states
-			const savedStates = localStorage.getItem(stateKey);
-			if (savedStates) {
-				const parsedStates = new Map(JSON.parse(savedStates));
-				scenarioStates.clear();
-				parsedStates.forEach((state: any, index: any) => {
-					scenarioStates.set(index, {
-						...state,
-						selectedModerations: new Set(state.selectedModerations) // Convert Array back to Set
-					});
-				});
-				// Reassign Map to trigger reactivity - Svelte needs Map reassignment to detect changes
-				scenarioStates = new Map(scenarioStates);
-				console.log(`Loaded saved scenario states from localStorage for child: ${selectedChildId}`);
-			}
-
-			// Load timers
-			const savedTimers = localStorage.getItem(timerKey);
-			if (savedTimers) {
-				scenarioTimers = new Map(JSON.parse(savedTimers));
-				console.log(`Loaded saved timers from localStorage for child: ${selectedChildId}`);
-			}
-
-			// Load current scenario
-			const savedCurrentScenario = localStorage.getItem(currentKey);
-			if (savedCurrentScenario) {
-				const scenarioIndex = parseInt(savedCurrentScenario);
-				if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
-					selectedScenarioIndex = scenarioIndex;
+			// Load from backend
+			if (selectedChildId && typeof window !== 'undefined') {
+				const token = localStorage.token || '';
+				if (token) {
+						const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
+						const data = draftRes?.data as { states?: [number, unknown][]; timers?: [number, number][]; current?: number } | undefined;
+						if (data?.states) {
+							scenarioStates.clear();
+							data.states.forEach(([index, state]: [number, any]) => {
+								scenarioStates.set(index, {
+									...state,
+									selectedModerations: new Set(state.selectedModerations || [])
+								});
+							});
+							scenarioStates = new Map(scenarioStates);
+							console.log(`Loaded saved scenario states from backend for child: ${selectedChildId}`);
+						}
+						if (data?.timers) {
+							scenarioTimers = new Map(data.timers);
+							console.log(`Loaded saved timers from backend for child: ${selectedChildId}`);
+						}
+						if (data?.current != null && data.current >= 0 && data.current < scenarioList.length) {
+							const scenarioIndex = data.current;
+							selectedScenarioIndex = scenarioIndex;
 					const [prompt, response] = scenarioList[scenarioIndex];
 
 					// If this is a custom scenario, restore the custom prompt first
@@ -3318,14 +3252,15 @@
 						originalResponse1 = response;
 					}
 					console.log('Restored current scenario:', scenarioIndex);
+						}
+					}
 				}
-			}
 		} catch (e) {
-			console.error('Failed to load saved states from localStorage:', e);
+			console.error('Failed to load saved states from backend:', e);
 		}
 	}
 
-	function resetConversation() {
+	async function resetConversation() {
 		// Reset current scenario state
 		highlightedTexts1 = [];
 		versions = [];
@@ -3355,20 +3290,16 @@
 		scenarioTimers.clear();
 		stopTimer();
 
-		// Clear child-specific localStorage
-		if (selectedChildId) {
-			const stateKey = `moderationScenarioStates_${selectedChildId}`;
-			const timerKey = `moderationScenarioTimers_${selectedChildId}`;
-			const currentKey = `moderationCurrentScenario_${selectedChildId}`;
-
-			localStorage.removeItem(stateKey);
-			localStorage.removeItem(timerKey);
-			localStorage.removeItem(currentKey);
-		} else {
-			// Fallback to non-specific keys
-			localStorage.removeItem('moderationScenarioStates');
-			localStorage.removeItem('moderationScenarioTimers');
-			localStorage.removeItem('moderationCurrentScenario');
+		// Clear moderation draft from backend
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+				}
+			} catch (e) {
+				console.error('Failed to delete moderation draft:', e);
+			}
 		}
 
 		// Reset to first scenario
@@ -4446,11 +4377,6 @@
 	}
 
 	function proceedToNextStep() {
-		// Update assignment step to 3 (exit survey)
-		localStorage.setItem('assignmentStep', '3');
-		localStorage.setItem('moderationScenariosAccessed', 'true');
-		localStorage.setItem('unlock_exit', 'true');
-		window.dispatchEvent(new Event('storage'));
 		window.dispatchEvent(new Event('workflow-updated'));
 		// Ask backend to mark latest per-scenario submission as final for this child/session
 		try {
@@ -4572,10 +4498,37 @@
 	//
 	// =================================================================================================
 
+	async function fetchWorkflowStateForModeration() {
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const state = await getWorkflowState(token);
+				workflowStateForModeration = state;
+			}
+		} catch (e) {
+			console.warn('Failed to fetch workflow state for moderation:', e);
+		}
+	}
+
+	// Handlers for event listeners - defined at component scope so we can remove them in onDestroy.
+	// Must NOT call onDestroy inside async onMount - causes lifecycle_outside_component error.
+	function onWorkflowUpdateHandler() {
+		fetchWorkflowStateForModeration();
+	}
+	function onResizeHandler() {
+		const shouldOpen = window.innerWidth >= 768;
+		if (shouldOpen !== sidebarOpen) {
+			sidebarOpen = shouldOpen;
+		}
+	}
+
 	onMount(async () => {
 		hasHydrated = true;
 		// Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
 		showSidebar.set(false);
+
+		await fetchWorkflowStateForModeration();
+		window.addEventListener('workflow-updated', onWorkflowUpdateHandler);
 
 		// Check for admin access via user_id query parameter
 		const adminUserId = $page.url.searchParams.get('user_id');
@@ -4592,14 +4545,7 @@
 		try {
 			// Initialize sidebar state based on screen size for mobile
 			sidebarOpen = window.innerWidth >= 768;
-			const onResize = () => {
-				const shouldOpen = window.innerWidth >= 768;
-				if (shouldOpen !== sidebarOpen) {
-					sidebarOpen = shouldOpen;
-				}
-			};
-			window.addEventListener('resize', onResize);
-			onDestroy(() => window.removeEventListener('resize', onResize));
+			window.addEventListener('resize', onResizeHandler);
 		} catch {}
 
 		// Warmup completion check is now handled synchronously via reactive statement
@@ -4633,9 +4579,14 @@
 		// Custom scenario is added during scenario list building (buildScenarioList function)
 		// No need to check for default scenarios anymore since we only use personality-based scenarios
 
-		// Guard navigation if user tries to jump ahead
-		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
-		if (step < 1) {
+		// Guard navigation if user tries to jump ahead (check backend workflow state)
+		try {
+			const wf = await getWorkflowState(localStorage.token);
+			if (!wf?.progress_by_section?.instructions_completed || !wf?.progress_by_section?.has_child_profile) {
+				goto('/kids/profile');
+				return;
+			}
+		} catch {
 			goto('/kids/profile');
 			return;
 		}
@@ -4655,11 +4606,7 @@
 			const sessionInfo = await getCurrentSession(localStorage.token);
 			if (sessionInfo.is_prolific_user && selectedChildId) {
 				// Skip if we shouldn't repoll (locked and no change)
-				let prospectiveSession = sessionNumber;
-				try {
-					const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
-					if (stored && !Number.isNaN(Number(stored))) prospectiveSession = Number(stored);
-				} catch {}
+				const prospectiveSession = sessionNumber;
 				if (!shouldRepollScenarios(selectedChildId, prospectiveSession)) {
 					console.log('Repoll skipped: locked and no child/session change');
 				} else {
@@ -4675,7 +4622,7 @@
 					// If session changed since last load, wipe cached moderation state
 					if (currentSessionId && currentSessionId !== lastLoadedSessionId) {
 						resetAllScenarioStates();
-						clearModerationLocalKeys();
+						await clearModerationLocalKeys();
 						localStorage.setItem('lastLoadedModerationSessionId', currentSessionId);
 					}
 
@@ -4688,17 +4635,7 @@
 						return;
 					}
 					availableScenarioIndices = availableScenarios.available_scenarios || [];
-					// Prefer locally established session number (fresh session on cold start)
-					try {
-						const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
-						if (stored && !Number.isNaN(Number(stored))) {
-							sessionNumber = Number(stored);
-						} else {
-							sessionNumber = availableScenarios.session_number;
-						}
-					} catch {
-						sessionNumber = availableScenarios.session_number;
-					}
+					sessionNumber = availableScenarios.session_number ?? sessionNumber;
 					console.log(
 						'Prolific user - available scenarios (from backend):',
 						availableScenarioIndices,
@@ -4757,13 +4694,15 @@
 				);
 				// Force regeneration by clearing locks
 				scenariosLockedForSession = false;
-				// Clear any scenario states that might be interfering
-				const stateKey = selectedChildId
-					? `moderationScenarioStates_${selectedChildId}`
-					: 'moderationScenarioStates';
-				console.log('Clearing scenario states key:', stateKey);
-				localStorage.removeItem(stateKey);
-				// Scenarios are now stored in backend, no localStorage cleanup needed
+				// Clear moderation draft if present (state stored in backend)
+				if (selectedChildId && typeof window !== 'undefined') {
+					try {
+						const token = localStorage.token || '';
+						if (token) {
+							await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+						}
+					} catch {}
+				}
 				// Try generating again
 				try {
 					await loadRandomScenarios();
@@ -4960,7 +4899,9 @@
 			clearTimeout(abandonmentTimeout);
 			abandonmentTimeout = null;
 		}
-		// Remove event listener
+		// Remove event listeners (must be here, not inside async onMount - causes lifecycle_outside_component)
+		window.removeEventListener('workflow-updated', onWorkflowUpdateHandler);
+		window.removeEventListener('resize', onResizeHandler);
 		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
 	});
 
@@ -5322,23 +5263,26 @@
 			class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
 		>
 			<div class="flex items-center">
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
-					>
-						<div class="m-auto self-center">
-							<MenuLines />
-						</div>
-					</button>
-				</div>
+				<!-- Sidebar toggle: only show when scenarios panel is visible; when hidden, Scenarios button replaces it -->
+				{#if sidebarOpen}
+					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class="m-auto self-center">
+								<MenuLines />
+							</div>
+						</button>
+					</div>
+				{/if}
 
 				<div class="flex w-full items-center justify-between">
-					<div class="flex items-center">
+					<div class="flex items-center space-x-3">
 						{#if !sidebarOpen}
 							<button
 								class="px-3 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -5347,13 +5291,12 @@
 								}}
 								aria-label="Open scenarios">Scenarios</button
 							>
-						{:else}
-							<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
 						{/if}
+						<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
 					</div>
 
-					<!-- Controls -->
-					<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
+					<!-- Controls - always visible so Previous/Next Task accessible when scenarios sidebar is closed -->
+					<div class="flex items-center space-x-3">
 						<!-- Help Button - HIDDEN -->
 						<!-- Help button has been hidden for the time being -->
 						<!--
@@ -5384,7 +5327,7 @@
 							</button>
 
 							<!-- Next Task Button -->
-							{#if typeof window !== 'undefined' && parseInt(localStorage.getItem('assignmentStep') || '0') >= 3}
+							{#if canAccessExitSurvey}
 								<button
 									on:click={() => goto('/exit-survey')}
 									class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white"

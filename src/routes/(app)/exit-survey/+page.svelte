@@ -16,9 +16,6 @@
 		}
 	});
 
-	// Assignment workflow state
-	let assignmentStep: number = 1;
-
 	// Survey responses
 	let surveyResponses = {
 		parentGender: '',
@@ -34,10 +31,15 @@
 	// API
 	import { createExitQuiz, listExitQuiz } from '$lib/apis/exit-quiz';
 	import { getChildProfiles as apiGetChildProfiles } from '$lib/apis/child-profiles';
+	import { getCurrentAttempt, getWorkflowDraft, saveWorkflowDraft, deleteWorkflowDraft } from '$lib/apis/workflow';
 
 	// Save/Edit pattern state
 	let isSaved: boolean = false;
 	let showConfirmationModal: boolean = false;
+
+	// Attempt and child context (populated in onMount from backend)
+	let attemptNumber: number = 1;
+	let currentChildId: string | null = null;
 
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
@@ -52,17 +54,6 @@
 			clearTimeout(t);
 			t = setTimeout(() => fn(...args), delay);
 		};
-	}
-
-	function draftKey(userId: string, childId: string) {
-		const u = userId || 'anon';
-		const c = childId || 'pending';
-		return `exitSurveyDraft:${u}:${c}`;
-	}
-	function completedKey(userId: string, childId: string) {
-		const u = userId || 'anon';
-		const c = childId || 'pending';
-		return `exitSurveyCompleted:${u}:${c}`;
 	}
 
 	async function resolveChildId(token: string): Promise<string> {
@@ -96,11 +87,11 @@
 	}
 
 	onMount(async () => {
-		assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '3');
+		const token = localStorage.token || '';
+		const childId = await resolveChildId(token);
 
 		// Get current attempt number and child ID
 		try {
-			const token = localStorage.token || '';
 			if (token) {
 				const attemptData = await getCurrentAttempt(token);
 				attemptNumber = attemptData.current_attempt || 1;
@@ -111,12 +102,8 @@
 			console.warn('Failed to get attempt number or child ID', e);
 		}
 
-		const token = localStorage.token || '';
-		const userId = get(user)?.id || 'anon';
-		const childId = await resolveChildId(token);
-
-		// Rehydrate from backend if any saved rows exist (works even if local completion flag was cleared)
-		if (childId) {
+		// Rehydrate from backend if any saved rows exist
+		if (childId && token) {
 			try {
 				const rows = await listExitQuiz(token, childId);
 				if (rows && Array.isArray(rows) && rows.length > 0) {
@@ -133,42 +120,31 @@
 						parentingStyle: ans.parentingStyle || ''
 					};
 					isSaved = true;
-					// Ensure sidebar unlock for completion if a saved survey exists
-					try {
-						localStorage.setItem('assignmentStep', '4');
-						localStorage.setItem('assignmentCompleted', 'true');
-						localStorage.setItem('unlock_completion', 'true');
-						window.dispatchEvent(new Event('storage'));
-						window.dispatchEvent(new Event('workflow-updated'));
-					} catch {}
-					// Also restore local completion flag for smoother UX next time
-					try {
-						localStorage.setItem(completedKey(userId, childId), 'true');
-					} catch {}
-					return; // prefer saved view
+					window.dispatchEvent(new Event('workflow-updated'));
+					return;
 				}
 			} catch {}
 		}
 
-		// Load draft if present
-		try {
-			const raw = localStorage.getItem(draftKey(userId, childId));
-			if (raw) {
-				const draft = JSON.parse(raw);
-				if (draft && typeof draft === 'object') {
+		// Load draft from backend
+		if (childId && token) {
+			try {
+				const draftRes = await getWorkflowDraft(token, childId, 'exit_survey');
+				if (draftRes?.data && typeof draftRes.data === 'object') {
+					const d = draftRes.data as Record<string, unknown>;
 					surveyResponses = {
-						parentGender: draft.parentGender || '',
-						parentAge: draft.parentAge || '',
-						areaOfResidency: draft.areaOfResidency || '',
-						parentEducation: draft.parentEducation || '',
-						parentEthnicity: Array.isArray(draft.parentEthnicity) ? draft.parentEthnicity : [],
-						genaiFamiliarity: draft.genaiFamiliarity || '',
-						genaiUsageFrequency: draft.genaiUsageFrequency || '',
-						parentingStyle: draft.parentingStyle || ''
+						parentGender: (d.parentGender as string) || '',
+						parentAge: (d.parentAge as string) || '',
+						areaOfResidency: (d.areaOfResidency as string) || '',
+						parentEducation: (d.parentEducation as string) || '',
+						parentEthnicity: Array.isArray(d.parentEthnicity) ? d.parentEthnicity : [],
+						genaiFamiliarity: (d.genaiFamiliarity as string) || '',
+						genaiUsageFrequency: (d.genaiUsageFrequency as string) || '',
+						parentingStyle: (d.parentingStyle as string) || ''
 					};
 				}
-			}
-		} catch {}
+			} catch {}
+		}
 	});
 
 	async function submitSurvey() {
@@ -233,37 +209,29 @@
 			// Persist to backend (exit quiz)
 			await createExitQuiz(token, { child_id, answers, meta: { page: 'exit-survey' } });
 
-			// Mark assignment as completed before showing confirmation
-			localStorage.setItem('assignmentStep', '4');
-			localStorage.setItem('assignmentCompleted', 'true');
-			localStorage.setItem('unlock_completion', 'true');
-			window.dispatchEvent(new Event('storage'));
 			window.dispatchEvent(new Event('workflow-updated'));
-			// Mark as saved and open confirmation modal
 			isSaved = true;
 			showConfirmationModal = true;
 
-			// Clear draft and set per-user per-child completion flag
-			const userId = get(user)?.id || 'anon';
+			// Clear draft in backend
 			try {
-				localStorage.removeItem(draftKey(userId, child_id));
+				await deleteWorkflowDraft(token, child_id, 'exit_survey');
 			} catch {}
-			localStorage.setItem(completedKey(userId, child_id), 'true');
 		} catch (error) {
 			console.error('Error saving survey:', error);
 			toast.error('Failed to save survey. Please try again.');
 		}
 	}
 
-	// Autosave draft on changes (debounced)
+	// Autosave draft on changes (debounced) - saves to backend
 	const saveDraft = debounce(async () => {
 		const token = localStorage.token || '';
-		const userId = get(user)?.id || 'anon';
 		const cid = await resolveChildId(token);
-		const key = draftKey(userId, cid);
-		try {
-			localStorage.setItem(key, JSON.stringify(surveyResponses));
-		} catch {}
+		if (cid && token) {
+			try {
+				await saveWorkflowDraft(token, cid, 'exit_survey', surveyResponses as Record<string, unknown>);
+			} catch {}
+		}
 	}, 500);
 
 	$: saveDraft();
@@ -273,9 +241,7 @@
 	}
 
 	function proceedToNextStep() {
-		// Update assignment step to 4 (completion)
-		localStorage.setItem('assignmentStep', '4');
-		localStorage.setItem('assignmentCompleted', 'true');
+		window.dispatchEvent(new Event('workflow-updated'));
 		goto('/completion');
 	}
 

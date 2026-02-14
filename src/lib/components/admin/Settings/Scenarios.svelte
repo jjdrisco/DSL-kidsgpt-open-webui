@@ -86,7 +86,9 @@
 		try {
 			stats = await getScenarioStatsAdmin(localStorage.token);
 		} catch (error: any) {
-			toast.error(`Failed to load stats: ${error.message || error}`);
+			const d = error?.detail;
+			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			toast.error(`Failed to load stats: ${msg}`);
 		}
 	}
 
@@ -100,7 +102,9 @@
 			scenarioInactiveCount = response.inactive_count;
 			await determineActiveSets(true, false); // Update only scenario active set
 		} catch (error: any) {
-			toast.error(`Failed to load scenarios: ${error.message || error}`);
+			const d = error?.detail;
+			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			toast.error(`Failed to load scenarios: ${msg}`);
 		} finally {
 			loading = false;
 		}
@@ -115,7 +119,9 @@
 			attentionCheckInactiveCount = response.inactive_count;
 			await determineActiveSets(false, true); // Update only attention check active set
 		} catch (error: any) {
-			toast.error(`Failed to load attention checks: ${error.message || error}`);
+			const d = error?.detail;
+			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			toast.error(`Failed to load attention checks: ${msg}`);
 		}
 	}
 
@@ -153,7 +159,9 @@
 			await loadScenarios();
 		} catch (error: any) {
 			console.error('Scenario upload error:', error);
-			const errorMessage = error?.detail || error?.message || String(error);
+			const detail = error?.detail;
+			const errorMessage =
+				Array.isArray(detail) ? detail.map((e: any) => e?.msg || e).join('; ') : detail || error?.message || String(error);
 			toast.error(`Failed to upload scenarios: ${errorMessage}`);
 		} finally {
 			uploadingScenarios = false;
@@ -196,7 +204,9 @@
 			await loadAttentionChecks();
 		} catch (error: any) {
 			console.error('Attention check upload error:', error);
-			const errorMessage = error?.detail || error?.message || String(error);
+			const detail = error?.detail;
+			const errorMessage =
+				Array.isArray(detail) ? detail.map((e: any) => e?.msg || e).join('; ') : detail || error?.message || String(error);
 			toast.error(`Failed to upload attention checks: ${errorMessage}`);
 		} finally {
 			uploadingAttentionChecks = false;
@@ -246,7 +256,9 @@
 			scenarioSetNames = scenarioResponse.set_names;
 			attentionCheckSetNames = attentionCheckResponse.set_names;
 		} catch (error: any) {
-			toast.error(`Failed to load set names: ${error.message || error}`);
+			const d = error?.detail;
+			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			toast.error(`Failed to load set names: ${msg}`);
 		}
 	}
 

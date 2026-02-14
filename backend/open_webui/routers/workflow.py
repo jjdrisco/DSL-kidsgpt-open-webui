@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
@@ -12,7 +13,7 @@ from open_webui.utils.auth import (
     is_interviewee_user,
     get_user_type,
 )
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import User, UserModel, Users
 from open_webui.models.moderation import (
     ModerationSession,
     ModerationSessions,
@@ -21,6 +22,8 @@ from open_webui.models.moderation import (
 from open_webui.models.child_profiles import ChildProfile, ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizResponse, ExitQuizzes
 from open_webui.models.assignment_time_tracking import AssignmentSessionActivity
+from open_webui.models.scenarios import ScenarioAssignments
+from open_webui.models.workflow_draft import WorkflowDraft, get_draft, save_draft, delete_draft
 from open_webui.internal.db import get_db
 
 log = logging.getLogger(__name__)
@@ -34,6 +37,17 @@ class WorkflowStateResponse(BaseModel):
     progress_by_section: dict
 
 
+def _default_progress() -> dict:
+    """Minimal progress dict when backend cannot compute full state."""
+    return {
+        "instructions_completed": False,
+        "has_child_profile": False,
+        "moderation_completed_count": 0,
+        "moderation_total": 12,
+        "exit_survey_completed": False,
+    }
+
+
 @router.get("/workflow/state")
 async def get_workflow_state(
     user: UserModel = Depends(get_verified_user),
@@ -44,44 +58,79 @@ async def get_workflow_state(
     """
     try:
         with get_db() as db:
-            progress = {
-                "has_child_profile": False,
-                "moderation_completed_count": 0,
-                "moderation_total": 12,
-                "exit_survey_completed": False,
-            }
+            progress = _default_progress()
+
+            # Instructions completed
+            instructions_at = getattr(user, "instructions_completed_at", None)
+            progress["instructions_completed"] = instructions_at is not None
 
             # Child profiles
-            latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
-            if latest_child:
-                progress["has_child_profile"] = True
+            try:
+                latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
+                if latest_child:
+                    progress["has_child_profile"] = True
+            except Exception as e:
+                log.warning(f"Failed to get child profiles for user {user.id}: {e}")
 
             # Moderation progress: count unique scenarios that have a terminal decision
-            sessions = ModerationSessions.get_sessions_by_user(user.id)
-            decided = set()
-            for s in sessions:
-                if s.initial_decision in (
-                    "accept_original",
-                    "moderate",
-                    "not_applicable",
-                ):
-                    decided.add(s.scenario_index)
-            progress["moderation_completed_count"] = len(decided)
+            # Terminal = initial_decision in (accept_original, moderate, not_applicable)
+            # OR attention check passed (is_attention_check and attention_check_passed)
+            # Exclude sessions created before last workflow reset
+            try:
+                sessions = ModerationSessions.get_sessions_by_user(user.id)
+                workflow_reset_at = getattr(user, "workflow_reset_at", None)
+                if workflow_reset_at:
+                    sessions = [s for s in sessions if s.created_at > workflow_reset_at]
+                decided = set()
+                for s in sessions:
+                    if s.initial_decision in (
+                        "accept_original",
+                        "moderate",
+                        "not_applicable",
+                    ):
+                        decided.add(s.scenario_index)
+                    elif getattr(s, "is_attention_check", False) and getattr(
+                        s, "attention_check_passed", False
+                    ):
+                        decided.add(s.scenario_index)
+                progress["moderation_completed_count"] = len(decided)
+
+                # moderation_total: use assignment count when available, else 12
+                try:
+                    latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
+                    if latest_child:
+                        assignments = ScenarioAssignments.get_assignments_by_child(
+                            latest_child.id
+                        )
+                        if assignments:
+                            progress["moderation_total"] = len(assignments)
+                except Exception as ae:
+                    log.debug(f"Could not get assignment count for user {user.id}: {ae}")
+            except Exception as e:
+                log.warning(f"Failed to get moderation sessions for user {user.id}: {e}")
 
             # Exit survey completion (latest current response)
-            latest_exit = (
-                db.query(ExitQuizResponse)
-                .filter(
-                    ExitQuizResponse.user_id == user.id,
-                    ExitQuizResponse.is_current == True,
+            try:
+                latest_exit = (
+                    db.query(ExitQuizResponse)
+                    .filter(
+                        ExitQuizResponse.user_id == user.id,
+                        ExitQuizResponse.is_current == True,
+                    )
+                    .order_by(ExitQuizResponse.created_at.desc())
+                    .first()
                 )
-                .order_by(ExitQuizResponse.created_at.desc())
-                .first()
-            )
-            progress["exit_survey_completed"] = latest_exit is not None
+                progress["exit_survey_completed"] = latest_exit is not None
+            except Exception as e:
+                log.warning(f"Failed to get exit survey status for user {user.id}: {e}")
 
             # Determine user type based on STUDY_ID whitelist
-            user_type = get_user_type(user, user.study_id)
+            try:
+                study_id = getattr(user, "study_id", None)
+                user_type = get_user_type(user, study_id)
+            except Exception as e:
+                log.warning(f"get_user_type failed for user {user.id}: {e}, defaulting to interviewee")
+                user_type = "interviewee"
 
             # Determine next route based on user type
             # For non-interviewees (parent/child), skip moderation-scenario
@@ -96,6 +145,13 @@ async def get_workflow_state(
                 )
 
             # For interviewees, follow the workflow
+            # Block kids/profile until instructions completed
+            if not progress["instructions_completed"]:
+                return WorkflowStateResponse(
+                    next_route="/assignment-instructions",
+                    substep=None,
+                    progress_by_section=progress,
+                )
             if not progress["has_child_profile"]:
                 return WorkflowStateResponse(
                     next_route="/kids/profile",
@@ -126,9 +182,103 @@ async def get_workflow_state(
                 next_route="/completion", substep=None, progress_by_section=progress
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        log.error(f"Error computing workflow state for user {user.id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to compute workflow state")
+        log.exception(f"Error computing workflow state for user {user.id}: {e}")
+        # Return fallback state so sidebar can display steps instead of failing silently
+        progress = _default_progress()
+        return WorkflowStateResponse(
+            next_route="/kids/profile",
+            substep=None,
+            progress_by_section=progress,
+        )
+
+
+class InstructionsCompleteResponse(BaseModel):
+    status: str
+    message: str
+
+
+@router.post("/workflow/instructions-complete")
+async def mark_instructions_complete(
+    user: UserModel = Depends(get_verified_user),
+) -> InstructionsCompleteResponse:
+    """Mark that the user has completed reading assignment instructions."""
+    try:
+        ts = int(time.time() * 1000)
+        with get_db() as db:
+            db.query(User).filter(User.id == user.id).update(
+                {"instructions_completed_at": ts}
+            )
+            db.commit()
+        return InstructionsCompleteResponse(status="success", message="Instructions marked complete")
+    except Exception as e:
+        log.error(f"Error marking instructions complete for user {user.id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to mark instructions complete")
+
+
+class DraftGetResponse(BaseModel):
+    data: dict | None
+    updated_at: int | None
+
+
+class DraftSaveRequest(BaseModel):
+    child_id: str
+    draft_type: str  # "exit_survey" | "moderation"
+    data: dict
+
+
+@router.get("/workflow/draft")
+async def get_workflow_draft(
+    child_id: str,
+    draft_type: str,
+    user: UserModel = Depends(get_verified_user),
+) -> DraftGetResponse:
+    """Get workflow draft (exit survey or moderation) for user+child."""
+    if draft_type not in ("exit_survey", "moderation"):
+        raise HTTPException(status_code=400, detail="Invalid draft_type")
+    try:
+        draft = get_draft(user.id, child_id, draft_type)
+        if draft:
+            return DraftGetResponse(data=draft.data, updated_at=draft.updated_at)
+        return DraftGetResponse(data=None, updated_at=None)
+    except Exception as e:
+        log.error(f"Error getting draft for user {user.id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get draft")
+
+
+@router.post("/workflow/draft")
+async def save_workflow_draft(
+    payload: DraftSaveRequest,
+    user: UserModel = Depends(get_verified_user),
+) -> DraftGetResponse:
+    """Save workflow draft (exit survey or moderation) for user+child."""
+    if payload.draft_type not in ("exit_survey", "moderation"):
+        raise HTTPException(status_code=400, detail="Invalid draft_type")
+    try:
+        draft = save_draft(user.id, payload.child_id, payload.draft_type, payload.data)
+        return DraftGetResponse(data=draft.data, updated_at=draft.updated_at)
+    except Exception as e:
+        log.error(f"Error saving draft for user {user.id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save draft")
+
+
+@router.delete("/workflow/draft")
+async def delete_workflow_draft(
+    child_id: str,
+    draft_type: str,
+    user: UserModel = Depends(get_verified_user),
+) -> Dict[str, Any]:
+    """Delete workflow draft for user+child."""
+    if draft_type not in ("exit_survey", "moderation"):
+        raise HTTPException(status_code=400, detail="Invalid draft_type")
+    try:
+        deleted = delete_draft(user.id, child_id, draft_type)
+        return {"status": "success", "deleted": deleted}
+    except Exception as e:
+        log.error(f"Error deleting draft for user {user.id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete draft")
 
 
 @router.post("/workflow/reset")
@@ -178,6 +328,15 @@ async def reset_user_workflow(
             db.query(ExitQuizResponse).filter(
                 ExitQuizResponse.user_id == user.id
             ).update({"is_current": False})
+
+            # Record workflow reset timestamp so moderation_completed_count excludes pre-reset sessions
+            reset_ts = int(time.time() * 1000)
+            db.query(User).filter(User.id == user.id).update(
+                {"workflow_reset_at": reset_ts}
+            )
+
+            # Clear workflow drafts (exit survey, moderation) for this user
+            db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user.id).delete()
 
             db.commit()
 

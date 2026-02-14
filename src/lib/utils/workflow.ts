@@ -66,14 +66,9 @@ export function canAccessStep(
 		return true;
 	}
 
-	// Step 1: Child Profile - accessible if next_route is /kids/profile or later
+	// Step 1: Child Profile - accessible when instructions completed
 	if (step === 1) {
-		return (
-			next_route === '/kids/profile' ||
-			next_route === '/moderation-scenario' ||
-			next_route === '/exit-survey' ||
-			next_route === '/completion'
-		);
+		return !!progress?.instructions_completed;
 	}
 
 	// Step 2: Moderation - accessible if child profile is completed and (moderation is current/next or we're past it)
@@ -141,13 +136,8 @@ export function isStepCompleted(step: number, workflowState: WorkflowStateRespon
 	const next_route = workflowState?.next_route ?? '';
 
 	if (step === 0) {
-		// Instructions "completed" when backend says user can proceed to child profile or later
-		return (
-			next_route === '/kids/profile' ||
-			next_route === '/moderation-scenario' ||
-			next_route === '/exit-survey' ||
-			next_route === '/completion'
-		);
+		// Instructions completed from backend
+		return !!progress?.instructions_completed;
 	}
 	if (step === 1) {
 		return !!progress?.has_child_profile;

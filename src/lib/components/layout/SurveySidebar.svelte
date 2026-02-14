@@ -16,10 +16,20 @@
 	let workflowState: WorkflowStateResponse | null = null;
 	let loadingProgress = true;
 
+	/** Get auth token from user store first, then localStorage. Always use backend as source of truth. */
+	function getToken(): string | null {
+		return ($user as { token?: string })?.token ?? localStorage.token ?? null;
+	}
+
 	async function fetchWorkflowProgress() {
+		const token = getToken();
+		if (!token) {
+			loadingProgress = false;
+			return;
+		}
 		try {
-			if (!localStorage.token) return;
-			const state = await getWorkflowState(localStorage.token);
+			loadingProgress = true;
+			const state = await getWorkflowState(token);
 			workflowState = state;
 		} catch (error) {
 			console.error('Failed to fetch workflow progress:', error);
@@ -91,10 +101,8 @@
 			fetchWorkflowProgress();
 		};
 		window.addEventListener('workflow-updated', onWorkflowUpdate);
-		window.addEventListener('storage', onWorkflowUpdate);
 		return () => {
 			window.removeEventListener('workflow-updated', onWorkflowUpdate);
-			window.removeEventListener('storage', onWorkflowUpdate);
 		};
 	});
 
@@ -350,16 +358,13 @@
 												></path>
 											</svg>
 										{:else if (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0}
-											<span class="text-xs text-white font-semibold">
-												{workflowState?.progress_by_section?.moderation_completed_count ?? 0}/{workflowState?.progress_by_section?.moderation_total ?? 0}
-											</span>
+											<span class="text-xs font-bold text-white">2</span>
 										{:else}
 											<span class="text-xs font-bold text-white">2</span>
 										{/if}
 									</div>
 									<span class="text-sm text-gray-700 dark:text-gray-300 text-left">
-										{$i18n.t('Moderation')} ({workflowState?.progress_by_section?.moderation_completed_count ?? 0}/
-										{workflowState?.progress_by_section?.moderation_total ?? 0})
+										{$i18n.t('Moderation')}
 									</span>
 								</button>
 
