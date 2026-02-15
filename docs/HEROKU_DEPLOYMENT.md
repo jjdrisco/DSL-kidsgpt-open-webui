@@ -66,11 +66,11 @@ git push heroku main
 
 ### Release phase: heroku.yml vs Procfile
 
-| Deployment method | Who builds the image | Release phase source | When it runs |
-|-------------------|----------------------|----------------------|--------------|
-| **Git push to Heroku** (`git push heroku main`) with `heroku.yml` | Heroku (from heroku.yml) | **heroku.yml** `release:` section | After Heroku build, before new release deploys. Procfile is ignored. |
-| **Buildpack** (no Docker) | Heroku (buildpacks) | **Procfile** `release:` process type | After build. No heroku.yml. |
-| **Container Registry** (e.g. GitHub Actions: build image → push → `heroku container:release web`) | You (CI) | **Neither** — release phase only runs if you build and push a **separate `release` image** and run `heroku container:release web release`. |
+| Deployment method                                                                                 | Who builds the image     | Release phase source                                                                                                                       | When it runs                                                         |
+| ------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| **Git push to Heroku** (`git push heroku main`) with `heroku.yml`                                 | Heroku (from heroku.yml) | **heroku.yml** `release:` section                                                                                                          | After Heroku build, before new release deploys. Procfile is ignored. |
+| **Buildpack** (no Docker)                                                                         | Heroku (buildpacks)      | **Procfile** `release:` process type                                                                                                       | After build. No heroku.yml.                                          |
+| **Container Registry** (e.g. GitHub Actions: build image → push → `heroku container:release web`) | You (CI)                 | **Neither** — release phase only runs if you build and push a **separate `release` image** and run `heroku container:release web release`. |
 
 **This project’s current setup:** The app is deployed via **GitHub Actions** (`.github/workflows/heroku-container-deploy.yml`): the workflow builds the Docker image, pushes it, and runs `heroku container:release web` (no `release` image). So **the platform is not using heroku.yml or Procfile for the release phase**. The workflow now includes a **Run migrations** step (one-off dyno) after release, so migrations run automatically on each deploy; you do not need to run them manually.
 

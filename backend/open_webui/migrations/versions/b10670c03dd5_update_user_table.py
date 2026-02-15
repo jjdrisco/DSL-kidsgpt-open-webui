@@ -264,10 +264,12 @@ def upgrade() -> None:
                 ).fetchone()
                 if not existing:
                     conn.execute(
-                        sa.text("""
+                        sa.text(
+                            """
                             INSERT INTO api_key (id, user_id, key, created_at, updated_at)
                             VALUES (:id, :user_id, :key, :created_at, :updated_at)
-                        """),
+                        """
+                        ),
                         {
                             "id": f"key_{uid}",
                             "user_id": uid,
