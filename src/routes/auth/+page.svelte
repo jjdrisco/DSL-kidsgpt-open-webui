@@ -804,7 +804,6 @@
 
 						<!-- Survey Information -->
 						<div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-							<p>This is a survey for a Child-AI Conversations interview</p>
 							<p>Contact: childai.research.ucsd@gmail.com</p>
 						</div>
 					</div>
