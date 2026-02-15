@@ -12,6 +12,7 @@
 		type SubCharacteristic
 	} from '$lib/data/personalityTraits';
 	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
+	import FeatureSelection from '$lib/components/profile/FeatureSelection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -55,6 +56,9 @@
 
 	// Personality traits system (selectedSubCharacteristics bound to ChildPersonalitySection)
 	let selectedSubCharacteristics: string[] = [];
+
+	// Feature selection
+	let selectedFeatures: string[] = [];
 
 	// Multi-child support
 	let childProfiles: ChildProfile[] = [];
@@ -122,6 +126,7 @@
 
 		childName = sel?.name || '';
 		childAge = sel?.child_age || '';
+		selectedFeatures = sel?.selected_features || [];
 
 		const genderValue = sel?.child_gender || '';
 		if (genderValue.startsWith('Other: ')) {
@@ -197,14 +202,17 @@
 					childCharacteristics = characteristics;
 					selectedSubCharacteristics = [];
 				}
-			} else {
-				childCharacteristics = characteristics;
-				selectedSubCharacteristics = [];
-			}
 		} else {
-			childCharacteristics = '';
+			childCharacteristics = characteristics;
 			selectedSubCharacteristics = [];
 		}
+	} else {
+		childCharacteristics = '';
+		selectedSubCharacteristics = [];
+	}
+	
+	// Load selected features
+	selectedFeatures = sel?.selected_features || [];
 	}
 
 	function applyFormToSelectedChild() {
@@ -214,6 +222,7 @@
 		sel.name = childName;
 		sel.child_age = childAge;
 		sel.child_gender = childGender;
+		sel.selected_features = selectedFeatures;
 		const personalityDesc = getPersonalityDescription();
 		const combinedCharacteristics = personalityDesc
 			? childCharacteristics.trim()
@@ -248,6 +257,7 @@
 				childAge = '';
 				childGender = '';
 				childCharacteristics = '';
+				selectedFeatures = [];
 			} else {
 				if (selectedChildIndex >= childProfiles.length) {
 					selectedChildIndex = childProfiles.length - 1;
@@ -277,6 +287,9 @@
 		}
 		if (!childGender) {
 			return 'Please select a gender';
+		}
+		if (selectedFeatures.length === 0) {
+			return 'Please select at least one feature for your child';
 		}
 		if (showPersonalityTraits && !childCharacteristics.trim()) {
 			return 'Please enter additional characteristics & interests';
@@ -332,7 +345,8 @@
 				child_age: childAge,
 				child_gender: childGender === 'Other' ? 'Other' : childGender,
 				child_characteristics: combinedCharacteristics,
-				child_email: childEmail || undefined
+				child_email: childEmail || undefined,
+				selected_features: selectedFeatures
 			};
 
 			if (showResearchFields) {
@@ -388,6 +402,7 @@
 			childCharacteristics = '';
 			childEmail = '';
 			selectedSubCharacteristics = [];
+			selectedFeatures = [];
 		}
 	}
 
@@ -467,7 +482,8 @@
 					child_age: childAge,
 					child_gender: childGender === 'Other' ? 'Other' : childGender,
 					child_characteristics: combinedCharacteristics,
-					child_email: childEmail || undefined
+					child_email: childEmail || undefined,
+					selected_features: selectedFeatures
 				};
 
 				if (showResearchFields) {
@@ -514,7 +530,8 @@
 						child_age: childAge,
 						child_gender: childGender,
 						child_characteristics: combinedCharacteristics,
-						child_email: childEmail || undefined
+						child_email: childEmail || undefined,
+						selected_features: selectedFeatures
 					};
 
 					if (showResearchFields) {
@@ -851,6 +868,17 @@
 								required={true}
 							/>
 						{/if}
+
+						<!-- Feature Selection -->
+						<div>
+							<FeatureSelection
+								bind:childAge
+								bind:selectedFeatures
+								onFeaturesChange={(features) => {
+									selectedFeatures = features;
+								}}
+							/>
+						</div>
 
 						<!-- Research Fields (Conditional) -->
 						{#if showResearchFields}

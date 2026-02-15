@@ -30,6 +30,8 @@ export interface ChildProfile {
 	created_at: number;
 	updated_at: number;
 	child_email?: string;
+	// Selected features for this child (array of feature IDs)
+	selected_features?: string[];
 }
 
 export interface ChildProfileForm {
@@ -54,6 +56,8 @@ export interface ChildProfileForm {
 	parent_llm_monitoring_other?: string;
 	session_number?: number; // Optional, backend will determine if not provided
 	child_email?: string;
+	// Selected features for this child (array of feature IDs)
+	selected_features?: string[];
 }
 
 export const getChildProfiles = async (token: string = '') => {
