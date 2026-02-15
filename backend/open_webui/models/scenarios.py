@@ -155,7 +155,9 @@ class ScenarioAssignment(Base):
     participant_id = Column(String, nullable=False)  # user_id
     scenario_id = Column(String, ForeignKey("scenarios.scenario_id"), nullable=False)
     child_profile_id = Column(String, nullable=True)
-    attempt_number = Column(Integer, nullable=False, default=1)  # Workflow attempt number
+    attempt_number = Column(
+        Integer, nullable=False, default=1
+    )  # Workflow attempt number
 
     # Status tracking
     status = Column(
@@ -270,7 +272,9 @@ class ScenarioAssignmentForm(BaseModel):
     participant_id: str
     scenario_id: Optional[str] = None  # If None, will be assigned via weighted sampling
     child_profile_id: Optional[str] = None
-    attempt_number: Optional[int] = None  # If None, will be computed from user's current attempt
+    attempt_number: Optional[int] = (
+        None  # If None, will be computed from user's current attempt
+    )
     assignment_position: Optional[int] = None
     alpha: Optional[float] = 1.0  # Default alpha for weighted sampling
 
@@ -724,7 +728,9 @@ class ScenarioAssignmentTable:
             if status_filter:
                 query = query.filter(ScenarioAssignment.status.in_(status_filter))
             if attempt_number is not None:
-                query = query.filter(ScenarioAssignment.attempt_number == attempt_number)
+                query = query.filter(
+                    ScenarioAssignment.attempt_number == attempt_number
+                )
             # Order by assignment_position to maintain order
             rows = query.order_by(ScenarioAssignment.assignment_position.asc()).all()
             return [ScenarioAssignmentModel.model_validate(row) for row in rows]
