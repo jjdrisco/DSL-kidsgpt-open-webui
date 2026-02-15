@@ -529,16 +529,16 @@
 				<!-- Editable form -->
 				<div class="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm">
 					<form on:submit|preventDefault={submitSurvey} class="space-y-8">
-						<!-- Question 1: Parenting Style -->
+						<!-- Question 1: Parenting Style (multi-select) -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								1. Which description best matches your typical approach to day-to-day parenting?
-								(Choose the closest fit.) <span class="text-red-500">*</span>
+								1. Which of these descriptions match your typical approach to day-to-day parenting?
+								(Select all that apply.) <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
 									<input
-										type="radio"
+										type="checkbox"
 										bind:group={surveyResponses.parentingStyle}
 										value="A"
 										class="mr-3"
@@ -551,7 +551,7 @@
 								</label>
 								<label class="flex items-center">
 									<input
-										type="radio"
+										type="checkbox"
 										bind:group={surveyResponses.parentingStyle}
 										value="B"
 										class="mr-3"
@@ -564,7 +564,7 @@
 								</label>
 								<label class="flex items-center">
 									<input
-										type="radio"
+										type="checkbox"
 										bind:group={surveyResponses.parentingStyle}
 										value="C"
 										class="mr-3"
@@ -577,7 +577,7 @@
 								</label>
 								<label class="flex items-center">
 									<input
-										type="radio"
+										type="checkbox"
 										bind:group={surveyResponses.parentingStyle}
 										value="D"
 										class="mr-3"
@@ -590,7 +590,7 @@
 								</label>
 								<label class="flex items-center">
 									<input
-										type="radio"
+										type="checkbox"
 										bind:group={surveyResponses.parentingStyle}
 										value="E"
 										class="mr-3"
@@ -602,7 +602,7 @@
 								</label>
 								<label class="flex items-center">
 									<input
-										type="radio"
+										type="checkbox"
 										bind:group={surveyResponses.parentingStyle}
 										value="prefer-not-to-answer"
 										class="mr-3"

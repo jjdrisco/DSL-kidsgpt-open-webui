@@ -225,12 +225,13 @@
 				}
 
 				// Determine redirect path based on Prolific response
-				let prolificRedirectPath = '/';
+				// Prolific users go to assignment-instructions (consent modal shows on top)
+				let prolificRedirectPath = '/assignment-instructions';
 				if (authResponse.new_child_id) {
 					prolificRedirectPath = '/kids/profile';
-				} else {
-					prolificRedirectPath = $page.url.searchParams.get('redirect') || '/';
 				}
+				// Ignore redirect param for Prolific users - it's just used to pass params around
+				// Always send Prolific users to assignment-instructions (unless new_child_id)
 
 				// Store Prolific metadata BEFORE setSessionUser (which clears localStorage)
 				localStorage.setItem('prolificPid', prolificPid);

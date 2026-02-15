@@ -138,7 +138,7 @@
 	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n3) Step 3: Select \'I read the instructions\' from the "Attention Check" dropdown under "Step 3: Moderate". ' +
+		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"), then click "Continue".\n3) Step 3: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last

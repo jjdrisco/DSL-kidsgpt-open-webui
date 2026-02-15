@@ -184,10 +184,12 @@ async def get_workflow_state(
                 user_type = "interviewee"
 
             # Determine next route based on user type
-            # For non-interviewees (parent/child), skip moderation-scenario
+            # Prolific users (with prolific_pid) always go to assignment-instructions, never /parent
+            is_prolific = getattr(user, "prolific_pid", None) is not None
             if user_type == "parent":
+                next_for_parent = "/assignment-instructions" if is_prolific else "/parent"
                 return WorkflowStateResponse(
-                    next_route="/parent", substep=None, progress_by_section=progress
+                    next_route=next_for_parent, substep=None, progress_by_section=progress
                 )
 
             if user_type == "child":
