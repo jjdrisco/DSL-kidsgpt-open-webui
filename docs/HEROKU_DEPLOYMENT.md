@@ -72,7 +72,11 @@ git push heroku main
 | **Buildpack** (no Docker)                                                                         | Heroku (buildpacks)      | **Procfile** `release:` process type                                                                                                       | After build. No heroku.yml.                                          |
 | **Container Registry** (e.g. GitHub Actions: build image → push → `heroku container:release web`) | You (CI)                 | **Neither** — release phase only runs if you build and push a **separate `release` image** and run `heroku container:release web release`. |
 
-**This project’s current setup:** The app is deployed via **GitHub Actions** (`.github/workflows/heroku-container-deploy.yml`): the workflow builds the Docker image, pushes it, and runs `heroku container:release web` (no `release` image). So **the platform is not using heroku.yml or Procfile for the release phase**. The workflow now includes a **Run migrations** step (one-off dyno) after release, so migrations run automatically on each deploy; you do not need to run them manually.
+**This project’s current setup:** The app is deployed via **GitHub Actions** (`.github/workflows/heroku-container-deploy.yml`): the workflow builds the Docker image, pushes it, and runs `heroku container:release web` (no `release` image). So **the platform is not using heroku.yml or Procfile for the release phase**. Migrations run automatically when each **web dyno starts**: the container entrypoint is `backend/start.sh`, which runs `alembic upgrade head` before starting uvicorn (see “Migrations on web startup” below). You do not need to run them manually.
+
+### Migrations on web startup
+
+The container’s entrypoint is `backend/start.sh`. It runs `alembic upgrade head` in `/app/backend/open_webui` before starting the web server, so every new release’s web dynos run migrations as they boot. A separate “Run migrations” step in the workflow was removed because `heroku run` one-off dynos for container apps do not use the app image’s Python environment (they reported “No module named alembic”), so the reliable place for migrations is web startup.
 
 ### What is “Heroku build”? (GitHub integration vs our workflow)
 
@@ -80,7 +84,7 @@ git push heroku main
   In the Heroku Dashboard you can connect the app to GitHub and enable “Deploy from GitHub” for a branch. Then **Heroku** runs the build on their servers on every push (using heroku.yml or buildpacks), and the release phase from heroku.yml runs automatically. You don’t run that manually; it’s triggered by the push. That’s a different path from our current one.
 
 - **Our workflow (Container Registry via GitHub Actions)**  
-  We don’t use Heroku to build. The **GitHub Actions** workflow builds the Docker image, pushes it to Container Registry, runs `heroku container:release web`, then runs migrations in a one-off dyno. No manual step is required; the workflow runs on push to the configured branches (and can be triggered manually via workflow_dispatch).
+  We don’t use Heroku to build. The **GitHub Actions** workflow builds the Docker image, pushes it to Container Registry, and runs `heroku container:release web`. Migrations run when the new web dynos start (see “Migrations on web startup” above). The workflow runs on push to the configured branches (and can be triggered manually via workflow_dispatch).
 
 ### Procfile
 

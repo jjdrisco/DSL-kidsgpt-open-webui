@@ -47,13 +47,6 @@ jobs:
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
 
-      - name: Run migrations
-        run: |
-          echo "$HEROKU_API_KEY" | heroku auth:token
-          heroku run "cd open_webui && python -m alembic upgrade head" -a $HEROKU_APP_NAME
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-
       - name: Check deployment status
         run: |
           echo "Waiting for dyno to start (max 5 minutes)..."
