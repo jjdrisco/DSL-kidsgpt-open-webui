@@ -64,12 +64,32 @@ git push heroku main
 | `.slugignore`      | Excludes files from buildpack slug (keeps under 500MB).                           |
 | `requirements.txt` | Root-level; used by buildpack. Backend uses `backend/requirements.txt` in Docker. |
 
+### Release phase: heroku.yml vs Procfile
+
+| Deployment method | Who builds the image | Release phase source | When it runs |
+|-------------------|----------------------|----------------------|--------------|
+| **Git push to Heroku** (`git push heroku main`) with `heroku.yml` | Heroku (from heroku.yml) | **heroku.yml** `release:` section | After Heroku build, before new release deploys. Procfile is ignored. |
+| **Buildpack** (no Docker) | Heroku (buildpacks) | **Procfile** `release:` process type | After build. No heroku.yml. |
+| **Container Registry** (e.g. GitHub Actions: build image → push → `heroku container:release web`) | You (CI) | **Neither** — release phase only runs if you build and push a **separate `release` image** and run `heroku container:release web release`. |
+
+**This project’s current setup:** The app is deployed via **GitHub Actions** (`.github/workflows/heroku-container-deploy.yml`): the workflow builds the Docker image, pushes it, and runs `heroku container:release web` (no `release` image). So **the platform is not using heroku.yml or Procfile for the release phase**. The workflow now includes a **Run migrations** step (one-off dyno) after release, so migrations run automatically on each deploy; you do not need to run them manually.
+
+### What is “Heroku build”? (GitHub integration vs our workflow)
+
+- **Heroku build (GitHub integration)**  
+  In the Heroku Dashboard you can connect the app to GitHub and enable “Deploy from GitHub” for a branch. Then **Heroku** runs the build on their servers on every push (using heroku.yml or buildpacks), and the release phase from heroku.yml runs automatically. You don’t run that manually; it’s triggered by the push. That’s a different path from our current one.
+
+- **Our workflow (Container Registry via GitHub Actions)**  
+  We don’t use Heroku to build. The **GitHub Actions** workflow builds the Docker image, pushes it to Container Registry, runs `heroku container:release web`, then runs migrations in a one-off dyno. No manual step is required; the workflow runs on push to the configured branches (and can be triggered manually via workflow_dispatch).
+
 ### Procfile
 
 ```
 release: cd backend/open_webui && python -m alembic upgrade head
 web: cd backend && uvicorn open_webui.main:app --host 0.0.0.0 --port $PORT
 ```
+
+Used for buildpack deploys and as reference for paths; for container deploys from CI, the release phase is not run from Procfile (see table above).
 
 ### heroku.yml (Docker)
 
@@ -78,10 +98,10 @@ build:
   docker:
     web: Dockerfile
 release:
-  command: cd open_webui && python -m alembic upgrade head
-run:
-  web: uvicorn open_webui.main:app --host 0.0.0.0 --port $PORT
+  command: cd /app/backend/open_webui && python -m alembic upgrade head || echo "Migration failed, continuing..."
 ```
+
+Used when Heroku builds the image (e.g. `git push heroku main` with stack container). For Container Registry deploys from GitHub Actions, Heroku does not build from heroku.yml, so this release command is not used.
 
 ---
 
