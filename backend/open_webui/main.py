@@ -1949,23 +1949,13 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            try:
-                user = Users.get_user_by_id(data["id"])
-            except Exception as e:
-                log.warning(f"Failed to get user by ID: {e}")
+            user = Users.get_user_by_id(data["id"])
 
-    # Wrap database call in try-except to handle connection issues gracefully
-    user_count = None
+    user_count = Users.get_num_users()
     onboarding = False
-    try:
-        user_count = Users.get_num_users()
-    except Exception as e:
-        log.warning(f"Failed to get user count from database: {e}")
-        # Default to 0 if database query fails
-        user_count = 0
 
     if user is None:
-        onboarding = user_count == 0 if user_count is not None else False
+        onboarding = user_count == 0
 
     return {
         **({"onboarding": True} if onboarding else {}),
@@ -2029,7 +2019,7 @@ async def get_app_config(request: Request):
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_pinned_models": app.state.config.DEFAULT_PINNED_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-                "user_count": user_count if user_count is not None else 0,
+                "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
                 },
