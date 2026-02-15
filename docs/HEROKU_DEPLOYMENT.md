@@ -204,6 +204,18 @@ To reduce slug size and memory, several packages were removed from `requirements
   ```
 - **Note**: `WEB_CONCURRENCY` and `MALLOC_ARENA_MAX` apply to the Python runtime, not the Node build. Do not change them to fix build OOM.
 
+### 8. No module named 'alembic' at Web Startup (Container)
+
+- **Symptom**: Logs show `Database migrations failed! Container will not start` and `python3: No module named alembic` when the web dyno runs `backend/start.sh`.
+- **Cause**: The Docker image was built with `pip install -r requirements.txt` failing (e.g. timeout, OOM, or dependency conflict). The Dockerfile had `|| ... continuing anyway`, so the build succeeded but the image was missing alembic and other packages.
+- **Fix**: The Dockerfile was updated to (1) install `alembic` in the critical-packages block (so it is always present even if the full requirements step fails), (2) remove “continuing anyway” so a failed requirements install fails the build, and (3) verify `alembic` is importable after install. Rebuild the image via GitHub Actions and redeploy.
+
+### 9. Error updating models: No module named 'sentence_transformers'
+
+- **Symptom**: Log line `ERROR:open_webui.main:Error updating models: No module named 'sentence_transformers'` during startup.
+- **Cause**: RAG reranker/embedding setup imports `sentence_transformers`; the exception is caught so the app continues, but the error is logged.
+- **Fix**: Non-fatal. Ensure `sentence-transformers` is in `backend/requirements.txt`; the runtime dependency checker (`check_dependencies.py`) can install it if the mapping `sentence_transformers` → `sentence-transformers` is present.
+
 ---
 
 ## Troubleshooting
@@ -218,6 +230,8 @@ To reduce slug size and memory, several packages were removed from `requirements
 | CORS errors in browser                                   | `CORS_ALLOW_ORIGIN='*'` in production                | Set explicit origins                         |
 | **Node OOM during build**                                | `npm run build` exceeds heap limit                   | Set `NODE_OPTIONS=--max-old-space-size=4096` |
 | `npm ci` "Missing from lock file"                        | package.json and package-lock.json out of sync       | See [Lockfile Sync](#lockfile-sync) below    |
+| **No module named 'alembic'** / migrations failed at startup | Full `pip install -r requirements.txt` failed during Docker build; image shipped without alembic | Dockerfile now installs alembic in the critical-packages step and verifies it after install. Rebuild and redeploy. |
+| **Error updating models: No module named 'sentence_transformers'** | RAG reranker/embedding code imports sentence_transformers; optional at startup | Non-fatal (app continues). Runtime checker can install it; ensure `sentence-transformers` is in backend/requirements.txt. |
 
 ### Lockfile Sync
 

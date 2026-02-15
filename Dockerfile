@@ -140,12 +140,13 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 # Upgrade pip first
 RUN pip3 install --upgrade pip setuptools wheel
 
-# Install critical packages first (core dependencies needed for app startup)
+# Install critical packages first (core dependencies needed for app startup and migrations)
 RUN pip3 install --no-cache-dir \
     "uvicorn[standard]==0.40.0" \
     "fastapi==0.128.0" \
     "typer" \
     "sqlalchemy==2.0.45" \
+    "alembic==1.17.2" \
     "pydantic==2.12.5" \
     "python-multipart==0.0.21" \
     "aiohttp==3.13.2" \
@@ -163,16 +164,17 @@ RUN pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee /tmp/pip_install.
     (echo "First attempt failed, retrying..." && pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee -a /tmp/pip_install.log || \
     (echo "ERROR: requirements.txt installation failed after 2 attempts!" && \
      echo "Last 50 lines of pip output:" && tail -50 /tmp/pip_install.log && \
-     echo "Installed packages:" && pip3 list && \
-     echo "Continuing anyway - missing packages will be installed at runtime"))
+     echo "Installed packages:" && pip3 list && exit 1))
+# Verify alembic is available (required for DB migrations at startup)
+RUN python3 -c "import alembic; print('✓ Alembic available for migrations')" || (echo "ERROR: alembic not found - migrations will fail at runtime!" && exit 1)
 
 # Copy and make dependency checker executable
 COPY --chown=$UID:$GID ./backend/check_dependencies.py ./check_dependencies.py
 RUN chmod +x ./check_dependencies.py
 
-# Verify core packages needed to start the app.
+# Verify core packages needed to start the app and run migrations.
 # Do NOT fail the image build on optional/large deps (runtime checker will handle them).
-RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic; print('✓ Core packages verified')" || (echo "ERROR: Core packages missing!" && exit 1)
+RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, alembic; print('✓ Core packages verified')" || (echo "ERROR: Core packages missing!" && exit 1)
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \

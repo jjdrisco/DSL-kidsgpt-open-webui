@@ -22,6 +22,7 @@ MODULE_TO_PIP = {
     "sklearn": "scikit-learn",
     # Open WebUI-specific helpers
     "langchain_text_splitters": "langchain-text-splitters",
+    "sentence_transformers": "sentence-transformers",
 }
 
 
