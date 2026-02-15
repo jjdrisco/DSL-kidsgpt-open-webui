@@ -105,12 +105,34 @@ fi
 
 # Run database migrations before starting the app
 echo "Running database migrations..."
-cd /app/backend/open_webui || exit
-if $PYTHON_CMD -m alembic upgrade head 2>&1; then
-    echo "✓ Database migrations completed"
-else
-    echo "WARNING: Database migrations failed, but continuing..."
+
+# Verify DATABASE_URL is set
+if [ -z "$DATABASE_URL" ]; then
+    echo "ERROR: DATABASE_URL is not set!"
+    exit 1
 fi
+echo "DATABASE_URL is set (host: $(echo $DATABASE_URL | cut -d@ -f2 | cut -d: -f1))"
+
+# Change to alembic directory
+cd /app/backend/open_webui || {
+    echo "ERROR: Failed to cd to /app/backend/open_webui"
+    echo "Contents of /app/backend:"
+    ls -la /app/backend/
+    exit 1
+}
+
+echo "Current directory: $(pwd)"
+echo "Python: $PYTHON_CMD ($($PYTHON_CMD --version 2>&1))"
+
+# Run migrations - show output, fail container if migrations fail
+if ! $PYTHON_CMD -m alembic upgrade head; then
+    echo "ERROR: Database migrations failed! Container will not start."
+    echo "Attempting to show current alembic state:"
+    $PYTHON_CMD -m alembic current 2>&1 || true
+    exit 1
+fi
+
+echo "✓ Database migrations completed successfully"
 cd /app/backend || exit
 
 # If script is called with arguments, use them; otherwise use default workers

@@ -772,6 +772,15 @@ async def upload_scenarios_admin(
                         errors.append(f"Scenario {idx}: Missing prompt or response")
                         continue
 
+                    # Trait: top-level or nested in big_five (pilot_scenarios format)
+                    big_five = scenario_data.get("big_five") or {}
+                    trait = scenario_data.get("trait") or (
+                        big_five.get("trait") if isinstance(big_five, dict) else None
+                    )
+                    trait_level = (
+                        big_five.get("level") if isinstance(big_five, dict) else None
+                    )
+
                     # Generate new UUID-based scenario_id for each upload
                     scenario_id = f"scenario_{uuid.uuid4()}"
 
@@ -781,10 +790,19 @@ async def upload_scenarios_admin(
                         prompt_text=prompt_text,
                         response_text=response_text,
                         set_name=set_name,
-                        trait=scenario_data.get("trait"),
+                        trait=trait,
                         polarity=scenario_data.get("polarity"),
                         prompt_style=scenario_data.get("prompt_style"),
                         domain=scenario_data.get("domain"),
+                        persona_id=scenario_data.get("persona_id"),
+                        age_band=scenario_data.get("age_band"),
+                        gender_identity=scenario_data.get("gender_identity"),
+                        context=scenario_data.get("context"),
+                        piaget_stage=scenario_data.get("piaget_stage"),
+                        trait_level=trait_level,
+                        intent=scenario_data.get("intent"),
+                        subdomain=scenario_data.get("subdomain"),
+                        safety_notes=scenario_data.get("safety_notes"),
                         source=source,
                         model_name=scenario_data.get("model_name"),
                         is_active=True,

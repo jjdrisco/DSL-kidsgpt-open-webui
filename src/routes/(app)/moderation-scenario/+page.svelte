@@ -142,7 +142,7 @@
 	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"), then click "Continue".\n3) Step 3: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n' +
+		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"). \n3) Step 3: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
@@ -889,6 +889,8 @@
 			return;
 		}
 
+		isLoadingScenarios = true;
+
 		const token = localStorage.getItem('token') || '';
 		if (!token) {
 			console.error('❌ No authentication token found');
@@ -1121,6 +1123,8 @@
 			toast.error(
 				'Failed to load scenarios. Please refresh the page or contact support if the issue persists.'
 			);
+		} finally {
+			isLoadingScenarios = false;
 		}
 	}
 
@@ -1487,6 +1491,8 @@
 	let moderationPanelVisible: boolean = false;
 	// Loading flag to gate reactive updates during state restoration to prevent flashing
 	let isLoadingScenario: boolean = false;
+	// Loading flag for initial scenario fetch (assignScenario loop, etc.)
+	let isLoadingScenarios: boolean = false;
 	let expandedGroups: Set<string> = new Set();
 	let markedNotApplicable: boolean = false;
 
@@ -5249,6 +5255,7 @@
 
 				try {
 					console.log('Calling loadRandomScenarios()...');
+					isLoadingScenarios = true;
 					await loadRandomScenarios();
 					console.log('Random scenarios loaded. Current scenarioList length:', scenarioList.length);
 					if (scenarioList.length === 0) {
@@ -5926,253 +5933,291 @@
 		</nav>
 
 		<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
-			<!-- Left Sidebar: Scenario List -->
-			<div
-				class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen
-					? 'md:flex'
-					: 'hidden md:hidden'}"
-			>
-				<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-					<div class="flex items-center justify-between">
-						<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
-						<div class="flex items-center space-x-2">
-							<!-- Tutorial Button - DISABLED -->
-							<!-- Tutorial feature has been disabled -->
-							<button
-								class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
-								on:click={() => {
-									sidebarOpen = !sidebarOpen;
-								}}
-								aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button
-							>
+			{#if isLoadingScenarios}
+				<div
+					class="flex-1 flex flex-col items-center justify-center gap-4 text-gray-600 dark:text-gray-400 p-8"
+				>
+					<svg
+						class="animate-spin h-10 w-10 text-blue-500"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
+					</svg>
+					<p class="text-lg font-medium">Loading scenarios...</p>
+					<p class="text-sm">
+						Assigning scenarios based on your child profile. This may take a moment.
+					</p>
+				</div>
+			{:else}
+				<!-- Left Sidebar: Scenario List -->
+				<div
+					class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen
+						? 'md:flex'
+						: 'hidden md:hidden'}"
+				>
+					<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
+						<div class="flex items-center justify-between">
+							<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
+							<div class="flex items-center space-x-2">
+								<!-- Tutorial Button - DISABLED -->
+								<!-- Tutorial feature has been disabled -->
+								<button
+									class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
+									on:click={() => {
+										sidebarOpen = !sidebarOpen;
+									}}
+									aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button
+								>
+							</div>
 						</div>
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							{completionCount}
+						</p>
 					</div>
-					<p class="text-sm text-gray-600 dark:text-gray-400">
-						{completionCount}
-					</p>
-				</div>
 
-				<div class="flex-1 overflow-y-auto p-3 space-y-2">
-					{#each scenarioList as [prompt, response], index}
-						{@const timerIdentifier = getScenarioId(index)}
-						<button
-							on:click={() => loadScenario(index)}
-							class="w-full text-left p-3 rounded-lg border transition-all duration-200 {selectedScenarioIndex ===
-							index
-								? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
-								: scenarioCompletionStatuses[index]
-									? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-700 opacity-60 hover:opacity-80'
-									: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'}"
-						>
-							<div class="flex items-start space-x-2">
-								<div class="flex-shrink-0 relative">
-									<div
-										class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {selectedScenarioIndex ===
-										index
-											? 'bg-blue-500 text-white'
-											: prompt === CUSTOM_SCENARIO_PROMPT
-												? 'bg-purple-500 text-white'
-												: scenarioCompletionStatuses[index]
-													? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
-													: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}"
-									>
-										{#if prompt === CUSTOM_SCENARIO_PROMPT}
-											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M12 4v16m8-8H4"
-												></path>
-											</svg>
-										{:else}
-											{index + 1}
-										{/if}
-									</div>
-								</div>
-
-								<div class="flex-1 min-w-0">
-									<p
-										class="text-sm font-medium {scenarioCompletionStatuses[index]
-											? 'text-gray-500 dark:text-gray-500'
-											: prompt === CUSTOM_SCENARIO_PROMPT
-												? 'text-purple-900 dark:text-purple-100'
-												: 'text-gray-900 dark:text-white'} line-clamp-2 leading-tight"
-									>
-										{customScenarioGenerated &&
-										prompt === CUSTOM_SCENARIO_PROMPT &&
-										customScenarioPrompt
-											? customScenarioPrompt
-											: prompt}
-									</p>
-								</div>
-							</div>
-
-							<div class="mt-2 flex items-center justify-between">
-								{#if selectedScenarioIndex === index}
-									<div class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												fill-rule="evenodd"
-												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-												clip-rule="evenodd"
-											></path>
-										</svg>
-										<span>Currently viewing</span>
-									</div>
-								{:else if scenarioCompletionStatuses[index]}
-									<!-- Use reactive array instead of isScenarioCompleted(index) function call
-							     to ensure template updates when scenarioStates changes -->
-									<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500">
-										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												fill-rule="evenodd"
-												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-												clip-rule="evenodd"
-											></path>
-										</svg>
-										<span>Completed</span>
-									</div>
-								{:else}
-									<div></div>
-								{/if}
-
-								{#if scenarioTimers.has(timerIdentifier) && (scenarioTimers.get(timerIdentifier) || 0) > 0}
-									<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												fill-rule="evenodd"
-												d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-												clip-rule="evenodd"
-											></path>
-										</svg>
-										<span>{formatTime(scenarioTimers.get(timerIdentifier) || 0)}</span>
-									</div>
-								{/if}
-							</div>
-						</button>
-					{/each}
-				</div>
-
-				<!-- Removed bottom divider and reset area -->
-			</div>
-
-			<!-- Right Side: Chat Thread -->
-			<div class="flex-1 flex flex-col">
-				<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
-					<p class="text-sm text-gray-600 dark:text-gray-400">
-						Please the conversation below, and answer the questions that follow.
-					</p>
-				</div>
-
-				<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
-					<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
-					{#if isCustomScenario && !customScenarioGenerated}
-						<div class="max-w-3xl mx-auto mt-2 space-y-6">
-							<div
-								class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg"
+					<div class="flex-1 overflow-y-auto p-3 space-y-2">
+						{#each scenarioList as [prompt, response], index}
+							{@const timerIdentifier = getScenarioId(index)}
+							<button
+								on:click={() => loadScenario(index)}
+								class="w-full text-left p-3 rounded-lg border transition-all duration-200 {selectedScenarioIndex ===
+								index
+									? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
+									: scenarioCompletionStatuses[index]
+										? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-700 opacity-60 hover:opacity-80'
+										: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'}"
 							>
-								<div class="flex items-start space-x-3 mb-6">
-									<svg
-										class="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-										></path>
-									</svg>
-									<div>
-										<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-											Create Your Own Scenario
-										</h3>
-										<p class="text-sm text-gray-600 dark:text-gray-400">
-											Enter a custom child prompt below and we'll generate an AI response for you to
-											review and moderate.
-										</p>
-									</div>
-								</div>
-
-								<div class="space-y-4">
-									<div>
-										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Child's Question or Prompt
-										</label>
-										<textarea
-											bind:value={customScenarioPrompt}
-											placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
-											rows="6"
-											minlength="10"
-											class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
-										></textarea>
-										<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-											💡 Tip: Write this from the perspective of a child asking a question or making
-											a statement.
-										</p>
-									</div>
-
-									<Tooltip
-										content={(!customScenarioPrompt.trim() ||
-											customScenarioPrompt.trim().length < 10) &&
-										!customScenarioGenerating
-											? 'Please enter at least 10 characters'
-											: ''}
-										placement="top"
-										className="w-full"
-									>
-										<button
-											on:click={generateCustomScenarioResponse}
-											disabled={customScenarioGenerating ||
-												!customScenarioPrompt.trim() ||
-												customScenarioPrompt.trim().length < 10}
-											class="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+								<div class="flex items-start space-x-2">
+									<div class="flex-shrink-0 relative">
+										<div
+											class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {selectedScenarioIndex ===
+											index
+												? 'bg-blue-500 text-white'
+												: prompt === CUSTOM_SCENARIO_PROMPT
+													? 'bg-purple-500 text-white'
+													: scenarioCompletionStatuses[index]
+														? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
+														: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}"
 										>
-											{#if customScenarioGenerating}
-												<svg
-													class="animate-spin h-5 w-5 text-white"
-													fill="none"
-													viewBox="0 0 24 24"
-												>
-													<circle
-														class="opacity-25"
-														cx="12"
-														cy="12"
-														r="10"
-														stroke="currentColor"
-														stroke-width="4"
-													></circle>
-													<path
-														class="opacity-75"
-														fill="currentColor"
-														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-													></path>
-												</svg>
-												<span>Generating Response...</span>
-											{:else}
-												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											{#if prompt === CUSTOM_SCENARIO_PROMPT}
+												<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
 														stroke-width="2"
-														d="M13 10V3L4 14h7v7l9-11h-7z"
+														d="M12 4v16m8-8H4"
 													></path>
 												</svg>
-												<span>Generate AI Response</span>
+											{:else}
+												{index + 1}
 											{/if}
-										</button>
-									</Tooltip>
+										</div>
+									</div>
+
+									<div class="flex-1 min-w-0">
+										<p
+											class="text-sm font-medium {scenarioCompletionStatuses[index]
+												? 'text-gray-500 dark:text-gray-500'
+												: prompt === CUSTOM_SCENARIO_PROMPT
+													? 'text-purple-900 dark:text-purple-100'
+													: 'text-gray-900 dark:text-white'} line-clamp-2 leading-tight"
+										>
+											{customScenarioGenerated &&
+											prompt === CUSTOM_SCENARIO_PROMPT &&
+											customScenarioPrompt
+												? customScenarioPrompt
+												: prompt}
+										</p>
+									</div>
+								</div>
+
+								<div class="mt-2 flex items-center justify-between">
+									{#if selectedScenarioIndex === index}
+										<div
+											class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400"
+										>
+											<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
+											</svg>
+											<span>Currently viewing</span>
+										</div>
+									{:else if scenarioCompletionStatuses[index]}
+										<!-- Use reactive array instead of isScenarioCompleted(index) function call
+							     to ensure template updates when scenarioStates changes -->
+										<div
+											class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+										>
+											<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
+											</svg>
+											<span>Completed</span>
+										</div>
+									{:else}
+										<div></div>
+									{/if}
+
+									{#if scenarioTimers.has(timerIdentifier) && (scenarioTimers.get(timerIdentifier) || 0) > 0}
+										<div
+											class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400"
+										>
+											<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+													clip-rule="evenodd"
+												></path>
+											</svg>
+											<span>{formatTime(scenarioTimers.get(timerIdentifier) || 0)}</span>
+										</div>
+									{/if}
+								</div>
+							</button>
+						{/each}
+					</div>
+
+					<!-- Removed bottom divider and reset area -->
+				</div>
+
+				<!-- Right Side: Chat Thread -->
+				<div class="flex-1 flex flex-col">
+					<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
+						<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							Please the conversation below, and answer the questions that follow.
+						</p>
+					</div>
+
+					<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
+						<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
+						{#if isCustomScenario && !customScenarioGenerated}
+							<div class="max-w-3xl mx-auto mt-2 space-y-6">
+								<div
+									class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg"
+								>
+									<div class="flex items-start space-x-3 mb-6">
+										<svg
+											class="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											></path>
+										</svg>
+										<div>
+											<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+												Create Your Own Scenario
+											</h3>
+											<p class="text-sm text-gray-600 dark:text-gray-400">
+												Enter a custom child prompt below and we'll generate an AI response for you
+												to review and moderate.
+											</p>
+										</div>
+									</div>
+
+									<div class="space-y-4">
+										<div>
+											<label
+												class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
+												Child's Question or Prompt
+											</label>
+											<textarea
+												bind:value={customScenarioPrompt}
+												placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
+												rows="6"
+												minlength="10"
+												class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
+											></textarea>
+											<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+												💡 Tip: Write this from the perspective of a child asking a question or
+												making a statement.
+											</p>
+										</div>
+
+										<Tooltip
+											content={(!customScenarioPrompt.trim() ||
+												customScenarioPrompt.trim().length < 10) &&
+											!customScenarioGenerating
+												? 'Please enter at least 10 characters'
+												: ''}
+											placement="top"
+											className="w-full"
+										>
+											<button
+												on:click={generateCustomScenarioResponse}
+												disabled={customScenarioGenerating ||
+													!customScenarioPrompt.trim() ||
+													customScenarioPrompt.trim().length < 10}
+												class="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+											>
+												{#if customScenarioGenerating}
+													<svg
+														class="animate-spin h-5 w-5 text-white"
+														fill="none"
+														viewBox="0 0 24 24"
+													>
+														<circle
+															class="opacity-25"
+															cx="12"
+															cy="12"
+															r="10"
+															stroke="currentColor"
+															stroke-width="4"
+														></circle>
+														<path
+															class="opacity-75"
+															fill="currentColor"
+															d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+														></path>
+													</svg>
+													<span>Generating Response...</span>
+												{:else}
+													<svg
+														class="w-5 h-5"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M13 10V3L4 14h7v7l9-11h-7z"
+														></path>
+													</svg>
+													<span>Generate AI Response</span>
+												{/if}
+											</button>
+										</Tooltip>
+									</div>
 								</div>
 							</div>
-						</div>
-					{:else if !isCustomScenario || customScenarioGenerated}
-						<!-- Child Prompt Bubble -->
-						<div class="flex justify-end">
-							<!-- 
+						{:else if !isCustomScenario || customScenarioGenerated}
+							<!-- Child Prompt Bubble -->
+							<div class="flex justify-end">
+								<!-- 
 						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
 						All three highlighting indicators must use identical conditions:
 						1. cursor-text class: Visual cursor feedback
@@ -6180,118 +6225,256 @@
 						3. Tooltip visibility: "← Drag to highlight" arrow indicator
 						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
 					-->
-							<div
-								class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
-									? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all'
-									: ''}"
-								bind:this={promptContainer1}
-								on:mouseup={handleTextSelection}
-								title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
-							>
-								{#if isHighlightingEnabled && highlightedTexts1.length === 0}
-									<div
-										class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
-									>
-										← Drag to highlight
-									</div>
-								{/if}
-								<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
-								<!-- Auto-highlight enabled: No button needed -->
+								<div
+									class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
+										? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all'
+										: ''}"
+									bind:this={promptContainer1}
+									on:mouseup={handleTextSelection}
+									title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
+								>
+									{#if isHighlightingEnabled && highlightedTexts1.length === 0}
+										<div
+											class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
+										>
+											← Drag to highlight
+										</div>
+									{/if}
+									<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
+									<!-- Auto-highlight enabled: No button needed -->
+								</div>
 							</div>
-						</div>
-					{/if}
+						{/if}
 
-					<!-- AI Response Bubble (hidden for custom scenario before generation) -->
-					{#if !isCustomScenario || customScenarioGenerated}
-						<!-- Side-by-Side Comparison View -->
-						{#if showComparisonView && versions.length > 0 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-								<!-- Left Column: Original Response -->
-								<div class="max-w-full">
-									<div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-										Original Response
+						<!-- AI Response Bubble (hidden for custom scenario before generation) -->
+						{#if !isCustomScenario || customScenarioGenerated}
+							<!-- Side-by-Side Comparison View -->
+							{#if showComparisonView && versions.length > 0 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+									<!-- Left Column: Original Response -->
+									<div class="max-w-full">
+										<div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+											Original Response
+										</div>
+										<div
+											class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
+										>
+											<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{@html getHighlightedHTML(originalResponse1, highlightedTexts1)}
+											</div>
+										</div>
 									</div>
-									<div
-										class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
-									>
-										<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-											{@html getHighlightedHTML(originalResponse1, highlightedTexts1)}
+
+									<!-- Right Column: Moderated Response -->
+									<div class="max-w-full">
+										<div class="flex items-center justify-between mb-2">
+											<div class="text-xs font-semibold text-gray-600 dark:text-gray-400">
+												Moderated Version {currentVersionIndex + 1}
+											</div>
+											<!-- Version Navigation Controls -->
+											{#if versions.length > 1}
+												<div class="flex items-center space-x-1">
+													<button
+														on:click={() => navigateToVersion('prev')}
+														disabled={currentVersionIndex <= 0 || confirmedVersionIndex !== null}
+														class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+														title="Previous version"
+													>
+														<svg
+															class="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M15 19l-7-7 7-7"
+															></path>
+														</svg>
+													</button>
+
+													<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+														{confirmedVersionIndex !== null &&
+														currentVersionIndex === confirmedVersionIndex
+															? '✓ '
+															: ''}
+														{currentVersionIndex + 1}/{versions.length}
+													</span>
+
+													<button
+														on:click={() => navigateToVersion('next')}
+														disabled={currentVersionIndex >= versions.length - 1 ||
+															confirmedVersionIndex !== null}
+														class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+														title="Next version"
+													>
+														<svg
+															class="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M9 5l7 7-7 7"
+															></path>
+														</svg>
+													</button>
+												</div>
+											{/if}
+										</div>
+										<div
+											class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
+										>
+											<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{@html versions[currentVersionIndex].response}
+											</div>
+
+											<!-- Applied Strategies inside moderated version -->
+											{#if versions[currentVersionIndex].strategies.length > 0 || versions[currentVersionIndex].customInstructions.length > 0}
+												<div class="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+													<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+														Applied Strategies:
+													</p>
+													<div class="flex flex-wrap gap-1">
+														{#each versions[currentVersionIndex].strategies as strategy}
+															<span
+																class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded"
+															>
+																{strategy}
+															</span>
+														{/each}
+														{#each versions[currentVersionIndex].customInstructions as custom}
+															<span
+																class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded"
+															>
+																Custom: {custom.text}
+															</span>
+														{/each}
+													</div>
+												</div>
+											{/if}
 										</div>
 									</div>
 								</div>
-
-								<!-- Right Column: Moderated Response -->
-								<div class="max-w-full">
-									<div class="flex items-center justify-between mb-2">
-										<div class="text-xs font-semibold text-gray-600 dark:text-gray-400">
-											Moderated Version {currentVersionIndex + 1}
-										</div>
-										<!-- Version Navigation Controls -->
-										{#if versions.length > 1}
-											<div class="flex items-center space-x-1">
-												<button
-													on:click={() => navigateToVersion('prev')}
-													disabled={currentVersionIndex <= 0 || confirmedVersionIndex !== null}
-													class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-													title="Previous version"
-												>
-													<svg
-														class="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M15 19l-7-7 7-7"
-														></path>
-													</svg>
-												</button>
-
-												<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-													{confirmedVersionIndex !== null &&
-													currentVersionIndex === confirmedVersionIndex
-														? '✓ '
-														: ''}
-													{currentVersionIndex + 1}/{versions.length}
-												</span>
-
-												<button
-													on:click={() => navigateToVersion('next')}
-													disabled={currentVersionIndex >= versions.length - 1 ||
-														confirmedVersionIndex !== null}
-													class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-													title="Next version"
-												>
-													<svg
-														class="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M9 5l7 7-7 7"
-														></path>
-													</svg>
-												</button>
+							{:else}
+								<!-- Single Response View -->
+								<div class="flex justify-start">
+									<!-- 
+						DRAG-TO-HIGHLIGHT UI: AI Response Bubble
+						All three highlighting indicators must use identical conditions:
+						1. cursor-text class: Visual cursor feedback
+						2. title attribute: Hover tooltip
+						3. Tooltip visibility: "Drag to highlight →" arrow indicator
+						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
+					-->
+									<div
+										bind:this={responseContainer1}
+										on:mouseup={handleTextSelection}
+										class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
+											? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all'
+											: ''}"
+										title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
+									>
+										{#if isHighlightingEnabled && highlightedTexts1.length === 0}
+											<div
+												class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
+											>
+												Drag to highlight →
 											</div>
 										{/if}
-									</div>
-									<div
-										class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
-									>
-										<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-											{@html versions[currentVersionIndex].response}
+										<div
+											class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text"
+										>
+											{@html response1HTML}
 										</div>
+										<!-- Auto-highlight enabled: No button needed -->
 
-										<!-- Applied Strategies inside moderated version -->
-										{#if versions[currentVersionIndex].strategies.length > 0 || versions[currentVersionIndex].customInstructions.length > 0}
-											<div class="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+										<!-- Original Accepted Indicator -->
+										{#if false}
+											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+												<div
+													class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg"
+												>
+													<div class="flex items-center space-x-2">
+														<svg
+															class="w-4 h-4 text-green-600 dark:text-green-400"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+															></path>
+														</svg>
+														<span class="text-xs font-medium text-green-700 dark:text-green-300">
+															Original response accepted as satisfactory
+														</span>
+													</div>
+													<button
+														on:click={unmarkSatisfaction}
+														class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+													>
+														Undo
+													</button>
+												</div>
+											</div>
+										{/if}
+
+										{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
+											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+												<div class="flex items-center justify-between mb-1">
+													<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+														Highlighted Concerns ({highlightedTexts1.length}):
+													</p>
+													{#if moderationPanelVisible}
+														<button
+															on:click={returnToHighlighting}
+															class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+														>
+															Change/Add Highlighted Text
+														</button>
+													{/if}
+												</div>
+												<div class="flex flex-wrap gap-1">
+													{#each highlightedTexts1 as highlight}
+														<button
+															class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+															on:click={() => removeHighlight(highlight)}
+															title="Click to remove"
+														>
+															{highlight.text.length > 30
+																? highlight.text.substring(0, 30) + '...'
+																: highlight.text}
+															<svg
+																class="w-3 h-3 ml-1"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M6 18L18 6M6 6l12 12"
+																></path>
+															</svg>
+														</button>
+													{/each}
+												</div>
+											</div>
+										{/if}
+
+										<!-- Applied Strategies Display (below response) -->
+										{#if versions.length > 0 && !showOriginal1 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
+											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
 												<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
 													Applied Strategies:
 												</p>
@@ -6315,877 +6498,110 @@
 										{/if}
 									</div>
 								</div>
-							</div>
-						{:else}
-							<!-- Single Response View -->
-							<div class="flex justify-start">
-								<!-- 
-						DRAG-TO-HIGHLIGHT UI: AI Response Bubble
-						All three highlighting indicators must use identical conditions:
-						1. cursor-text class: Visual cursor feedback
-						2. title attribute: Hover tooltip
-						3. Tooltip visibility: "Drag to highlight →" arrow indicator
-						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
-					-->
-								<div
-									bind:this={responseContainer1}
-									on:mouseup={handleTextSelection}
-									class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
-										? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all'
-										: ''}"
-									title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
-								>
-									{#if isHighlightingEnabled && highlightedTexts1.length === 0}
-										<div
-											class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
-										>
-											Drag to highlight →
-										</div>
-									{/if}
-									<div
-										class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text"
-									>
-										{@html response1HTML}
-									</div>
-									<!-- Auto-highlight enabled: No button needed -->
-
-									<!-- Original Accepted Indicator -->
-									{#if false}
-										<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-											<div
-												class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg"
-											>
-												<div class="flex items-center space-x-2">
-													<svg
-														class="w-4 h-4 text-green-600 dark:text-green-400"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-														></path>
-													</svg>
-													<span class="text-xs font-medium text-green-700 dark:text-green-300">
-														Original response accepted as satisfactory
-													</span>
-												</div>
-												<button
-													on:click={unmarkSatisfaction}
-													class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-												>
-													Undo
-												</button>
-											</div>
-										</div>
-									{/if}
-
-									{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
-										<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-											<div class="flex items-center justify-between mb-1">
-												<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
-													Highlighted Concerns ({highlightedTexts1.length}):
-												</p>
-												{#if moderationPanelVisible}
-													<button
-														on:click={returnToHighlighting}
-														class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-													>
-														Change/Add Highlighted Text
-													</button>
-												{/if}
-											</div>
-											<div class="flex flex-wrap gap-1">
-												{#each highlightedTexts1 as highlight}
-													<button
-														class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-														on:click={() => removeHighlight(highlight)}
-														title="Click to remove"
-													>
-														{highlight.text.length > 30
-															? highlight.text.substring(0, 30) + '...'
-															: highlight.text}
-														<svg
-															class="w-3 h-3 ml-1"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															></path>
-														</svg>
-													</button>
-												{/each}
-											</div>
-										</div>
-									{/if}
-
-									<!-- Applied Strategies Display (below response) -->
-									{#if versions.length > 0 && !showOriginal1 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
-										<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-											<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-												Applied Strategies:
-											</p>
-											<div class="flex flex-wrap gap-1">
-												{#each versions[currentVersionIndex].strategies as strategy}
-													<span
-														class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded"
-													>
-														{strategy}
-													</span>
-												{/each}
-												{#each versions[currentVersionIndex].customInstructions as custom}
-													<span
-														class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded"
-													>
-														Custom: {custom.text}
-													</span>
-												{/each}
-											</div>
-										</div>
-									{/if}
-								</div>
-							</div>
+							{/if}
 						{/if}
-					{/if}
 
-					<!-- Unified Initial Decision Pane -->
-					<!-- SIMPLIFIED FLOW: Only Steps 1 and 2 are shown (Step 3 is disabled) -->
-					{#if showInitialDecisionPane && !markedNotApplicable && initialDecisionStep >= 1 && initialDecisionStep <= 2 && (!isCustomScenario || customScenarioGenerated)}
-						<div class="flex justify-center mt-6">
-							<div class="w-full max-w-4xl px-4">
-								<div
-									class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
-								>
-									<!-- Step Indicators -->
-									<!-- SIMPLIFIED FLOW: Only showing Steps 1 (Highlight) and 2 (Reflect) -->
-									<!-- Step 3 (Moderate) has been removed for identification-only experiment -->
-									<div class="flex items-center justify-between mb-6">
-										{#each [1, 2] as step}
-											{@const stepCompleted =
-												(step === 1 && step1Completed) || (step === 2 && step2Completed)}
-											{@const stepCurrent = step === initialDecisionStep}
-											{@const stepLocked =
-												(step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
-											<button
-												on:click={() => navigateToStep(step)}
-												disabled={stepLocked}
-												class="flex items-center space-x-2 transition-all {stepCurrent
-													? 'text-blue-600 dark:text-blue-400'
-													: stepCompleted
-														? 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-														: 'text-gray-300 dark:text-gray-600'} {stepLocked
-													? 'cursor-not-allowed opacity-50'
-													: 'cursor-pointer'}"
-											>
-												<div
-													class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all {stepCurrent
-														? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-110'
+						<!-- Unified Initial Decision Pane -->
+						<!-- SIMPLIFIED FLOW: Only Steps 1 and 2 are shown (Step 3 is disabled) -->
+						{#if showInitialDecisionPane && !markedNotApplicable && initialDecisionStep >= 1 && initialDecisionStep <= 2 && (!isCustomScenario || customScenarioGenerated)}
+							<div class="flex justify-center mt-6">
+								<div class="w-full max-w-4xl px-4">
+									<div
+										class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
+									>
+										<!-- Step Indicators -->
+										<!-- SIMPLIFIED FLOW: Only showing Steps 1 (Highlight) and 2 (Reflect) -->
+										<!-- Step 3 (Moderate) has been removed for identification-only experiment -->
+										<div class="flex items-center justify-between mb-6">
+											{#each [1, 2] as step}
+												{@const stepCompleted =
+													(step === 1 && step1Completed) || (step === 2 && step2Completed)}
+												{@const stepCurrent = step === initialDecisionStep}
+												{@const stepLocked =
+													(step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
+												<button
+													on:click={() => navigateToStep(step)}
+													disabled={stepLocked}
+													class="flex items-center space-x-2 transition-all {stepCurrent
+														? 'text-blue-600 dark:text-blue-400'
 														: stepCompleted
-															? 'border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700 hover:border-gray-500 dark:hover:border-gray-400'
-															: 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}"
+															? 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+															: 'text-gray-300 dark:text-gray-600'} {stepLocked
+														? 'cursor-not-allowed opacity-50'
+														: 'cursor-pointer'}"
 												>
-													{#if stepCompleted}
-														<svg
-															class="w-5 h-5 text-green-600 dark:text-green-400"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M5 13l4 4L19 7"
-															></path>
-														</svg>
-													{:else}
-														<span class="text-sm font-semibold">{step}</span>
-													{/if}
-												</div>
-												<span class="text-sm font-medium hidden sm:inline">
-													{step === 1 ? 'Highlight' : 'Reflect'}
-												</span>
-											</button>
-											{#if step < 2}
-												<div
-													class="flex-1 h-0.5 mx-2 transition-colors {(step === 1 &&
-														step1Completed) ||
-													(step === 2 && step2Completed)
-														? 'bg-gray-400 dark:bg-gray-500'
-														: 'bg-gray-200 dark:bg-gray-700'}"
-												></div>
-											{/if}
-										{/each}
-									</div>
-
-									<!-- Step 1: Highlighting or Skip -->
-									{#if initialDecisionStep === 1}
-										<div class="space-y-4">
-											<div>
-												<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-													Step 1: Highlight the content that concerns you
-												</h3>
-
-												{#if highlightedTexts1.length > 0}
 													<div
-														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+														class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all {stepCurrent
+															? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-110'
+															: stepCompleted
+																? 'border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700 hover:border-gray-500 dark:hover:border-gray-400'
+																: 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}"
 													>
-														<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-															✓ {highlightedTexts1.length} section{highlightedTexts1.length === 1
-																? ''
-																: 's'} highlighted
-														</p>
-														<div class="flex flex-wrap gap-2">
-															{#each highlightedTexts1 as highlight}
-																<button
-																	class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-																	on:click={() => removeHighlight(highlight)}
-																	title="Click to remove"
-																>
-																	{highlight.text.length > 40
-																		? highlight.text.substring(0, 40) + '...'
-																		: highlight.text}
-																	<svg
-																		class="w-3 h-3 ml-1"
-																		fill="none"
-																		stroke="currentColor"
-																		viewBox="0 0 24 24"
-																	>
-																		<path
-																			stroke-linecap="round"
-																			stroke-linejoin="round"
-																			stroke-width="2"
-																			d="M6 18L18 6M6 6l12 12"
-																		></path>
-																	</svg>
-																</button>
-															{/each}
-														</div>
-														<p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-															Drag over more text to add highlights, or click "Continue" when done.
-														</p>
+														{#if stepCompleted}
+															<svg
+																class="w-5 h-5 text-green-600 dark:text-green-400"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M5 13l4 4L19 7"
+																></path>
+															</svg>
+														{:else}
+															<span class="text-sm font-semibold">{step}</span>
+														{/if}
 													</div>
-												{:else}
+													<span class="text-sm font-medium hidden sm:inline">
+														{step === 1 ? 'Highlight' : 'Reflect'}
+													</span>
+												</button>
+												{#if step < 2}
 													<div
-														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-													>
-														<p class="text-xs text-yellow-800 dark:text-yellow-200">
-															⚠️ Drag over text in the response above to highlight concerns. If this
-															scenario is not relevant, click "Skip Scenario".
-														</p>
-													</div>
+														class="flex-1 h-0.5 mx-2 transition-colors {(step === 1 &&
+															step1Completed) ||
+														(step === 2 && step2Completed)
+															? 'bg-gray-400 dark:bg-gray-500'
+															: 'bg-gray-200 dark:bg-gray-700'}"
+													></div>
 												{/if}
-											</div>
-
-											<!-- Action buttons - Continue disabled when no highlights, only Skip enabled -->
-											<div
-												class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-											>
-												<button
-													on:click={() => completeStep1(false)}
-													disabled={highlightedTexts1.length === 0}
-													class="flex-1 px-6 py-3 {highlightedTexts1.length > 0
-														? 'bg-green-500 hover:bg-green-600 text-white'
-														: 'bg-gray-400 text-white cursor-not-allowed opacity-50'} font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed"
-												>
-													<span>Continue</span>
-													{#if highlightedTexts1.length === 0}
-														<span class="text-xs opacity-75">(highlight required)</span>
-													{/if}
-												</button>
-												<button
-													on:click={() => completeStep1(true)}
-													class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
-												>
-													Skip Scenario
-												</button>
-											</div>
+											{/each}
 										</div>
-									{/if}
 
-									<!-- Step 2: Assess -->
-									{#if initialDecisionStep === 2}
-										<div class="space-y-4">
-											<div>
-												<div class="flex items-center justify-between mb-2">
-													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-														Step 2: Explain why this content concerns you
-													</h3>
-													<button
-														on:click={() => navigateToStep(1)}
-														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
-													>
-														<svg
-															class="w-3 h-3 flex-shrink-0"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M10 19l-7-7m0 0l7-7m-7 7h18"
-															></path>
-														</svg>
-														<span>Back</span>
-													</button>
-												</div>
-											</div>
-
-											<!-- Concern Rating Likert Scale (before explain why) -->
+										<!-- Step 1: Highlighting or Skip -->
+										{#if initialDecisionStep === 1}
 											<div class="space-y-4">
 												<div>
-													<label
-														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-													>
-														To what extent, if any, are you concerned about this interaction? <span
-															class="text-red-500">*</span
-														>
-													</label>
-													<div class="space-y-2">
-														{#each [{ value: 1, label: 'Not concerned at all' }, { value: 2, label: 'Somewhat unconcerned' }, { value: 3, label: 'Neutral' }, { value: 4, label: 'Somewhat concerned' }, { value: 5, label: 'Concerned' }] as option}
-															<label
-																class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {concernLevel ===
-																option.value
-																	? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-																	: ''}"
-															>
-																<input
-																	type="radio"
-																	name="concernLevel"
-																	value={option.value}
-																	bind:group={concernLevel}
-																	class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-																/>
-																<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
-																	{option.label}
-																</span>
-															</label>
-														{/each}
-													</div>
-												</div>
-
-												<!-- Explanation field -->
-												<div>
-													<label
-														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-													>
-														Explain why this content concerns you <span class="text-red-500">*</span
-														>
-													</label>
-													<textarea
-														bind:value={concernReason}
-														placeholder="Explain why this content concerns you... (minimum 10 characters)"
-														rows="5"
-														minlength="10"
-														class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
-													></textarea>
-												</div>
-											</div>
-
-											<div>
-												<button
-													on:click={completeStep2}
-													disabled={concernLevel === null ||
-														!concernReason.trim() ||
-														concernReason.trim().length < 10}
-													class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-												>
-													Submit
-												</button>
-											</div>
-										</div>
-									{/if}
-
-									<!-- ============================================================================
-						     STEP 3 (MODERATION) - COMMENTED OUT FOR IDENTIFICATION-ONLY EXPERIMENT
-						     This entire block is disabled but preserved for future restoration.
-						     To restore: Change `{#if false && initialDecisionStep === 3}` back to `{#if initialDecisionStep === 3}`
-						     ============================================================================ -->
-									<!-- Step 3: Update -->
-									{#if false && initialDecisionStep === 3}
-										<div class="space-y-4">
-											<div>
-												<div class="flex items-center justify-between mb-2">
-													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-														Step 3: Moderate
+													<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+														Step 1: Highlight the content that concerns you
 													</h3>
-													<button
-														on:click={() => navigateToStep(2)}
-														disabled={moderationLoading}
-														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
-													>
-														<svg
-															class="w-3 h-3 flex-shrink-0"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M10 19l-7-7m0 0l7-7m-7 7h18"
-															></path>
-														</svg>
-														<span>Back</span>
-													</button>
-												</div>
-												{#if versions.length > 0 && showComparisonView}
-													<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-														Review the moderated version above. You can confirm it or try different
-														strategies.
-													</p>
-												{:else}
-													<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-														How would you like to moderate the content?
-													</p>
-												{/if}
-											</div>
 
-											<!-- Step 3: Satisfaction Check UI (unified panel - always shown when versions exist) -->
-											{#if versions.length > 0 && showComparisonView && !moderationPanelVisible}
-												<div
-													class="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-												>
-													<h4 class="text-base font-semibold text-gray-900 dark:text-white mb-3">
-														How satisfied are you with the updated response?
-													</h4>
-
-													<!-- Satisfaction Likert Scale (1-5) - Required -->
-													<div class="space-y-2">
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															Satisfaction Level <span class="text-red-500">*</span>
-														</label>
-														{#each [1, 2, 3, 4, 5] as level}
-															<label
-																class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {satisfactionLevel ===
-																level
-																	? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-																	: ''}"
-															>
-																<input
-																	type="radio"
-																	name="satisfactionLevel"
-																	value={level}
-																	bind:group={satisfactionLevel}
-																	class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-																/>
-																<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
-																	{level === 1
-																		? '1 - Very Dissatisfied'
-																		: level === 2
-																			? '2 - Dissatisfied'
-																			: level === 3
-																				? '3 - Neutral'
-																				: level === 4
-																					? '4 - Satisfied'
-																					: '5 - Very Satisfied'}
-																</span>
-															</label>
-														{/each}
-													</div>
-
-													<!-- Why field - Always shown, required (minimum 10 characters) -->
-													<div>
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															Why? <span class="text-red-500">*</span>
-														</label>
-														<textarea
-															bind:value={satisfactionReason}
-															placeholder="Explain your satisfaction level... (minimum 10 characters)"
-															rows="3"
-															minlength="10"
-															class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
-														></textarea>
-													</div>
-
-													<!-- Navigation Buttons -->
-													<div
-														class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-													>
-														<!-- Moderate Again Button -->
-														<button
-															on:click={async () => {
-																// Validate satisfaction level is set
-																if (satisfactionLevel === null) {
-																	toast.error('Please select a satisfaction level');
-																	return;
-																}
-
-																// Validate reason is filled and meets minimum length
-																if (!satisfactionReason.trim()) {
-																	toast.error('Please explain your satisfaction level');
-																	return;
-																}
-
-																if (satisfactionReason.trim().length < 10) {
-																	toast.error(
-																		'Please provide at least 10 characters in your explanation'
-																	);
-																	return;
-																}
-
-																try {
-																	// Save satisfaction check to backend
-																	await submitSatisfactionCheck(
-																		satisfactionLevel,
-																		satisfactionReason,
-																		'try_again'
-																	);
-
-																	// Reset satisfaction state to allow creating new version
-																	satisfactionLevel = null;
-																	satisfactionReason = '';
-																	nextAction = null;
-
-																	// Clear selected moderations to start fresh
-																	selectedModerations = new Set();
-																	customInstructions = [];
-
-																	// Show moderation panel for another iteration
-																	moderationPanelVisible = true;
-																	moderationPanelExpanded = true;
-																	toast.info(
-																		'Select moderation strategies to create another version'
-																	);
-
-																	// Scroll to moderation panel after it opens
-																	setTimeout(() => {
-																		if (moderationPanelElement) {
-																			moderationPanelElement.scrollIntoView({
-																				behavior: 'smooth',
-																				block: 'start'
-																			});
-																		}
-																	}, 100);
-																} catch (error) {
-																	console.error('Failed to save satisfaction check:', error);
-																	toast.error('Failed to save your response. Please try again.');
-																}
-															}}
-															disabled={satisfactionLevel === null ||
-																!satisfactionReason.trim() ||
-																satisfactionReason.trim().length < 10}
-															class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-														>
-															Moderate Again
-														</button>
-
-														<!-- Continue to next scenario Button -->
-														<button
-															on:click={async () => {
-																// Validate satisfaction level is set
-																if (satisfactionLevel === null) {
-																	toast.error('Please select a satisfaction level');
-																	return;
-																}
-
-																// Validate reason is filled and meets minimum length
-																if (!satisfactionReason.trim()) {
-																	toast.error('Please explain your satisfaction level');
-																	return;
-																}
-
-																if (satisfactionReason.trim().length < 10) {
-																	toast.error(
-																		'Please provide at least 10 characters in your explanation'
-																	);
-																	return;
-																}
-
-																try {
-																	// Save satisfaction check to backend (this already handles navigation)
-																	await submitSatisfactionCheck(
-																		satisfactionLevel,
-																		satisfactionReason,
-																		'move_on'
-																	);
-																	// submitSatisfactionCheck already handles confirmCurrentVersion() and navigation (lines 2590-2603)
-																} catch (error) {
-																	console.error('Failed to save satisfaction check:', error);
-																	toast.error('Failed to save your response. Please try again.');
-																}
-															}}
-															disabled={satisfactionLevel === null ||
-																!satisfactionReason.trim() ||
-																satisfactionReason.trim().length < 10}
-															class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-														>
-															Continue to next scenario
-														</button>
-													</div>
-												</div>
-											{:else}
-												<!-- Strategy instruction and Clear button -->
-												<div class="flex items-center justify-between mb-3">
-													<p class="text-sm text-gray-600 dark:text-gray-400">
-														Choose up to <b>3 strategies</b> to improve the AI's response.
-													</p>
-													{#if selectedModerations.size > 0 || attentionCheckSelected}
-														<button
-															on:click={clearSelections}
-															class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-														>
-															Clear All
-														</button>
-													{/if}
-												</div>
-
-												<!-- Grouped Strategy Options (Legacy validated design) -->
-												<div class="space-y-3 mb-4" bind:this={moderationPanelElement}>
-													{#each Object.entries(moderationOptions) as [category, options]}
+													{#if highlightedTexts1.length > 0}
 														<div
-															class="border-2 {category === 'Refuse and Remove'
-																? 'border-red-500 dark:border-red-600'
-																: category === 'Investigate and Empathize'
-																	? 'border-blue-500 dark:border-blue-600'
-																	: category === 'Correct their Understanding'
-																		? 'border-green-500 dark:border-green-600'
-																		: category === 'Match their Age'
-																			? 'border-yellow-500 dark:border-yellow-600'
-																			: category === 'Defer to Support'
-																				? 'border-purple-500 dark:border-purple-600'
-																				: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
+															class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
 														>
-															<!-- Group Header -->
-															<button
-																on:click={() => toggleGroupExpansion(category)}
-																class="w-full p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+															<p
+																class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2"
 															>
-																<div class="flex items-center justify-between">
-																	<div class="flex items-center">
-																		<span
-																			class="w-3 h-3 rounded-full mr-3 {category ===
-																			'Refuse and Remove'
-																				? 'bg-red-500'
-																				: category === 'Investigate and Empathize'
-																					? 'bg-blue-500'
-																					: category === 'Correct their Understanding'
-																						? 'bg-green-500'
-																						: category === 'Match their Age'
-																							? 'bg-yellow-500'
-																							: category === 'Defer to Support'
-																								? 'bg-purple-500'
-																								: 'bg-pink-500'}"
-																		></span>
-																		<h4 class="text-sm font-bold text-gray-900 dark:text-white">
-																			{category === 'Custom' && showCustomInput
-																				? '✨ Custom (Open)'
-																				: category}
-																		</h4>
-																	</div>
-																	<div class="flex items-center space-x-2">
-																		{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
-																			<span
-																				class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
-																			>
-																				{#if category === 'Custom'}
-																					{customInstructions.filter((c) =>
-																						selectedModerations.has(c.id)
-																					).length} selected
-																				{:else if category === 'Attention Check'}
-																					{attentionCheckSelected ? 1 : 0} selected
-																				{:else}
-																					{options.filter((option) =>
-																						selectedModerations.has(option)
-																					).length} selected
-																				{/if}
-																			</span>
-																		{/if}
-																		{#if category !== 'Custom' || !showCustomInput}
-																			<svg
-																				class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
-																					category
-																				) ||
-																				(category === 'Custom' && showCustomInput)
-																					? 'rotate-180'
-																					: ''}"
-																				fill="none"
-																				stroke="currentColor"
-																				viewBox="0 0 24 24"
-																			>
-																				<path
-																					stroke-linecap="round"
-																					stroke-linejoin="round"
-																					stroke-width="2"
-																					d="M19 9l-7 7-7-7"
-																				></path>
-																			</svg>
-																		{:else}
-																			<svg
-																				class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
-																				fill="none"
-																				stroke="currentColor"
-																				viewBox="0 0 24 24"
-																			>
-																				<path
-																					stroke-linecap="round"
-																					stroke-linejoin="round"
-																					stroke-width="2"
-																					d="M19 9l-7 7-7-7"
-																				></path>
-																			</svg>
-																		{/if}
-																	</div>
-																</div>
-															</button>
-
-															<!-- Group Content (2-column grid with button toggles) -->
-															{#if expandedGroups.has(category) && category !== 'Custom'}
-																<div class="px-3 pb-3">
-																	<div class="grid grid-cols-2 gap-2">
-																		{#each options as option}
-																			<Tooltip
-																				content={moderationTooltips[option] || ''}
-																				placement="top-end"
-																				className="w-full"
-																				tippyOptions={{ delay: [200, 0] }}
-																			>
-																				<button
-																					on:click={() => toggleModerationSelection(option)}
-																					disabled={moderationLoading}
-																					aria-pressed={option === 'I read the instructions'
-																						? attentionCheckSelected
-																						: selectedModerations.has(option)}
-																					class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {(
-																						option === 'I read the instructions'
-																							? attentionCheckSelected
-																							: selectedModerations.has(option)
-																					)
-																						? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-																						: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
-																				>
-																					{option}
-																				</button>
-																			</Tooltip>
-																		{/each}
-																	</div>
-																</div>
-															{/if}
-
-															<!-- Custom Input Field -->
-															{#if category === 'Custom' && showCustomInput}
-																<div class="px-3 pb-3 pt-2">
-																	<div class="space-y-2">
-																		<label
-																			class="block text-xs font-medium text-purple-900 dark:text-purple-200"
-																		>
-																			Enter custom moderation instruction:
-																		</label>
-																		<textarea
-																			bind:value={customInstructionInput}
-																			rows="2"
-																			placeholder="E.g., Emphasize problem-solving skills..."
-																			class="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-																			on:keydown={(e) => {
-																				if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-																					addCustomInstruction();
-																				} else if (e.key === 'Escape') {
-																					cancelCustomInput();
-																				}
-																			}}
-																		></textarea>
-																		<div class="flex justify-end space-x-2">
-																			<button
-																				on:click={cancelCustomInput}
-																				class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-																			>
-																				Cancel
-																			</button>
-																			<button
-																				on:click={addCustomInstruction}
-																				class="px-3 py-1 text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors"
-																			>
-																				Add
-																			</button>
-																		</div>
-																	</div>
-																</div>
-															{/if}
-														</div>
-													{/each}
-												</div>
-
-												<!-- Custom Instructions Display -->
-												{#if customInstructions.length > 0}
-													<div
-														class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
-													>
-														<h4
-															class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2"
-														>
-															Custom Instructions ({customInstructions.length}):
-														</h4>
-														<div class="space-y-2">
-															{#each customInstructions as custom}
-																<div
-																	class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
-																		custom.id
-																	)
-																		? 'border-purple-500'
-																		: 'border-transparent'}"
-																>
+																✓ {highlightedTexts1.length} section{highlightedTexts1.length === 1
+																	? ''
+																	: 's'} highlighted
+															</p>
+															<div class="flex flex-wrap gap-2">
+																{#each highlightedTexts1 as highlight}
 																	<button
-																		on:click={() => toggleModerationSelection(custom.id)}
-																		class="flex-1 text-left mr-2"
+																		class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+																		on:click={() => removeHighlight(highlight)}
+																		title="Click to remove"
 																	>
-																		<div class="flex items-center space-x-1 mb-1">
-																			<div
-																				class="w-3 h-3 rounded border-2 {selectedModerations.has(
-																					custom.id
-																				)
-																					? 'bg-purple-500 border-purple-500'
-																					: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
-																			>
-																				{#if selectedModerations.has(custom.id)}
-																					<svg
-																						class="w-2 h-2 text-white"
-																						fill="none"
-																						stroke="currentColor"
-																						viewBox="0 0 24 24"
-																					>
-																						<path
-																							stroke-linecap="round"
-																							stroke-linejoin="round"
-																							stroke-width="3"
-																							d="M5 13l4 4L19 7"
-																						></path>
-																					</svg>
-																				{/if}
-																			</div>
-																			<p
-																				class="text-xs text-purple-800 dark:text-purple-200 font-medium"
-																			>
-																				#{customInstructions.indexOf(custom) + 1}
-																			</p>
-																		</div>
-																		<p
-																			class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2"
-																		>
-																			{custom.text}
-																		</p>
-																	</button>
-																	<button
-																		on:click={() => removeCustomInstruction(custom.id)}
-																		class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
-																		title="Remove"
-																	>
+																		{highlight.text.length > 40
+																			? highlight.text.substring(0, 40) + '...'
+																			: highlight.text}
 																		<svg
-																			class="w-3 h-3"
+																			class="w-3 h-3 ml-1"
 																			fill="none"
 																			stroke="currentColor"
 																			viewBox="0 0 24 24"
@@ -7198,110 +6614,674 @@
 																			></path>
 																		</svg>
 																	</button>
-																</div>
+																{/each}
+															</div>
+															<p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+																Drag over more text to add highlights, or click "Continue" when
+																done.
+															</p>
+														</div>
+													{:else}
+														<div
+															class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+														>
+															<p class="text-xs text-yellow-800 dark:text-yellow-200">
+																⚠️ Drag over text in the response above to highlight concerns. If
+																this scenario is not relevant, click "Skip Scenario".
+															</p>
+														</div>
+													{/if}
+												</div>
+
+												<!-- Action buttons - Continue disabled when no highlights, only Skip enabled -->
+												<div
+													class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+												>
+													<button
+														on:click={() => completeStep1(false)}
+														disabled={highlightedTexts1.length === 0}
+														class="flex-1 px-6 py-3 {highlightedTexts1.length > 0
+															? 'bg-green-500 hover:bg-green-600 text-white'
+															: 'bg-gray-400 text-white cursor-not-allowed opacity-50'} font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed"
+													>
+														<span>Continue</span>
+														{#if highlightedTexts1.length === 0}
+															<span class="text-xs opacity-75">(highlight required)</span>
+														{/if}
+													</button>
+													<button
+														on:click={() => completeStep1(true)}
+														class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+													>
+														Skip Scenario
+													</button>
+												</div>
+											</div>
+										{/if}
+
+										<!-- Step 2: Assess -->
+										{#if initialDecisionStep === 2}
+											<div class="space-y-4">
+												<div>
+													<div class="flex items-center justify-between mb-2">
+														<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+															Step 2: Explain why this content concerns you
+														</h3>
+														<button
+															on:click={() => navigateToStep(1)}
+															class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+														>
+															<svg
+																class="w-3 h-3 flex-shrink-0"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M10 19l-7-7m0 0l7-7m-7 7h18"
+																></path>
+															</svg>
+															<span>Back</span>
+														</button>
+													</div>
+												</div>
+
+												<!-- Concern Rating Likert Scale (before explain why) -->
+												<div class="space-y-4">
+													<div>
+														<label
+															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+														>
+															To what extent, if any, are you concerned about this interaction? <span
+																class="text-red-500">*</span
+															>
+														</label>
+														<div class="space-y-2">
+															{#each [{ value: 1, label: 'Not concerned at all' }, { value: 2, label: 'Somewhat unconcerned' }, { value: 3, label: 'Neutral' }, { value: 4, label: 'Somewhat concerned' }, { value: 5, label: 'Concerned' }] as option}
+																<label
+																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {concernLevel ===
+																	option.value
+																		? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+																		: ''}"
+																>
+																	<input
+																		type="radio"
+																		name="concernLevel"
+																		value={option.value}
+																		bind:group={concernLevel}
+																		class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+																	/>
+																	<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+																		{option.label}
+																	</span>
+																</label>
 															{/each}
 														</div>
 													</div>
-												{/if}
 
-												<!-- Action Buttons -->
-												<div class="flex space-x-3">
+													<!-- Explanation field -->
+													<div>
+														<label
+															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+														>
+															Explain why this content concerns you <span class="text-red-500"
+																>*</span
+															>
+														</label>
+														<textarea
+															bind:value={concernReason}
+															placeholder="Explain why this content concerns you... (minimum 10 characters)"
+															rows="5"
+															minlength="10"
+															class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+														></textarea>
+													</div>
+												</div>
+
+												<div>
 													<button
-														on:click={applySelectedModerations}
-														disabled={moderationLoading ||
-															(selectedModerations.size === 0 && !attentionCheckSelected) ||
-															attentionCheckProcessing}
-														class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+														on:click={completeStep2}
+														disabled={concernLevel === null ||
+															!concernReason.trim() ||
+															concernReason.trim().length < 10}
+														class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 													>
-														{#if moderationLoading}
-															<div
-																class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-															></div>
-															<span>Creating Version...</span>
-														{:else}
-															<span>Generate New Version</span>
-														{/if}
+														Submit
 													</button>
 												</div>
-											{/if}
-										</div>
-									{/if}
+											</div>
+										{/if}
+
+										<!-- ============================================================================
+						     STEP 3 (MODERATION) - COMMENTED OUT FOR IDENTIFICATION-ONLY EXPERIMENT
+						     This entire block is disabled but preserved for future restoration.
+						     To restore: Change `{#if false && initialDecisionStep === 3}` back to `{#if initialDecisionStep === 3}`
+						     ============================================================================ -->
+										<!-- Step 3: Update -->
+										{#if false && initialDecisionStep === 3}
+											<div class="space-y-4">
+												<div>
+													<div class="flex items-center justify-between mb-2">
+														<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+															Step 3: Moderate
+														</h3>
+														<button
+															on:click={() => navigateToStep(2)}
+															disabled={moderationLoading}
+															class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+														>
+															<svg
+																class="w-3 h-3 flex-shrink-0"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M10 19l-7-7m0 0l7-7m-7 7h18"
+																></path>
+															</svg>
+															<span>Back</span>
+														</button>
+													</div>
+													{#if versions.length > 0 && showComparisonView}
+														<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+															Review the moderated version above. You can confirm it or try
+															different strategies.
+														</p>
+													{:else}
+														<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+															How would you like to moderate the content?
+														</p>
+													{/if}
+												</div>
+
+												<!-- Step 3: Satisfaction Check UI (unified panel - always shown when versions exist) -->
+												{#if versions.length > 0 && showComparisonView && !moderationPanelVisible}
+													<div
+														class="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+													>
+														<h4 class="text-base font-semibold text-gray-900 dark:text-white mb-3">
+															How satisfied are you with the updated response?
+														</h4>
+
+														<!-- Satisfaction Likert Scale (1-5) - Required -->
+														<div class="space-y-2">
+															<label
+																class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+															>
+																Satisfaction Level <span class="text-red-500">*</span>
+															</label>
+															{#each [1, 2, 3, 4, 5] as level}
+																<label
+																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {satisfactionLevel ===
+																	level
+																		? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+																		: ''}"
+																>
+																	<input
+																		type="radio"
+																		name="satisfactionLevel"
+																		value={level}
+																		bind:group={satisfactionLevel}
+																		class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+																	/>
+																	<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+																		{level === 1
+																			? '1 - Very Dissatisfied'
+																			: level === 2
+																				? '2 - Dissatisfied'
+																				: level === 3
+																					? '3 - Neutral'
+																					: level === 4
+																						? '4 - Satisfied'
+																						: '5 - Very Satisfied'}
+																	</span>
+																</label>
+															{/each}
+														</div>
+
+														<!-- Why field - Always shown, required (minimum 10 characters) -->
+														<div>
+															<label
+																class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+															>
+																Why? <span class="text-red-500">*</span>
+															</label>
+															<textarea
+																bind:value={satisfactionReason}
+																placeholder="Explain your satisfaction level... (minimum 10 characters)"
+																rows="3"
+																minlength="10"
+																class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+															></textarea>
+														</div>
+
+														<!-- Navigation Buttons -->
+														<div
+															class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+														>
+															<!-- Moderate Again Button -->
+															<button
+																on:click={async () => {
+																	// Validate satisfaction level is set
+																	if (satisfactionLevel === null) {
+																		toast.error('Please select a satisfaction level');
+																		return;
+																	}
+
+																	// Validate reason is filled and meets minimum length
+																	if (!satisfactionReason.trim()) {
+																		toast.error('Please explain your satisfaction level');
+																		return;
+																	}
+
+																	if (satisfactionReason.trim().length < 10) {
+																		toast.error(
+																			'Please provide at least 10 characters in your explanation'
+																		);
+																		return;
+																	}
+
+																	try {
+																		// Save satisfaction check to backend
+																		await submitSatisfactionCheck(
+																			satisfactionLevel,
+																			satisfactionReason,
+																			'try_again'
+																		);
+
+																		// Reset satisfaction state to allow creating new version
+																		satisfactionLevel = null;
+																		satisfactionReason = '';
+																		nextAction = null;
+
+																		// Clear selected moderations to start fresh
+																		selectedModerations = new Set();
+																		customInstructions = [];
+
+																		// Show moderation panel for another iteration
+																		moderationPanelVisible = true;
+																		moderationPanelExpanded = true;
+																		toast.info(
+																			'Select moderation strategies to create another version'
+																		);
+
+																		// Scroll to moderation panel after it opens
+																		setTimeout(() => {
+																			if (moderationPanelElement) {
+																				moderationPanelElement.scrollIntoView({
+																					behavior: 'smooth',
+																					block: 'start'
+																				});
+																			}
+																		}, 100);
+																	} catch (error) {
+																		console.error('Failed to save satisfaction check:', error);
+																		toast.error('Failed to save your response. Please try again.');
+																	}
+																}}
+																disabled={satisfactionLevel === null ||
+																	!satisfactionReason.trim() ||
+																	satisfactionReason.trim().length < 10}
+																class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+															>
+																Moderate Again
+															</button>
+
+															<!-- Continue to next scenario Button -->
+															<button
+																on:click={async () => {
+																	// Validate satisfaction level is set
+																	if (satisfactionLevel === null) {
+																		toast.error('Please select a satisfaction level');
+																		return;
+																	}
+
+																	// Validate reason is filled and meets minimum length
+																	if (!satisfactionReason.trim()) {
+																		toast.error('Please explain your satisfaction level');
+																		return;
+																	}
+
+																	if (satisfactionReason.trim().length < 10) {
+																		toast.error(
+																			'Please provide at least 10 characters in your explanation'
+																		);
+																		return;
+																	}
+
+																	try {
+																		// Save satisfaction check to backend (this already handles navigation)
+																		await submitSatisfactionCheck(
+																			satisfactionLevel,
+																			satisfactionReason,
+																			'move_on'
+																		);
+																		// submitSatisfactionCheck already handles confirmCurrentVersion() and navigation (lines 2590-2603)
+																	} catch (error) {
+																		console.error('Failed to save satisfaction check:', error);
+																		toast.error('Failed to save your response. Please try again.');
+																	}
+																}}
+																disabled={satisfactionLevel === null ||
+																	!satisfactionReason.trim() ||
+																	satisfactionReason.trim().length < 10}
+																class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+															>
+																Continue to next scenario
+															</button>
+														</div>
+													</div>
+												{:else}
+													<!-- Strategy instruction and Clear button -->
+													<div class="flex items-center justify-between mb-3">
+														<p class="text-sm text-gray-600 dark:text-gray-400">
+															Choose up to <b>3 strategies</b> to improve the AI's response.
+														</p>
+														{#if selectedModerations.size > 0 || attentionCheckSelected}
+															<button
+																on:click={clearSelections}
+																class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+															>
+																Clear All
+															</button>
+														{/if}
+													</div>
+
+													<!-- Grouped Strategy Options (Legacy validated design) -->
+													<div class="space-y-3 mb-4" bind:this={moderationPanelElement}>
+														{#each Object.entries(moderationOptions) as [category, options]}
+															<div
+																class="border-2 {category === 'Refuse and Remove'
+																	? 'border-red-500 dark:border-red-600'
+																	: category === 'Investigate and Empathize'
+																		? 'border-blue-500 dark:border-blue-600'
+																		: category === 'Correct their Understanding'
+																			? 'border-green-500 dark:border-green-600'
+																			: category === 'Match their Age'
+																				? 'border-yellow-500 dark:border-yellow-600'
+																				: category === 'Defer to Support'
+																					? 'border-purple-500 dark:border-purple-600'
+																					: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
+															>
+																<!-- Group Header -->
+																<button
+																	on:click={() => toggleGroupExpansion(category)}
+																	class="w-full p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+																>
+																	<div class="flex items-center justify-between">
+																		<div class="flex items-center">
+																			<span
+																				class="w-3 h-3 rounded-full mr-3 {category ===
+																				'Refuse and Remove'
+																					? 'bg-red-500'
+																					: category === 'Investigate and Empathize'
+																						? 'bg-blue-500'
+																						: category === 'Correct their Understanding'
+																							? 'bg-green-500'
+																							: category === 'Match their Age'
+																								? 'bg-yellow-500'
+																								: category === 'Defer to Support'
+																									? 'bg-purple-500'
+																									: 'bg-pink-500'}"
+																			></span>
+																			<h4 class="text-sm font-bold text-gray-900 dark:text-white">
+																				{category === 'Custom' && showCustomInput
+																					? '✨ Custom (Open)'
+																					: category}
+																			</h4>
+																		</div>
+																		<div class="flex items-center space-x-2">
+																			{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
+																				<span
+																					class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
+																				>
+																					{#if category === 'Custom'}
+																						{customInstructions.filter((c) =>
+																							selectedModerations.has(c.id)
+																						).length} selected
+																					{:else if category === 'Attention Check'}
+																						{attentionCheckSelected ? 1 : 0} selected
+																					{:else}
+																						{options.filter((option) =>
+																							selectedModerations.has(option)
+																						).length} selected
+																					{/if}
+																				</span>
+																			{/if}
+																			{#if category !== 'Custom' || !showCustomInput}
+																				<svg
+																					class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
+																						category
+																					) ||
+																					(category === 'Custom' && showCustomInput)
+																						? 'rotate-180'
+																						: ''}"
+																					fill="none"
+																					stroke="currentColor"
+																					viewBox="0 0 24 24"
+																				>
+																					<path
+																						stroke-linecap="round"
+																						stroke-linejoin="round"
+																						stroke-width="2"
+																						d="M19 9l-7 7-7-7"
+																					></path>
+																				</svg>
+																			{:else}
+																				<svg
+																					class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
+																					fill="none"
+																					stroke="currentColor"
+																					viewBox="0 0 24 24"
+																				>
+																					<path
+																						stroke-linecap="round"
+																						stroke-linejoin="round"
+																						stroke-width="2"
+																						d="M19 9l-7 7-7-7"
+																					></path>
+																				</svg>
+																			{/if}
+																		</div>
+																	</div>
+																</button>
+
+																<!-- Group Content (2-column grid with button toggles) -->
+																{#if expandedGroups.has(category) && category !== 'Custom'}
+																	<div class="px-3 pb-3">
+																		<div class="grid grid-cols-2 gap-2">
+																			{#each options as option}
+																				<Tooltip
+																					content={moderationTooltips[option] || ''}
+																					placement="top-end"
+																					className="w-full"
+																					tippyOptions={{ delay: [200, 0] }}
+																				>
+																					<button
+																						on:click={() => toggleModerationSelection(option)}
+																						disabled={moderationLoading}
+																						aria-pressed={option === 'I read the instructions'
+																							? attentionCheckSelected
+																							: selectedModerations.has(option)}
+																						class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {(
+																							option === 'I read the instructions'
+																								? attentionCheckSelected
+																								: selectedModerations.has(option)
+																						)
+																							? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+																							: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
+																					>
+																						{option}
+																					</button>
+																				</Tooltip>
+																			{/each}
+																		</div>
+																	</div>
+																{/if}
+
+																<!-- Custom Input Field -->
+																{#if category === 'Custom' && showCustomInput}
+																	<div class="px-3 pb-3 pt-2">
+																		<div class="space-y-2">
+																			<label
+																				class="block text-xs font-medium text-purple-900 dark:text-purple-200"
+																			>
+																				Enter custom moderation instruction:
+																			</label>
+																			<textarea
+																				bind:value={customInstructionInput}
+																				rows="2"
+																				placeholder="E.g., Emphasize problem-solving skills..."
+																				class="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+																				on:keydown={(e) => {
+																					if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+																						addCustomInstruction();
+																					} else if (e.key === 'Escape') {
+																						cancelCustomInput();
+																					}
+																				}}
+																			></textarea>
+																			<div class="flex justify-end space-x-2">
+																				<button
+																					on:click={cancelCustomInput}
+																					class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+																				>
+																					Cancel
+																				</button>
+																				<button
+																					on:click={addCustomInstruction}
+																					class="px-3 py-1 text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors"
+																				>
+																					Add
+																				</button>
+																			</div>
+																		</div>
+																	</div>
+																{/if}
+															</div>
+														{/each}
+													</div>
+
+													<!-- Custom Instructions Display -->
+													{#if customInstructions.length > 0}
+														<div
+															class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
+														>
+															<h4
+																class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2"
+															>
+																Custom Instructions ({customInstructions.length}):
+															</h4>
+															<div class="space-y-2">
+																{#each customInstructions as custom}
+																	<div
+																		class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
+																			custom.id
+																		)
+																			? 'border-purple-500'
+																			: 'border-transparent'}"
+																	>
+																		<button
+																			on:click={() => toggleModerationSelection(custom.id)}
+																			class="flex-1 text-left mr-2"
+																		>
+																			<div class="flex items-center space-x-1 mb-1">
+																				<div
+																					class="w-3 h-3 rounded border-2 {selectedModerations.has(
+																						custom.id
+																					)
+																						? 'bg-purple-500 border-purple-500'
+																						: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
+																				>
+																					{#if selectedModerations.has(custom.id)}
+																						<svg
+																							class="w-2 h-2 text-white"
+																							fill="none"
+																							stroke="currentColor"
+																							viewBox="0 0 24 24"
+																						>
+																							<path
+																								stroke-linecap="round"
+																								stroke-linejoin="round"
+																								stroke-width="3"
+																								d="M5 13l4 4L19 7"
+																							></path>
+																						</svg>
+																					{/if}
+																				</div>
+																				<p
+																					class="text-xs text-purple-800 dark:text-purple-200 font-medium"
+																				>
+																					#{customInstructions.indexOf(custom) + 1}
+																				</p>
+																			</div>
+																			<p
+																				class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2"
+																			>
+																				{custom.text}
+																			</p>
+																		</button>
+																		<button
+																			on:click={() => removeCustomInstruction(custom.id)}
+																			class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
+																			title="Remove"
+																		>
+																			<svg
+																				class="w-3 h-3"
+																				fill="none"
+																				stroke="currentColor"
+																				viewBox="0 0 24 24"
+																			>
+																				<path
+																					stroke-linecap="round"
+																					stroke-linejoin="round"
+																					stroke-width="2"
+																					d="M6 18L18 6M6 6l12 12"
+																				></path>
+																			</svg>
+																		</button>
+																	</div>
+																{/each}
+															</div>
+														</div>
+													{/if}
+
+													<!-- Action Buttons -->
+													<div class="flex space-x-3">
+														<button
+															on:click={applySelectedModerations}
+															disabled={moderationLoading ||
+																(selectedModerations.size === 0 && !attentionCheckSelected) ||
+																attentionCheckProcessing}
+															class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+														>
+															{#if moderationLoading}
+																<div
+																	class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+																></div>
+																<span>Creating Version...</span>
+															{:else}
+																<span>Generate New Version</span>
+															{/if}
+														</button>
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
-						</div>
-					{/if}
+						{/if}
 
-					<!-- Completion Indicator for identification-only flow (shows after Submit) -->
-					{#if confirmedVersionIndex === 0 && versions.length === 0}
-						<div class="mt-3">
-							<div
-								class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
-							>
-								<div class="flex items-center space-x-2">
-									<svg
-										class="w-4 h-4 text-green-600 dark:text-green-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-										></path>
-									</svg>
-									<span class="text-xs font-medium text-green-700 dark:text-green-300">
-										Scenario Completed
-									</span>
-								</div>
-								<button
-									on:click={undoScenarioCompleted}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-								>
-									Undo
-								</button>
-							</div>
-						</div>
-					{/if}
-
-					<!-- Not Applicable Indicator (moved from response bubble) -->
-					{#if markedNotApplicable}
-						<div class="mt-3">
-							<div
-								class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-							>
-								<div class="flex items-center space-x-2">
-									<svg
-										class="w-4 h-4 text-gray-600 dark:text-gray-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-										></path>
-									</svg>
-									<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-										Marked as not applicable
-									</span>
-								</div>
-								<button
-									on:click={unmarkNotApplicable}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-								>
-									Undo
-								</button>
-							</div>
-						</div>
-					{/if}
-
-					<!-- Confirmation Indicator moved below the response area -->
-					{#if versions.length > 0 && !showOriginal1 && confirmedVersionIndex !== null}
-						{#if confirmedVersionIndex === currentVersionIndex}
+						<!-- Completion Indicator for identification-only flow (shows after Submit) -->
+						{#if confirmedVersionIndex === 0 && versions.length === 0}
 							<div class="mt-3">
 								<div
 									class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
@@ -7321,427 +7301,498 @@
 											></path>
 										</svg>
 										<span class="text-xs font-medium text-green-700 dark:text-green-300">
-											Scenario Moderated
+											Scenario Completed
 										</span>
 									</div>
 									<button
-										on:click={() => {
-											confirmCurrentVersion();
-											// Confirmation will be saved in the session data
-										}}
+										on:click={undoScenarioCompleted}
 										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 									>
-										Edit Moderation
-									</button>
-								</div>
-							</div>
-						{:else}
-							<div class="mt-3">
-								<div
-									class="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg"
-								>
-									<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
-										Another version is confirmed
-									</span>
-									<button
-										on:click={() => {
-											confirmCurrentVersion(); // Unconfirm to go back
-										}}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-									>
-										Back
+										Undo
 									</button>
 								</div>
 							</div>
 						{/if}
-					{/if}
 
-					<!-- Moderation Panel (Legacy - only shown when not in Step 4) -->
-					{#if moderationPanelVisible && initialDecisionStep !== 3}
-						<div
-							class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-							bind:this={moderationPanelElement}
-						>
-							<div class="flex items-center justify-between mb-1">
-								<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-									Select Moderation Strategies
-								</h3>
-								<button
-									on:click={() => navigateToStep(3)}
-									disabled={moderationLoading}
-									class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
-								>
-									<svg
-										class="w-3 h-3 flex-shrink-0"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M10 19l-7-7m0 0l7-7m-7 7h18"
-										></path>
-									</svg>
-									<span>Back</span>
-								</button>
-							</div>
-
-							<p class="text-base text-gray-600 dark:text-gray-400 mb-3">
-								Choose up to <b>3 strategies</b> to improve the AI's response. Click on a group to see
-								its strategies, or hover over each option for details.
-							</p>
-
-							<!-- Strategy Count -->
-							<div class="flex items-center justify-end mb-3">
-								{#if selectedModerations.size > 0 || attentionCheckSelected}
-									<button
-										on:click={clearSelections}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-									>
-										Clear All
-									</button>
-								{/if}
-							</div>
-
-							<!-- Grouped Strategy Options -->
-							<div class="space-y-4 mb-4">
-								{#each Object.entries(moderationOptions) as [category, options]}
-									<div
-										class="border-2 {category === 'Refuse and Remove'
-											? 'border-red-500 dark:border-red-600'
-											: category === 'Investigate and Empathize'
-												? 'border-blue-500 dark:border-blue-600'
-												: category === 'Correct their Understanding'
-													? 'border-green-500 dark:border-green-600'
-													: category === 'Match their Age'
-														? 'border-yellow-500 dark:border-yellow-600'
-														: category === 'Defer to Support'
-															? 'border-purple-500 dark:border-purple-600'
-															: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
-									>
-										<!-- Group Header (Always Visible) -->
-										<button
-											on:click={() => toggleGroupExpansion(category)}
-											class="w-full p-4 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
-										>
-											<div class="flex items-center justify-between">
-												<div class="flex items-center">
-													<span
-														class="w-3 h-3 rounded-full mr-3 {category === 'Refuse and Remove'
-															? 'bg-red-500'
-															: category === 'Investigate and Empathize'
-																? 'bg-blue-500'
-																: category === 'Correct their Understanding'
-																	? 'bg-green-500'
-																	: category === 'Match their Age'
-																		? 'bg-yellow-500'
-																		: category === 'Defer to Support'
-																			? 'bg-purple-500'
-																			: 'bg-pink-500'}"
-													></span>
-													<h4 class="text-base font-bold text-gray-900 dark:text-white">
-														{category === 'Custom' && showCustomInput
-															? '✨ Custom (Open)'
-															: category}
-													</h4>
-												</div>
-												<div class="flex items-center space-x-2">
-													{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
-														<span
-															class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
-														>
-															{#if category === 'Custom'}
-																{customInstructions.filter((c) => selectedModerations.has(c.id))
-																	.length} selected
-															{:else if category === 'Attention Check'}
-																{attentionCheckSelected ? 1 : 0} selected
-															{:else}
-																{options.filter((option) => selectedModerations.has(option)).length} selected
-															{/if}
-														</span>
-													{/if}
-													{#if category !== 'Custom' || !showCustomInput}
-														<svg
-															class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
-																category
-															) ||
-															(category === 'Custom' && showCustomInput)
-																? 'rotate-180'
-																: ''}"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M19 9l-7 7-7-7"
-															></path>
-														</svg>
-													{:else}
-														<svg
-															class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M19 9l-7 7-7-7"
-															></path>
-														</svg>
-													{/if}
-												</div>
-											</div>
-										</button>
-
-										<!-- Group Content (Expandable) - Skip for Custom category -->
-										{#if expandedGroups.has(category) && category !== 'Custom'}
-											<div class="px-4 pb-4">
-												<div class="grid grid-cols-2 gap-3">
-													{#each options as option}
-														<Tooltip
-															content={moderationTooltips[option] || ''}
-															placement="top-end"
-															className="w-full"
-															tippyOptions={{ delay: [200, 0] }}
-														>
-															<button
-																on:click={() => toggleModerationSelection(option)}
-																disabled={moderationLoading}
-																aria-pressed={option === 'I read the instructions'
-																	? attentionCheckSelected
-																	: selectedModerations.has(option)}
-																class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {(
-																	option === 'I read the instructions'
-																		? attentionCheckSelected
-																		: selectedModerations.has(option)
-																)
-																	? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-																	: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
-															>
-																{option}
-															</button>
-														</Tooltip>
-													{/each}
-												</div>
-											</div>
-										{/if}
-
-										<!-- Custom Input Field - Shows directly when Custom category is clicked -->
-										{#if category === 'Custom' && showCustomInput}
-											<div class="px-4 pb-4 pt-2">
-												<div class="space-y-3">
-													<label
-														class="block text-sm font-medium text-purple-900 dark:text-purple-200"
-													>
-														Enter custom moderation instruction:
-													</label>
-													<textarea
-														bind:value={customInstructionInput}
-														rows="3"
-														placeholder="E.g., Emphasize problem-solving skills, Include mindfulness techniques, Focus on building independence..."
-														class="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-														on:keydown={(e) => {
-															if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-																addCustomInstruction();
-															} else if (e.key === 'Escape') {
-																cancelCustomInput();
-															}
-														}}
-													></textarea>
-													<div class="flex justify-end">
-														<div class="flex space-x-2">
-															<button
-																on:click={cancelCustomInput}
-																class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-															>
-																Cancel
-															</button>
-															<button
-																on:click={addCustomInstruction}
-																class="px-3 py-1.5 text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-															>
-																Add
-															</button>
-														</div>
-													</div>
-												</div>
-											</div>
-										{/if}
-									</div>
-								{/each}
-							</div>
-
-							<!-- Custom Instructions -->
-							{#if customInstructions.length > 0}
+						<!-- Not Applicable Indicator (moved from response bubble) -->
+						{#if markedNotApplicable}
+							<div class="mt-3">
 								<div
-									class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
+									class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
 								>
-									<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
-										Custom Instructions ({customInstructions.length}):
-									</h4>
-									<div class="space-y-2">
-										{#each customInstructions as custom}
-											<div
-												class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
-													custom.id
-												)
-													? 'border-purple-500'
-													: 'border-transparent'}"
+									<div class="flex items-center space-x-2">
+										<svg
+											class="w-4 h-4 text-gray-600 dark:text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+											></path>
+										</svg>
+										<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+											Marked as not applicable
+										</span>
+									</div>
+									<button
+										on:click={unmarkNotApplicable}
+										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+									>
+										Undo
+									</button>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Confirmation Indicator moved below the response area -->
+						{#if versions.length > 0 && !showOriginal1 && confirmedVersionIndex !== null}
+							{#if confirmedVersionIndex === currentVersionIndex}
+								<div class="mt-3">
+									<div
+										class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+									>
+										<div class="flex items-center space-x-2">
+											<svg
+												class="w-4 h-4 text-green-600 dark:text-green-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
 											>
-												<button
-													on:click={() => toggleModerationSelection(custom.id)}
-													class="flex-1 text-left mr-2"
-												>
-													<div class="flex items-center space-x-1 mb-1">
-														<div
-															class="w-3 h-3 rounded border-2 {selectedModerations.has(custom.id)
-																? 'bg-purple-500 border-purple-500'
-																: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
-														>
-															{#if selectedModerations.has(custom.id)}
-																<svg
-																	class="w-2 h-2 text-white"
-																	fill="none"
-																	stroke="currentColor"
-																	viewBox="0 0 24 24"
-																>
-																	<path
-																		stroke-linecap="round"
-																		stroke-linejoin="round"
-																		stroke-width="3"
-																		d="M5 13l4 4L19 7"
-																	></path>
-																</svg>
-															{/if}
-														</div>
-														<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
-															#{customInstructions.indexOf(custom) + 1}
-														</p>
-													</div>
-													<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
-														{custom.text}
-													</p>
-												</button>
-												<button
-													on:click={() => removeCustomInstruction(custom.id)}
-													class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
-													title="Remove"
-												>
-													<svg
-														class="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M6 18L18 6M6 6l12 12"
-														></path>
-													</svg>
-												</button>
-											</div>
-										{/each}
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												></path>
+											</svg>
+											<span class="text-xs font-medium text-green-700 dark:text-green-300">
+												Scenario Moderated
+											</span>
+										</div>
+										<button
+											on:click={() => {
+												confirmCurrentVersion();
+												// Confirmation will be saved in the session data
+											}}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+										>
+											Edit Moderation
+										</button>
+									</div>
+								</div>
+							{:else}
+								<div class="mt-3">
+									<div
+										class="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg"
+									>
+										<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
+											Another version is confirmed
+										</span>
+										<button
+											on:click={() => {
+												confirmCurrentVersion(); // Unconfirm to go back
+											}}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+										>
+											Back
+										</button>
 									</div>
 								</div>
 							{/if}
+						{/if}
 
-							<!-- Apply Button -->
-							<button
-								on:click={applySelectedModerations}
-								disabled={moderationLoading ||
-									(selectedModerations.size === 0 && !attentionCheckSelected) ||
-									(selectedModerations.size === 0 && attentionCheckSelected) ||
-									attentionCheckProcessing}
-								class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+						<!-- Moderation Panel (Legacy - only shown when not in Step 4) -->
+						{#if moderationPanelVisible && initialDecisionStep !== 3}
+							<div
+								class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+								bind:this={moderationPanelElement}
 							>
-								{#if moderationLoading}
+								<div class="flex items-center justify-between mb-1">
+									<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+										Select Moderation Strategies
+									</h3>
+									<button
+										on:click={() => navigateToStep(3)}
+										disabled={moderationLoading}
+										class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+									>
+										<svg
+											class="w-3 h-3 flex-shrink-0"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M10 19l-7-7m0 0l7-7m-7 7h18"
+											></path>
+										</svg>
+										<span>Back</span>
+									</button>
+								</div>
+
+								<p class="text-base text-gray-600 dark:text-gray-400 mb-3">
+									Choose up to <b>3 strategies</b> to improve the AI's response. Click on a group to see
+									its strategies, or hover over each option for details.
+								</p>
+
+								<!-- Strategy Count -->
+								<div class="flex items-center justify-end mb-3">
+									{#if selectedModerations.size > 0 || attentionCheckSelected}
+										<button
+											on:click={clearSelections}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+										>
+											Clear All
+										</button>
+									{/if}
+								</div>
+
+								<!-- Grouped Strategy Options -->
+								<div class="space-y-4 mb-4">
+									{#each Object.entries(moderationOptions) as [category, options]}
+										<div
+											class="border-2 {category === 'Refuse and Remove'
+												? 'border-red-500 dark:border-red-600'
+												: category === 'Investigate and Empathize'
+													? 'border-blue-500 dark:border-blue-600'
+													: category === 'Correct their Understanding'
+														? 'border-green-500 dark:border-green-600'
+														: category === 'Match their Age'
+															? 'border-yellow-500 dark:border-yellow-600'
+															: category === 'Defer to Support'
+																? 'border-purple-500 dark:border-purple-600'
+																: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
+										>
+											<!-- Group Header (Always Visible) -->
+											<button
+												on:click={() => toggleGroupExpansion(category)}
+												class="w-full p-4 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+											>
+												<div class="flex items-center justify-between">
+													<div class="flex items-center">
+														<span
+															class="w-3 h-3 rounded-full mr-3 {category === 'Refuse and Remove'
+																? 'bg-red-500'
+																: category === 'Investigate and Empathize'
+																	? 'bg-blue-500'
+																	: category === 'Correct their Understanding'
+																		? 'bg-green-500'
+																		: category === 'Match their Age'
+																			? 'bg-yellow-500'
+																			: category === 'Defer to Support'
+																				? 'bg-purple-500'
+																				: 'bg-pink-500'}"
+														></span>
+														<h4 class="text-base font-bold text-gray-900 dark:text-white">
+															{category === 'Custom' && showCustomInput
+																? '✨ Custom (Open)'
+																: category}
+														</h4>
+													</div>
+													<div class="flex items-center space-x-2">
+														{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
+															<span
+																class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
+															>
+																{#if category === 'Custom'}
+																	{customInstructions.filter((c) => selectedModerations.has(c.id))
+																		.length} selected
+																{:else if category === 'Attention Check'}
+																	{attentionCheckSelected ? 1 : 0} selected
+																{:else}
+																	{options.filter((option) => selectedModerations.has(option))
+																		.length} selected
+																{/if}
+															</span>
+														{/if}
+														{#if category !== 'Custom' || !showCustomInput}
+															<svg
+																class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
+																	category
+																) ||
+																(category === 'Custom' && showCustomInput)
+																	? 'rotate-180'
+																	: ''}"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M19 9l-7 7-7-7"
+																></path>
+															</svg>
+														{:else}
+															<svg
+																class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M19 9l-7 7-7-7"
+																></path>
+															</svg>
+														{/if}
+													</div>
+												</div>
+											</button>
+
+											<!-- Group Content (Expandable) - Skip for Custom category -->
+											{#if expandedGroups.has(category) && category !== 'Custom'}
+												<div class="px-4 pb-4">
+													<div class="grid grid-cols-2 gap-3">
+														{#each options as option}
+															<Tooltip
+																content={moderationTooltips[option] || ''}
+																placement="top-end"
+																className="w-full"
+																tippyOptions={{ delay: [200, 0] }}
+															>
+																<button
+																	on:click={() => toggleModerationSelection(option)}
+																	disabled={moderationLoading}
+																	aria-pressed={option === 'I read the instructions'
+																		? attentionCheckSelected
+																		: selectedModerations.has(option)}
+																	class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {(
+																		option === 'I read the instructions'
+																			? attentionCheckSelected
+																			: selectedModerations.has(option)
+																	)
+																		? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+																		: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
+																>
+																	{option}
+																</button>
+															</Tooltip>
+														{/each}
+													</div>
+												</div>
+											{/if}
+
+											<!-- Custom Input Field - Shows directly when Custom category is clicked -->
+											{#if category === 'Custom' && showCustomInput}
+												<div class="px-4 pb-4 pt-2">
+													<div class="space-y-3">
+														<label
+															class="block text-sm font-medium text-purple-900 dark:text-purple-200"
+														>
+															Enter custom moderation instruction:
+														</label>
+														<textarea
+															bind:value={customInstructionInput}
+															rows="3"
+															placeholder="E.g., Emphasize problem-solving skills, Include mindfulness techniques, Focus on building independence..."
+															class="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+															on:keydown={(e) => {
+																if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+																	addCustomInstruction();
+																} else if (e.key === 'Escape') {
+																	cancelCustomInput();
+																}
+															}}
+														></textarea>
+														<div class="flex justify-end">
+															<div class="flex space-x-2">
+																<button
+																	on:click={cancelCustomInput}
+																	class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+																>
+																	Cancel
+																</button>
+																<button
+																	on:click={addCustomInstruction}
+																	class="px-3 py-1.5 text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+																>
+																	Add
+																</button>
+															</div>
+														</div>
+													</div>
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+
+								<!-- Custom Instructions -->
+								{#if customInstructions.length > 0}
 									<div
-										class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-									></div>
-									<span>Creating Version...</span>
-								{:else}
-									<span>Generate New Version</span>
+										class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
+									>
+										<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
+											Custom Instructions ({customInstructions.length}):
+										</h4>
+										<div class="space-y-2">
+											{#each customInstructions as custom}
+												<div
+													class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
+														custom.id
+													)
+														? 'border-purple-500'
+														: 'border-transparent'}"
+												>
+													<button
+														on:click={() => toggleModerationSelection(custom.id)}
+														class="flex-1 text-left mr-2"
+													>
+														<div class="flex items-center space-x-1 mb-1">
+															<div
+																class="w-3 h-3 rounded border-2 {selectedModerations.has(custom.id)
+																	? 'bg-purple-500 border-purple-500'
+																	: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
+															>
+																{#if selectedModerations.has(custom.id)}
+																	<svg
+																		class="w-2 h-2 text-white"
+																		fill="none"
+																		stroke="currentColor"
+																		viewBox="0 0 24 24"
+																	>
+																		<path
+																			stroke-linecap="round"
+																			stroke-linejoin="round"
+																			stroke-width="3"
+																			d="M5 13l4 4L19 7"
+																		></path>
+																	</svg>
+																{/if}
+															</div>
+															<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
+																#{customInstructions.indexOf(custom) + 1}
+															</p>
+														</div>
+														<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+															{custom.text}
+														</p>
+													</button>
+													<button
+														on:click={() => removeCustomInstruction(custom.id)}
+														class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
+														title="Remove"
+													>
+														<svg
+															class="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M6 18L18 6M6 6l12 12"
+															></path>
+														</svg>
+													</button>
+												</div>
+											{/each}
+										</div>
+									</div>
 								{/if}
-							</button>
-						</div>
-					{/if}
 
-					<!-- Footer with Navigation -->
-					<div
-						class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
-					>
-						<div class="flex items-center justify-between">
-							<!-- Previous Scenario Button -->
-							{#if selectedScenarioIndex > 0}
+								<!-- Apply Button -->
 								<button
-									on:click={() => loadScenario(selectedScenarioIndex - 1)}
-									class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+									on:click={applySelectedModerations}
+									disabled={moderationLoading ||
+										(selectedModerations.size === 0 && !attentionCheckSelected) ||
+										(selectedModerations.size === 0 && attentionCheckSelected) ||
+										attentionCheckProcessing}
+									class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 19l-7-7 7-7"
-										></path>
-									</svg>
-									<span>Previous</span>
+									{#if moderationLoading}
+										<div
+											class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+										></div>
+										<span>Creating Version...</span>
+									{:else}
+										<span>Generate New Version</span>
+									{/if}
 								</button>
-							{:else}
-								<div></div>
-							{/if}
+							</div>
+						{/if}
 
-							<!-- Next Scenario or Done Button -->
-							{#if selectedScenarioIndex < scenarioList.length - 1}
-								<button
-									on:click={() => loadScenario(selectedScenarioIndex + 1)}
-									class="px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
-										? 'bg-green-500 text-white hover:bg-green-600 shadow-lg hover:shadow-xl'
-										: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-								>
-									<span>Next</span>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 5l7 7-7 7"
-										></path>
-									</svg>
-								</button>
-							{:else}
-								<!-- Last scenario: always show Done; disabled until current scenario is completed -->
-								<button
-									on:click={completeModeration}
-									disabled={!currentScenarioCompleted}
-									class="px-6 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
-										? 'shadow-lg bg-purple-500 text-white hover:bg-purple-600 cursor-pointer'
-										: 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'}"
-								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M5 13l4 4L19 7"
-										></path>
-									</svg>
-									<span>Done</span>
-								</button>
-							{/if}
+						<!-- Footer with Navigation -->
+						<div
+							class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
+						>
+							<div class="flex items-center justify-between">
+								<!-- Previous Scenario Button -->
+								{#if selectedScenarioIndex > 0}
+									<button
+										on:click={() => loadScenario(selectedScenarioIndex - 1)}
+										class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M15 19l-7-7 7-7"
+											></path>
+										</svg>
+										<span>Previous</span>
+									</button>
+								{:else}
+									<div></div>
+								{/if}
+
+								<!-- Next Scenario or Done Button -->
+								{#if selectedScenarioIndex < scenarioList.length - 1}
+									<button
+										on:click={() => loadScenario(selectedScenarioIndex + 1)}
+										class="px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
+											? 'bg-green-500 text-white hover:bg-green-600 shadow-lg hover:shadow-xl'
+											: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+									>
+										<span>Next</span>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 5l7 7-7 7"
+											></path>
+										</svg>
+									</button>
+								{:else}
+									<!-- Last scenario: always show Done; disabled until current scenario is completed -->
+									<button
+										on:click={completeModeration}
+										disabled={!currentScenarioCompleted}
+										class="px-6 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
+											? 'shadow-lg bg-purple-500 text-white hover:bg-purple-600 cursor-pointer'
+											: 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'}"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+										<span>Done</span>
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 		</div>
 
 		<!-- Custom Instruction Modal - REMOVED: Now using inline input -->

@@ -88,6 +88,17 @@ class Scenario(Base):
     prompt_style = Column(String, nullable=True)  # 'Journalistic', 'Should I', etc.
     domain = Column(String, nullable=True)  # 'Internet Interaction', 'Self', etc.
 
+    # Extended metadata (pilot_scenarios / child_llm_scenarios JSON format)
+    persona_id = Column(String, nullable=True)
+    age_band = Column(String, nullable=True)
+    gender_identity = Column(String, nullable=True)
+    context = Column(Text, nullable=True)
+    piaget_stage = Column(String, nullable=True)
+    trait_level = Column(String, nullable=True)  # 'high' or 'low' from big_five.level
+    intent = Column(String, nullable=True)
+    subdomain = Column(String, nullable=True)
+    safety_notes = Column(Text, nullable=True)
+
     # Source tracking fields
     source = Column(String, nullable=True)  # 'json_file', 'api_generated', 'manual'
     model_name = Column(String, nullable=True)  # Model that produced the response
@@ -115,6 +126,9 @@ class Scenario(Base):
         Index("idx_scenarios_is_active", "is_active"),
         Index("idx_scenarios_source", "source"),
         Index("idx_scenarios_n_assigned", "n_assigned"),
+        Index("idx_scenarios_age_band", "age_band"),
+        Index("idx_scenarios_gender_identity", "gender_identity"),
+        Index("idx_scenarios_piaget_stage", "piaget_stage"),
     )
 
 
