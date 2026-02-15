@@ -23,7 +23,12 @@ from open_webui.models.child_profiles import ChildProfile, ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizResponse, ExitQuizzes
 from open_webui.models.assignment_time_tracking import AssignmentSessionActivity
 from open_webui.models.scenarios import ScenarioAssignments
-from open_webui.models.workflow_draft import WorkflowDraft, get_draft, save_draft, delete_draft
+from open_webui.models.workflow_draft import (
+    WorkflowDraft,
+    get_draft,
+    save_draft,
+    delete_draft,
+)
 from open_webui.internal.db import get_db
 
 log = logging.getLogger(__name__)
@@ -38,7 +43,9 @@ def get_current_attempt_number(user_id: str) -> int:
     with get_db() as db:
         user_row = db.query(User).filter(User.id == user_id).first()
         if user_row and getattr(user_row, "current_attempt_number", None) is not None:
-            log.debug(f"Using stored current_attempt_number for user {user_id}: {user_row.current_attempt_number}")
+            log.debug(
+                f"Using stored current_attempt_number for user {user_id}: {user_row.current_attempt_number}"
+            )
             return user_row.current_attempt_number
         max_mod = (
             db.query(func.max(ModerationSession.attempt_number))
@@ -59,7 +66,9 @@ def get_current_attempt_number(user_id: str) -> int:
             or 0
         )
         computed = max(max_mod, max_child, max_exit, 1)  # Default to 1 if no records
-        log.debug(f"Computed current_attempt_number for user {user_id}: {computed} (mod:{max_mod}, child:{max_child}, exit:{max_exit})")
+        log.debug(
+            f"Computed current_attempt_number for user {user_id}: {computed} (mod:{max_mod}, child:{max_child}, exit:{max_exit})"
+        )
         return computed
 
 
@@ -144,9 +153,13 @@ async def get_workflow_state(
                         if assignments:
                             progress["moderation_total"] = len(assignments)
                     except Exception as ae:
-                        log.debug(f"Could not get assignment count for user {user.id}: {ae}")
+                        log.debug(
+                            f"Could not get assignment count for user {user.id}: {ae}"
+                        )
             except Exception as e:
-                log.warning(f"Failed to get moderation sessions for user {user.id}: {e}")
+                log.warning(
+                    f"Failed to get moderation sessions for user {user.id}: {e}"
+                )
 
             # Check if moderation has been finalized (user clicked "Done")
             try:
