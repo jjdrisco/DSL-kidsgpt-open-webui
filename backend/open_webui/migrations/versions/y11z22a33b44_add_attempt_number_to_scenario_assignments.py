@@ -42,7 +42,9 @@ def upgrade() -> None:
         op.alter_column("scenario_assignments", "attempt_number", server_default=None)
 
     # Add indexes for efficient filtering
-    existing_indexes = [idx["name"] for idx in inspector.get_indexes("scenario_assignments")]
+    existing_indexes = [
+        idx["name"] for idx in inspector.get_indexes("scenario_assignments")
+    ]
     if "idx_assignments_attempt_number" not in existing_indexes:
         op.create_index(
             "idx_assignments_attempt_number",

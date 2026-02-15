@@ -40,7 +40,7 @@ def _get_current_attempt_number(user_id: str) -> int:
     from open_webui.models.moderation import ModerationSession
     from open_webui.models.child_profiles import ChildProfile
     from open_webui.models.exit_quiz import ExitQuizResponse
-    
+
     with get_db() as db:
         user_row = db.query(User).filter(User.id == user_id).first()
         if user_row and getattr(user_row, "current_attempt_number", None) is not None:
