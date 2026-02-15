@@ -133,8 +133,12 @@ class UserModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
     workflow_reset_at: Optional[int] = None  # timestamp of last workflow reset
-    instructions_completed_at: Optional[int] = None  # when user completed assignment instructions
-    current_attempt_number: Optional[int] = None  # set on reset; next moderation/exit_quiz use this attempt
+    instructions_completed_at: Optional[int] = (
+        None  # when user completed assignment instructions
+    )
+    current_attempt_number: Optional[int] = (
+        None  # set on reset; next moderation/exit_quiz use this attempt
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

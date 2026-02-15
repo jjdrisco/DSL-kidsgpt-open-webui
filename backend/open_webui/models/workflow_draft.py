@@ -22,7 +22,7 @@ class WorkflowDraft(Base):
 
 class WorkflowDraftModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: str
     user_id: str
     child_id: str
@@ -31,7 +31,9 @@ class WorkflowDraftModel(BaseModel):
     updated_at: int
 
 
-def get_draft(user_id: str, child_id: str, draft_type: str) -> Optional[WorkflowDraftModel]:
+def get_draft(
+    user_id: str, child_id: str, draft_type: str
+) -> Optional[WorkflowDraftModel]:
     with get_db() as db:
         row = (
             db.query(WorkflowDraft)
@@ -45,7 +47,9 @@ def get_draft(user_id: str, child_id: str, draft_type: str) -> Optional[Workflow
         return WorkflowDraftModel.model_validate(row) if row else None
 
 
-def save_draft(user_id: str, child_id: str, draft_type: str, data: dict) -> WorkflowDraftModel:
+def save_draft(
+    user_id: str, child_id: str, draft_type: str, data: dict
+) -> WorkflowDraftModel:
     ts = int(time.time() * 1000)
     with get_db() as db:
         row = (

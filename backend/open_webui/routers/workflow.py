@@ -166,6 +166,7 @@ async def get_workflow_state(
                 latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
                 if latest_child:
                     from open_webui.models.workflow_draft import get_draft
+
                     draft = get_draft(user.id, latest_child.id, "moderation")
                     if draft and draft.data:
                         progress["moderation_finalized"] = draft.data.get(

@@ -52,7 +52,7 @@ async def list_exit_quiz_responses(
     current_user: UserModel = Depends(get_verified_user),
 ):
     """
-    List exit quiz responses. 
+    List exit quiz responses.
     - Use attempt_number to filter to a specific attempt
     - If not specified, defaults to current attempt number
     """
@@ -60,7 +60,7 @@ async def list_exit_quiz_responses(
         # Default to current attempt if not specified
         if attempt_number is None:
             attempt_number = get_current_attempt_number(current_user.id)
-        
+
         items = ExitQuizzes.get_responses_by_user(
             current_user.id,
             child_id=child_id,
