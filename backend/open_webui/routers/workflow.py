@@ -155,9 +155,13 @@ async def get_workflow_state(
                     from open_webui.models.workflow_draft import get_draft
                     draft = get_draft(user.id, latest_child.id, "moderation")
                     if draft and draft.data:
-                        progress["moderation_finalized"] = draft.data.get("moderation_finalized", False)
+                        progress["moderation_finalized"] = draft.data.get(
+                            "moderation_finalized", False
+                        )
             except Exception as e:
-                log.debug(f"Failed to check moderation finalized status for user {user.id}: {e}")
+                log.debug(
+                    f"Failed to check moderation finalized status for user {user.id}: {e}"
+                )
 
             # Exit survey completion (filter by current attempt number)
             try:
@@ -180,16 +184,22 @@ async def get_workflow_state(
                 study_id = getattr(user, "study_id", None)
                 user_type = get_user_type(user, study_id)
             except Exception as e:
-                log.warning(f"get_user_type failed for user {user.id}: {e}, defaulting to interviewee")
+                log.warning(
+                    f"get_user_type failed for user {user.id}: {e}, defaulting to interviewee"
+                )
                 user_type = "interviewee"
 
             # Determine next route based on user type
             # Prolific users (with prolific_pid) always go to assignment-instructions, never /parent
             is_prolific = getattr(user, "prolific_pid", None) is not None
             if user_type == "parent":
-                next_for_parent = "/assignment-instructions" if is_prolific else "/parent"
+                next_for_parent = (
+                    "/assignment-instructions" if is_prolific else "/parent"
+                )
                 return WorkflowStateResponse(
-                    next_route=next_for_parent, substep=None, progress_by_section=progress
+                    next_route=next_for_parent,
+                    substep=None,
+                    progress_by_section=progress,
                 )
 
             if user_type == "child":
