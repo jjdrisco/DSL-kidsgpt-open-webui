@@ -61,7 +61,7 @@
 	let deactivatePreviousAttentionChecks = false;
 	let scenarioSetName = 'pilot';
 	let attentionCheckSetName = 'default';
-	
+
 	// File input references
 	let scenarioFileInput: HTMLInputElement;
 	let attentionCheckFileInput: HTMLInputElement;
@@ -87,7 +87,9 @@
 			stats = await getScenarioStatsAdmin(localStorage.token);
 		} catch (error: any) {
 			const d = error?.detail;
-			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			const msg = Array.isArray(d)
+				? d.map((e: any) => e?.msg || e).join('; ')
+				: d || error?.message || String(error);
 			toast.error(`Failed to load stats: ${msg}`);
 		}
 	}
@@ -103,7 +105,9 @@
 			await determineActiveSets(true, false); // Update only scenario active set
 		} catch (error: any) {
 			const d = error?.detail;
-			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			const msg = Array.isArray(d)
+				? d.map((e: any) => e?.msg || e).join('; ')
+				: d || error?.message || String(error);
 			toast.error(`Failed to load scenarios: ${msg}`);
 		} finally {
 			loading = false;
@@ -120,7 +124,9 @@
 			await determineActiveSets(false, true); // Update only attention check active set
 		} catch (error: any) {
 			const d = error?.detail;
-			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			const msg = Array.isArray(d)
+				? d.map((e: any) => e?.msg || e).join('; ')
+				: d || error?.message || String(error);
 			toast.error(`Failed to load attention checks: ${msg}`);
 		}
 	}
@@ -160,8 +166,9 @@
 		} catch (error: any) {
 			console.error('Scenario upload error:', error);
 			const detail = error?.detail;
-			const errorMessage =
-				Array.isArray(detail) ? detail.map((e: any) => e?.msg || e).join('; ') : detail || error?.message || String(error);
+			const errorMessage = Array.isArray(detail)
+				? detail.map((e: any) => e?.msg || e).join('; ')
+				: detail || error?.message || String(error);
 			toast.error(`Failed to upload scenarios: ${errorMessage}`);
 		} finally {
 			uploadingScenarios = false;
@@ -205,8 +212,9 @@
 		} catch (error: any) {
 			console.error('Attention check upload error:', error);
 			const detail = error?.detail;
-			const errorMessage =
-				Array.isArray(detail) ? detail.map((e: any) => e?.msg || e).join('; ') : detail || error?.message || String(error);
+			const errorMessage = Array.isArray(detail)
+				? detail.map((e: any) => e?.msg || e).join('; ')
+				: detail || error?.message || String(error);
 			toast.error(`Failed to upload attention checks: ${errorMessage}`);
 		} finally {
 			uploadingAttentionChecks = false;
@@ -257,7 +265,9 @@
 			attentionCheckSetNames = attentionCheckResponse.set_names;
 		} catch (error: any) {
 			const d = error?.detail;
-			const msg = Array.isArray(d) ? d.map((e: any) => e?.msg || e).join('; ') : d || error?.message || String(error);
+			const msg = Array.isArray(d)
+				? d.map((e: any) => e?.msg || e).join('; ')
+				: d || error?.message || String(error);
 			toast.error(`Failed to load set names: ${msg}`);
 		}
 	}

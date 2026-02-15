@@ -40,10 +40,7 @@ export function getStepFromRoute(route: string): number {
  * - Any previous completed steps
  * - Not future steps
  */
-export function canAccessStep(
-	step: number,
-	workflowState: WorkflowStateResponse
-): boolean {
+export function canAccessStep(step: number, workflowState: WorkflowStateResponse): boolean {
 	const progress = workflowState?.progress_by_section;
 	const next_route = workflowState?.next_route ?? '';
 	if (!progress || !next_route) return false;
@@ -94,10 +91,7 @@ export function canAccessStep(
 		if (total === 0 || count < total) {
 			return false;
 		}
-		return (
-			next_route === '/exit-survey' ||
-			next_route === '/completion'
-		);
+		return next_route === '/exit-survey' || next_route === '/completion';
 	}
 
 	// Step 4: Completion - accessible if exit survey is completed

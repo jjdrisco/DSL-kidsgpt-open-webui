@@ -5,10 +5,10 @@
  * Identifier-Based State Management Tests
  * Tests that scenario state is correctly keyed by identifiers (assignment_id/scenario_id)
  * instead of indices, preventing state bleeding when attention check position changes.
- * 
+ *
  * Prereqs: frontend (npm run dev) and backend running; RUN_CHILD_PROFILE_TESTS=1;
  * CYPRESS_baseUrl must match the dev server port (e.g. http://localhost:5173 or 5174).
- * 
+ *
  * Run: RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 npx cypress run --spec cypress/e2e/identifier-based-state.cy.ts
  */
 
@@ -150,7 +150,7 @@ describe('Identifier-Based State Management', () => {
 				}).then((draftResponse) => {
 					if (draftResponse.status === 200 && draftResponse.body?.data) {
 						const draft = draftResponse.body.data;
-						
+
 						// Verify draft uses identifier-based format (string keys)
 						if (draft.states && draft.states.length > 0) {
 							const firstStateKey = draft.states[0][0];
@@ -183,7 +183,7 @@ describe('Identifier-Based State Management', () => {
 				}).then((draftResponse) => {
 					if (draftResponse.status === 200 && draftResponse.body?.data) {
 						const draft = draftResponse.body.data;
-						
+
 						// State should still be identifier-based after reload
 						if (draft.states && draft.states.length > 0) {
 							const firstStateKey = draft.states[0][0];
@@ -232,7 +232,7 @@ describe('Identifier-Based State Management', () => {
 				}).then((draftResponse) => {
 					if (draftResponse.status === 200 && draftResponse.body?.data) {
 						const draft = draftResponse.body.data;
-						
+
 						// All state keys should be strings (identifiers)
 						if (draft.states) {
 							draft.states.forEach(([key]: [string | number, any]) => {
@@ -258,8 +258,10 @@ describe('Identifier-Based State Management', () => {
 			// Verify that state is isolated per identifier
 			cy.get('body').then(($body) => {
 				// Look for scenario navigation buttons or sidebar
-				const scenarioButtons = $body.find('button[data-scenario-index], button:contains("Scenario")');
-				
+				const scenarioButtons = $body.find(
+					'button[data-scenario-index], button:contains("Scenario")'
+				);
+
 				if (scenarioButtons.length > 1) {
 					// Click through scenarios and verify state isolation
 					cy.log('✅ Multiple scenarios available for testing state isolation');

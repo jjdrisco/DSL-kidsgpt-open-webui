@@ -19,13 +19,13 @@ Context export for continuing work on this project. Updated Feb 2025.
 
 ## Survey Workflow (5 Steps)
 
-| Step | Route | Description |
-|------|-------|-------------|
-| 0 | `/assignment-instructions` | Study instructions; user must confirm before continuing |
-| 1 | `/kids/profile` | Parent describes their child (survey data, academic research only) |
-| 2 | `/moderation-scenario` | Review AI chat scenarios and make moderation decisions |
-| 3 | `/exit-survey` | Final survey / exit questionnaire |
-| 4 | `/completion` | Completion page |
+| Step | Route                      | Description                                                        |
+| ---- | -------------------------- | ------------------------------------------------------------------ |
+| 0    | `/assignment-instructions` | Study instructions; user must confirm before continuing            |
+| 1    | `/kids/profile`            | Parent describes their child (survey data, academic research only) |
+| 2    | `/moderation-scenario`     | Review AI chat scenarios and make moderation decisions             |
+| 3    | `/exit-survey`             | Final survey / exit questionnaire                                  |
+| 4    | `/completion`              | Completion page                                                    |
 
 **Workflow state**: Backend (`GET /api/v1/workflow/state`) is the source of truth. Response includes `next_route` and `progress_by_section` (has_child_profile, moderation_completed_count, moderation_total, exit_survey_completed).
 
@@ -35,45 +35,45 @@ Context export for continuing work on this project. Updated Feb 2025.
 
 ### Workflow & Navigation
 
-| File | Purpose |
-|------|---------|
-| `src/lib/utils/workflow.ts` | `getStepRoute`, `canAccessStep`, `isStepCompleted`, `getStepLabel` |
-| `src/lib/apis/workflow/index.ts` | `getWorkflowState()`, `WorkflowStateResponse` type |
+| File                                             | Purpose                                                                                  |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `src/lib/utils/workflow.ts`                      | `getStepRoute`, `canAccessStep`, `isStepCompleted`, `getStepLabel`                       |
+| `src/lib/apis/workflow/index.ts`                 | `getWorkflowState()`, `WorkflowStateResponse` type                                       |
 | `src/lib/components/layout/SurveySidebar.svelte` | Sidebar for survey routes; step navigation; listens for `workflow-updated` and `storage` |
-| `src/lib/components/layout/Sidebar.svelte` | Main app sidebar; workflow section for interviewees; same listeners |
-| `src/routes/(app)/+layout.svelte` | Uses SurveySidebar on survey routes, main Sidebar elsewhere |
+| `src/lib/components/layout/Sidebar.svelte`       | Main app sidebar; workflow section for interviewees; same listeners                      |
+| `src/routes/(app)/+layout.svelte`                | Uses SurveySidebar on survey routes, main Sidebar elsewhere                              |
 
 ### Survey Routes
 
-| Route | Component / Page |
-|-------|------------------|
-| `/assignment-instructions` | Assignment instructions page |
-| `/kids/profile` | Child profile form; "Proceed to next step" → `/moderation-scenario` |
-| `/moderation-scenario` | Moderation scenario review |
-| `/exit-survey` | Exit survey |
-| `/completion` | Completion page |
+| Route                      | Component / Page                                                    |
+| -------------------------- | ------------------------------------------------------------------- |
+| `/assignment-instructions` | Assignment instructions page                                        |
+| `/kids/profile`            | Child profile form; "Proceed to next step" → `/moderation-scenario` |
+| `/moderation-scenario`     | Moderation scenario review                                          |
+| `/exit-survey`             | Exit survey                                                         |
+| `/completion`              | Completion page                                                     |
 
 ### Child Profile
 
-| File | Purpose |
-|------|---------|
-| `src/lib/components/profile/ChildProfileForm.svelte` | Child profile form; survey disclaimer; no "Add Profile" button |
-| `src/routes/(app)/kids/profile/+page.svelte` | Wraps ChildProfileForm; `proceedToNextStep()` goes to moderation-scenario |
+| File                                                 | Purpose                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| `src/lib/components/profile/ChildProfileForm.svelte` | Child profile form; survey disclaimer; no "Add Profile" button            |
+| `src/routes/(app)/kids/profile/+page.svelte`         | Wraps ChildProfileForm; `proceedToNextStep()` goes to moderation-scenario |
 
 ### Admin
 
-| File | Purpose |
-|------|---------|
-| `src/lib/components/admin/Settings.svelte` | Admin settings; tabs from `allSettings` array; includes Scenarios |
-| `src/lib/components/admin/Settings/Scenarios.svelte` | Scenario upload (JSON), attention-check upload, scenario list |
-| `src/routes/(app)/admin/settings/[tab]/+page.svelte` | Dynamic tab route; `/admin/settings/scenarios` works here |
+| File                                                 | Purpose                                                           |
+| ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `src/lib/components/admin/Settings.svelte`           | Admin settings; tabs from `allSettings` array; includes Scenarios |
+| `src/lib/components/admin/Settings/Scenarios.svelte` | Scenario upload (JSON), attention-check upload, scenario list     |
+| `src/routes/(app)/admin/settings/[tab]/+page.svelte` | Dynamic tab route; `/admin/settings/scenarios` works here         |
 
 ### Backend (Moderation & Workflow)
 
-| File | Purpose |
-|------|---------|
+| File                                                 | Purpose                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------- |
 | `backend/open_webui/routers/moderation_scenarios.py` | `POST /admin/scenarios/upload`, scenario CRUD, workflow state |
-| `src/lib/apis/moderation/index.ts` | `uploadScenariosAdmin`, `listScenariosAdmin`, etc. |
+| `src/lib/apis/moderation/index.ts`                   | `uploadScenariosAdmin`, `listScenariosAdmin`, etc.            |
 
 ---
 
@@ -84,12 +84,12 @@ Survey/workflow routes use **SurveySidebar** (not main Sidebar):
 ```javascript
 // In +layout.svelte and UserMenu.svelte
 isSurveyOrWorkflowRoute =
-  pathname.startsWith('/exit-survey') ||
-  pathname.startsWith('/initial-survey') ||
-  pathname.startsWith('/assignment-instructions') ||
-  pathname.startsWith('/kids/profile') ||
-  pathname.startsWith('/moderation-scenario') ||
-  pathname === '/completion'
+	pathname.startsWith('/exit-survey') ||
+	pathname.startsWith('/initial-survey') ||
+	pathname.startsWith('/assignment-instructions') ||
+	pathname.startsWith('/kids/profile') ||
+	pathname.startsWith('/moderation-scenario') ||
+	pathname === '/completion';
 ```
 
 ---
@@ -110,14 +110,14 @@ isSurveyOrWorkflowRoute =
 ```typescript
 // GET /api/v1/workflow/state
 interface WorkflowStateResponse {
-  next_route: string;  // e.g. '/kids/profile', '/moderation-scenario'
-  substep: string | null;
-  progress_by_section: {
-    has_child_profile: boolean;
-    moderation_completed_count: number;
-    moderation_total: number;
-    exit_survey_completed: boolean;
-  };
+	next_route: string; // e.g. '/kids/profile', '/moderation-scenario'
+	substep: string | null;
+	progress_by_section: {
+		has_child_profile: boolean;
+		moderation_completed_count: number;
+		moderation_total: number;
+		exit_survey_completed: boolean;
+	};
 }
 ```
 

@@ -3,6 +3,7 @@
 ## Prerequisites
 
 1. **Backend must be running** on port 8080:
+
    ```bash
    cd backend
    ./start.sh
@@ -10,6 +11,7 @@
    ```
 
 2. **Frontend must be running** (typically on port 5173 or 5174):
+
    ```bash
    npm run dev
    ```
@@ -73,6 +75,7 @@ The `workflow-navigation.cy.ts` test suite covers:
 ## Expected Test Results
 
 All tests should pass when:
+
 - Backend is running and accessible
 - Frontend is running and accessible
 - Test account exists (default: jjdrisco@ucsd.edu / 0000)
@@ -81,21 +84,25 @@ All tests should pass when:
 ## Troubleshooting
 
 ### Tests Fail with "Cannot connect to backend"
+
 - Ensure backend is running on port 8080
 - Check backend logs for errors
 - Verify `/api/v1/workflow/state` endpoint is accessible
 
 ### Tests Fail with "Cannot connect to frontend"
+
 - Ensure frontend is running (check the port - may be 5174 if 5173 is in use)
 - Update `CYPRESS_baseUrl` to match the correct port
 - Check frontend console for errors
 
 ### Tests Fail with "Element not found"
+
 - Wait times may need adjustment
 - Check that SurveySidebar/Sidebar is actually visible
 - Verify user type is correct (interviewee)
 
 ### Authentication Failures
+
 - Verify test account credentials
 - Check that signup/login endpoints are working
 - Ensure token is being set in localStorage
