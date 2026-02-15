@@ -265,10 +265,14 @@ async def mark_instructions_complete(
                 {"instructions_completed_at": ts}
             )
             db.commit()
-        return InstructionsCompleteResponse(status="success", message="Instructions marked complete")
+        return InstructionsCompleteResponse(
+            status="success", message="Instructions marked complete"
+        )
     except Exception as e:
         log.error(f"Error marking instructions complete for user {user.id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to mark instructions complete")
+        raise HTTPException(
+            status_code=500, detail="Failed to mark instructions complete"
+        )
 
 
 class DraftGetResponse(BaseModel):
@@ -393,12 +397,16 @@ async def reset_user_workflow(
 
             # Note: scenario_assignments now use attempt_number, so old assignments
             # are automatically excluded when fetching by current attempt_number
-            
+
             db.commit()
-            
+
             # Verify the update worked
             updated_user = db.query(User).filter(User.id == user.id).first()
-            stored_attempt = getattr(updated_user, "current_attempt_number", None) if updated_user else None
+            stored_attempt = (
+                getattr(updated_user, "current_attempt_number", None)
+                if updated_user
+                else None
+            )
 
             log.info(
                 f"Reset workflow for user {user.id}, new attempt number: {new_attempt_number}, "
