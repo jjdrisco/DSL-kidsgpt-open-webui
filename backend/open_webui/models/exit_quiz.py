@@ -94,7 +94,7 @@ class ExitQuizTable:
         child_id: Optional[str] = None,
         attempt_number: Optional[int] = None,
     ) -> list[ExitQuizModel]:
-        """Get exit quiz responses. 
+        """Get exit quiz responses.
         When attempt_number is provided, filter to that specific attempt.
         If not provided, returns all responses for the user.
         """

@@ -89,7 +89,9 @@ class User(Base):
     created_at = Column(BigInteger)
     workflow_reset_at = Column(BigInteger, nullable=True)
     instructions_completed_at = Column(BigInteger, nullable=True)
-    current_attempt_number = Column(Integer, nullable=True)  # set on workflow reset; used for next session
+    current_attempt_number = Column(
+        Integer, nullable=True
+    )  # set on workflow reset; used for next session
 
 
 class UserModel(BaseModel):

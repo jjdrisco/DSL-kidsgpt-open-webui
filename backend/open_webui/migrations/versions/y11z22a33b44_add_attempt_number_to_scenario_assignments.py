@@ -34,7 +34,9 @@ def upgrade() -> None:
         # Add column with default value of 1 for existing rows
         op.add_column(
             "scenario_assignments",
-            sa.Column("attempt_number", sa.Integer(), nullable=False, server_default="1"),
+            sa.Column(
+                "attempt_number", sa.Integer(), nullable=False, server_default="1"
+            ),
         )
         # Remove server_default after adding the column so new rows don't get default
         op.alter_column("scenario_assignments", "attempt_number", server_default=None)

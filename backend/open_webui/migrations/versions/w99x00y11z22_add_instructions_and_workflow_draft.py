@@ -41,7 +41,9 @@ def upgrade() -> None:
             sa.Column("id", sa.Text(), primary_key=True),
             sa.Column("user_id", sa.Text(), nullable=False),
             sa.Column("child_id", sa.Text(), nullable=False),
-            sa.Column("draft_type", sa.Text(), nullable=False),  # "exit_survey" | "moderation"
+            sa.Column(
+                "draft_type", sa.Text(), nullable=False
+            ),  # "exit_survey" | "moderation"
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=False),
         )

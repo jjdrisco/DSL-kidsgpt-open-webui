@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 def _get_current_attempt_number(user_id: str) -> int:
-    """Get current attempt number for a user. 
+    """Get current attempt number for a user.
     Uses user.current_attempt_number if set; otherwise max across workflow tables.
     Duplicates logic from workflow.get_current_attempt_number to avoid circular import.
     """

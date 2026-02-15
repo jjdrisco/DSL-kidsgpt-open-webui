@@ -1472,7 +1472,9 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
-app.include_router(moderation_scenarios.router, prefix="/api/v1", tags=["moderation_scenarios"])
+app.include_router(
+    moderation_scenarios.router, prefix="/api/v1", tags=["moderation_scenarios"]
+)
 app.include_router(exit_quiz.router, prefix="/api/v1", tags=["exit_quiz"])
 app.include_router(assignment_time.router, prefix="/api/v1", tags=["assignment_time"])
 app.include_router(prolific.router, prefix="/api/v1/prolific", tags=["prolific"])
