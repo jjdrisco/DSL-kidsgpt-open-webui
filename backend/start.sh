@@ -103,6 +103,16 @@ else
     echo "WARNING: Some dependencies may be missing, but continuing..."
 fi
 
+# Run database migrations before starting the app
+echo "Running database migrations..."
+cd /app/backend/open_webui || exit
+if $PYTHON_CMD -m alembic upgrade head 2>&1; then
+    echo "✓ Database migrations completed"
+else
+    echo "WARNING: Database migrations failed, but continuing..."
+fi
+cd /app/backend || exit
+
 # If script is called with arguments, use them; otherwise use default workers
 if [ "$#" -gt 0 ]; then
     ARGS=("$@")
