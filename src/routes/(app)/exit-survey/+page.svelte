@@ -8,6 +8,8 @@
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
+	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
+	import { personalityTraits } from '$lib/data/personalityTraits';
 
 	// Survey responses
 	let surveyResponses: any = {
@@ -18,6 +20,7 @@
 		parentEthnicity: [],
 		genaiFamiliarity: '',
 		genaiUsageFrequency: '',
+		parentInternetUseFrequency: '', // 1 (never) to 8 (several times per day)
 		parentingStyle: [], // Changed to array for multi-select
 		// Child profile research fields
 		isOnlyChild: '',
@@ -26,7 +29,11 @@
 		parentLLMMonitoringLevel: '',
 		childGenderOther: '',
 		childAIUseContextsOther: '',
-		parentLLMMonitoringOther: ''
+		parentLLMMonitoringOther: '',
+		childInternetUseFrequency: '', // 1 (never) to 8 (several times per day)
+		// Child personality (Big 5) and additional info
+		childPersonalitySubCharacteristics: [] as string[],
+		childAdditionalInfo: ''
 	};
 
 	// API
@@ -61,6 +68,39 @@
 			clearTimeout(t);
 			t = setTimeout(() => fn(...args), delay);
 		};
+	}
+
+	// 8-point scale: How often do you use the Internet? (1 = never to 8 = several times per day)
+	const INTERNET_USE_SCALE: { value: string; label: string }[] = [
+		{ value: '1', label: 'Never' },
+		{ value: '2', label: 'Less than once a month' },
+		{ value: '3', label: 'About once a month' },
+		{ value: '4', label: 'About once a week' },
+		{ value: '5', label: 'Several times a week' },
+		{ value: '6', label: 'About once a day' },
+		{ value: '7', label: 'Once a day' },
+		{ value: '8', label: 'Several times per day' }
+	];
+
+	function getInternetUseLabel(value: string): string {
+		return INTERNET_USE_SCALE.find((s) => s.value === value)?.label || value || 'Not specified';
+	}
+
+	/** Format selected personality sub-characteristic IDs into readable string (TraitName: char1, char2; ...). */
+	function formatPersonalityDescription(selectedIds: string[]): string {
+		if (!selectedIds || selectedIds.length === 0) return '';
+		const traitGroups = new Map<string, string[]>();
+		for (const id of selectedIds) {
+			for (const trait of personalityTraits) {
+				const sub = trait.subCharacteristics.find((sc) => sc.id === id);
+				if (sub) {
+					if (!traitGroups.has(trait.name)) traitGroups.set(trait.name, []);
+					traitGroups.get(trait.name)!.push(sub.name);
+					break;
+				}
+			}
+		}
+		return [...traitGroups.entries()].map(([name, chars]) => `${name}: ${chars.join(', ')}`).join('; ');
 	}
 
 	async function resolveChildId(token: string): Promise<string> {
@@ -104,6 +144,7 @@
 			: [];
 		surveyResponses.genaiFamiliarity = (ans.genaiFamiliarity as string) || '';
 		surveyResponses.genaiUsageFrequency = (ans.genaiUsageFrequency as string) || '';
+		surveyResponses.parentInternetUseFrequency = (ans.parentInternetUseFrequency as string) || '';
 		surveyResponses.parentingStyle = Array.isArray(ans.parentingStyle)
 			? [...ans.parentingStyle]
 			: ans.parentingStyle
@@ -119,6 +160,13 @@
 		surveyResponses.childGenderOther = (ans.childGenderOther as string) || '';
 		surveyResponses.childAIUseContextsOther = (ans.childAIUseContextsOther as string) || '';
 		surveyResponses.parentLLMMonitoringOther = (ans.parentLLMMonitoringOther as string) || '';
+		surveyResponses.childInternetUseFrequency = (ans.childInternetUseFrequency as string) || '';
+		surveyResponses.childPersonalitySubCharacteristics = Array.isArray(
+			ans.childPersonalitySubCharacteristics
+		)
+			? [...(ans.childPersonalitySubCharacteristics as string[])]
+			: [];
+		surveyResponses.childAdditionalInfo = (ans.childAdditionalInfo as string) || '';
 	}
 
 	/** Load saved responses from backend (exit quiz rows or draft) so the form repopulates when revisiting the page after completion. */
@@ -216,8 +264,26 @@
 				toast.error('Please select at least one parenting style');
 				return;
 			}
+			if (!surveyResponses.parentInternetUseFrequency) {
+				toast.error('Please select how often you use the Internet');
+				return;
+			}
 			if (!surveyResponses.parentEthnicity || surveyResponses.parentEthnicity.length === 0) {
 				toast.error('Please select at least one ethnicity');
+				return;
+			}
+			if (!surveyResponses.childInternetUseFrequency) {
+				toast.error('Please select how often this child uses the Internet');
+				return;
+			}
+			const hasPersonality =
+				(surveyResponses.childPersonalitySubCharacteristics &&
+					surveyResponses.childPersonalitySubCharacteristics.length > 0) ||
+				(surveyResponses.childAdditionalInfo && surveyResponses.childAdditionalInfo.trim() !== '');
+			if (!hasPersonality) {
+				toast.error(
+					'Please select at least one personality characteristic or add additional information about your child'
+				);
 				return;
 			}
 
@@ -241,6 +307,7 @@
 				parentEthnicity: surveyResponses.parentEthnicity,
 				genaiFamiliarity: surveyResponses.genaiFamiliarity,
 				genaiUsageFrequency: surveyResponses.genaiUsageFrequency,
+				parentInternetUseFrequency: surveyResponses.parentInternetUseFrequency,
 				parentingStyle: surveyResponses.parentingStyle, // Now an array
 				// Child profile research fields
 				isOnlyChild: surveyResponses.isOnlyChild,
@@ -249,7 +316,10 @@
 				parentLLMMonitoringLevel: surveyResponses.parentLLMMonitoringLevel,
 				childGenderOther: surveyResponses.childGenderOther,
 				childAIUseContextsOther: surveyResponses.childAIUseContextsOther,
-				parentLLMMonitoringOther: surveyResponses.parentLLMMonitoringOther
+				parentLLMMonitoringOther: surveyResponses.parentLLMMonitoringOther,
+				childInternetUseFrequency: surveyResponses.childInternetUseFrequency,
+				childPersonalitySubCharacteristics: surveyResponses.childPersonalitySubCharacteristics,
+				childAdditionalInfo: surveyResponses.childAdditionalInfo
 			};
 
 			// Persist to backend (exit quiz)
@@ -459,6 +529,14 @@
 						</div>
 						<div>
 							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								How often do you use the Internet? (parent)
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{getInternetUseLabel(surveyResponses.parentInternetUseFrequency)}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 								Gender
 							</div>
 							<p class="text-gray-900 dark:text-white">
@@ -501,6 +579,14 @@
 							</p>
 						</div>
 						<!-- Child Profile Research Fields -->
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								How often does this child use the Internet?
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{getInternetUseLabel(surveyResponses.childInternetUseFrequency)}
+							</p>
+						</div>
 						<div>
 							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 								Is this child an only child?
@@ -570,6 +656,23 @@
 												: surveyResponses.parentLLMMonitoringLevel === 'other'
 													? surveyResponses.parentLLMMonitoringOther || 'Other'
 													: 'Not specified'}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Child personality (selected traits)
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{formatPersonalityDescription(surveyResponses.childPersonalitySubCharacteristics) ||
+									'None selected'}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Additional information about child
+							</div>
+							<p class="text-gray-900 dark:text-white whitespace-pre-wrap">
+								{surveyResponses.childAdditionalInfo || 'None provided'}
 							</p>
 						</div>
 					</div>
@@ -662,10 +765,35 @@
 							</div>
 						</div>
 
-						<!-- GenAI familiarity -->
+						<!-- 2. How often do you use the Internet? (parent) - 8-point scale -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								2. How familiar are you with ChatGPT or other Large Language Models (LLMs)? <span
+								2. How often do you use the Internet? <span class="text-red-500">*</span>
+							</div>
+							<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+								Scale: 1 (never) to 8 (several times per day).
+							</p>
+							<div class="space-y-2">
+								{#each INTERNET_USE_SCALE as option}
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentInternetUseFrequency}
+											value={option.value}
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white"
+											>{option.value}. {option.label}</span
+										>
+									</label>
+								{/each}
+							</div>
+						</div>
+
+						<!-- 3. GenAI familiarity -->
+						<div>
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+								3. How familiar are you with ChatGPT or other Large Language Models (LLMs)? <span
 									class="text-red-500">*</span
 								>
 							</div>
@@ -713,10 +841,10 @@
 							</div>
 						</div>
 
-						<!-- Personal GenAI use frequency -->
+						<!-- 4. Personal GenAI use frequency -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								3. How often do you personally use ChatGPT or similar AI tools? <span
+								4. How often do you personally use ChatGPT or similar AI tools? <span
 									class="text-red-500">*</span
 								>
 							</div>
@@ -763,10 +891,11 @@
 								>
 							</div>
 						</div>
-						<!-- Question 4: Parent Gender -->
+
+						<!-- 5. Parent Gender -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								4. What is your gender? <span class="text-red-500">*</span>
+								5. What is your gender? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -822,10 +951,10 @@
 							</div>
 						</div>
 
-						<!-- Question 5: Parent Age -->
+						<!-- 6. Parent Age -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								5. What is your age range? <span class="text-red-500">*</span>
+								6. What is your age range? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -901,10 +1030,10 @@
 							</div>
 						</div>
 
-						<!-- Question 6: Area of Residency -->
+						<!-- 7. Area of Residency -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								6. What type of area do you live in? <span class="text-red-500">*</span>
+								7. What type of area do you live in? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -950,10 +1079,10 @@
 							</div>
 						</div>
 
-						<!-- Question 7: Parent Education -->
+						<!-- 8. Parent Education -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								7. What is your highest level of education? <span class="text-red-500">*</span>
+								8. What is your highest level of education? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -1031,10 +1160,10 @@
 							</div>
 						</div>
 
-						<!-- Question 8: Parent Ethnicity -->
+						<!-- 9. Parent Ethnicity -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								8. What is your ethnicity? (Select all that apply) <span class="text-red-500"
+								9. What is your ethnicity? (Select all that apply) <span class="text-red-500"
 									>*</span
 								>
 							</div>
@@ -1215,6 +1344,31 @@
 										/>
 										<span class="text-gray-900 dark:text-white">Prefer not to say</span>
 									</label>
+								</div>
+							</div>
+
+							<!-- How often does this child use the Internet? - 8-point scale -->
+							<div class="mb-6">
+								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									How often does this child use the Internet? <span class="text-red-500">*</span>
+								</div>
+								<p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+									Scale: 1 (never) to 8 (several times per day).
+								</p>
+								<div class="space-y-2">
+									{#each INTERNET_USE_SCALE as option}
+										<label class="flex items-center">
+											<input
+												type="radio"
+												bind:group={surveyResponses.childInternetUseFrequency}
+												value={option.value}
+												class="mr-3"
+											/>
+											<span class="text-gray-900 dark:text-white"
+												>{option.value}. {option.label}</span
+											>
+										</label>
+									{/each}
 								</div>
 							</div>
 
@@ -1414,6 +1568,22 @@
 									{/if}
 								</div>
 							</div>
+						</div>
+
+						<!-- Child personality (Big Five) and additional info -->
+						<div>
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-2">
+								Child personality (Big Five) <span class="text-red-500">*</span>
+							</div>
+							<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+								Select at least one personality characteristic that describes your child, or add additional
+								details below.
+							</p>
+							<ChildPersonalitySection
+								bind:selectedSubCharacteristics={surveyResponses.childPersonalitySubCharacteristics}
+								bind:additionalInfo={surveyResponses.childAdditionalInfo}
+								required={true}
+							/>
 						</div>
 
 						<!-- Submit Button -->
