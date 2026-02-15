@@ -341,10 +341,12 @@
 			const isProlificUser = $user?.prolific_pid !== undefined && $user?.prolific_pid !== null;
 			const prolificSessionId = localStorage.getItem('prolificSessionId');
 			const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
-			
+
 			// Get completion status from backend workflow state
-			const assignmentCompleted = workflowState?.progress_by_section?.exit_survey_completed || false;
-			const instructionsCompleted = workflowState?.progress_by_section?.instructions_completed || false;
+			const assignmentCompleted =
+				workflowState?.progress_by_section?.exit_survey_completed || false;
+			const instructionsCompleted =
+				workflowState?.progress_by_section?.instructions_completed || false;
 
 			// For Prolific users on new sessions, call reset API and redirect to instructions
 			if (isProlificUser) {
@@ -441,8 +443,13 @@
 				const nextStep = getStepFromRoute(nextRoute);
 
 				// Define valid workflow routes (excluding assignment-instructions - handled above)
-				const workflowRoutes = ['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion'];
-				const isWorkflowRoute = workflowRoutes.some(route => currentPath.startsWith(route));
+				const workflowRoutes = [
+					'/kids/profile',
+					'/moderation-scenario',
+					'/exit-survey',
+					'/completion'
+				];
+				const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
 
 				// If user is on a workflow route but not the correct one, redirect
 				if (isWorkflowRoute && currentPath !== nextRoute && !currentPath.startsWith(nextRoute)) {

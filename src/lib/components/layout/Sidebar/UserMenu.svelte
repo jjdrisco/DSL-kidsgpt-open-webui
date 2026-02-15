@@ -346,15 +346,15 @@
 								)
 							);
 							if (!confirmed) return;
-						try {
-							await resetUserWorkflow(localStorage.token);
-							// Dispatch reset event so all components can clear their state
-							window.dispatchEvent(new Event('workflow-reset'));
-							toast.success($i18n.t('Survey reset successfully.'));
-							window.dispatchEvent(new Event('workflow-updated'));
-							// Allow sidebar to refetch workflow state before navigating so button states update
-							await new Promise((r) => setTimeout(r, 400));
-							await goto('/assignment-instructions');
+							try {
+								await resetUserWorkflow(localStorage.token);
+								// Dispatch reset event so all components can clear their state
+								window.dispatchEvent(new Event('workflow-reset'));
+								toast.success($i18n.t('Survey reset successfully.'));
+								window.dispatchEvent(new Event('workflow-updated'));
+								// Allow sidebar to refetch workflow state before navigating so button states update
+								await new Promise((r) => setTimeout(r, 400));
+								await goto('/assignment-instructions');
 							} catch (e) {
 								console.error('Failed to reset survey:', e);
 								toast.error($i18n.t('Failed to reset survey. Please try again.'));

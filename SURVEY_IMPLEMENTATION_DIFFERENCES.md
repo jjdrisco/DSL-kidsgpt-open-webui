@@ -11,12 +11,14 @@ The commit `ba6fbc56d` represents the state where the survey feature was **block
 ## 1. Workflow Navigation Logic (`enforceWorkflowNavigation`)
 
 ### In ba6fbc56d (Blocking Implementation):
+
 - **All users** (except admins) were subject to workflow enforcement
 - No user type differentiation
 - Workflow steps were enforced for all non-admin users regardless of their role
 - Users were redirected to their current step if they tried to access other routes
 
 ### Current Implementation:
+
 - **User type differentiation** using `getUserType()` function
 - Only **"interviewee"** users are subject to workflow enforcement
 - **Parent users** can access `/parent` freely
@@ -25,25 +27,26 @@ The commit `ba6fbc56d` represents the state where the survey feature was **block
 - Added `mayFetchWhitelist` option to avoid 401 errors for non-admin users
 
 **Key Code Changes:**
+
 ```typescript
 // NEW: User type determination
 const userType = await getUserType($user, [], {
-    mayFetchWhitelist: $user?.role === 'admin'
+	mayFetchWhitelist: $user?.role === 'admin'
 });
 
 // NEW: Allow parent users to access /parent freely
 if (userType === 'parent' && currentPath.startsWith('/parent')) {
-    return;
+	return;
 }
 
 // NEW: Allow child users to access / freely
 if (userType === 'child' && currentPath === '/') {
-    return;
+	return;
 }
 
 // NEW: Only enforce workflow steps for interviewee users
 if (userType !== 'interviewee') {
-    return; // For parent/child users, don't enforce workflow steps
+	return; // For parent/child users, don't enforce workflow steps
 }
 ```
 
@@ -52,16 +55,19 @@ if (userType !== 'interviewee') {
 ## 2. User Role Handling
 
 ### In ba6fbc56d:
+
 - Only checked for `['user', 'admin']` roles
 - No support for `'parent'` or `'child'` roles
 - All non-admin users were treated the same
 
 ### Current Implementation:
+
 - Supports `['user', 'admin', 'parent', 'child']` roles
 - Different access patterns for different user types
 - Parent and child users bypass workflow enforcement
 
 **Code Change:**
+
 ```typescript
 // OLD:
 } else if (['user', 'admin'].includes($user?.role)) {
@@ -77,11 +83,13 @@ if (!['user', 'admin', 'parent', 'child'].includes($user?.role)) {
 ## 3. SurveySidebar Component
 
 ### In ba6fbc56d:
+
 - **No SurveySidebar component existed**
 - Only the standard `Sidebar` component was used
 - All pages used the same sidebar
 
 ### Current Implementation:
+
 - **New `SurveySidebar` component** (`src/lib/components/layout/SurveySidebar.svelte`)
 - Conditionally displayed on survey routes (`/exit-survey`, `/initial-survey`)
 - Shows assignment progress, workflow state, and "Chat View" button
@@ -92,16 +100,16 @@ if (!['user', 'admin', 'parent', 'child'].includes($user?.role)) {
   - Exit Survey
 
 **Code Change:**
+
 ```svelte
 <!-- NEW: Conditional sidebar rendering -->
 {@const isSurveyRoute =
-    $page.url.pathname.startsWith('/exit-survey') ||
-    $page.url.pathname.startsWith('/initial-survey')}
+	$page.url.pathname.startsWith('/exit-survey') || $page.url.pathname.startsWith('/initial-survey')}
 
 {#if isSurveyRoute}
-    <SurveySidebar />
+	<SurveySidebar />
 {:else}
-    <Sidebar />
+	<Sidebar />
 {/if}
 ```
 
@@ -116,7 +124,9 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 ### Removed Features from Original Sidebar:
 
 #### 1. Assignment Workflow State Management
+
 **In ba6fbc56d:**
+
 - The Sidebar tracked comprehensive workflow state:
   ```typescript
   let assignmentStep: number = 1;
@@ -132,11 +142,11 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 - **Reactive statements** that synced with localStorage:
   ```typescript
   $: if (typeof window !== 'undefined') {
-      const storedStep = localStorage.getItem('assignmentStep');
-      if (storedStep) {
-          assignmentStep = parseInt(storedStep);
-      }
-      // ... synced all unlock flags and state
+  	const storedStep = localStorage.getItem('assignmentStep');
+  	if (storedStep) {
+  		assignmentStep = parseInt(storedStep);
+  	}
+  	// ... synced all unlock flags and state
   }
   ```
 - **Event listeners** for cross-tab synchronization:
@@ -146,13 +156,16 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
   ```
 
 **Current Implementation:**
+
 - ❌ **All of this state management was removed from Sidebar**
 - ❌ No reactive localStorage syncing in Sidebar
 - ❌ No workflow event listeners in Sidebar
 - ✅ SurveySidebar has some progress tracking, but uses different approach (backend API)
 
 #### 2. Assignment Workflow Navigation Functions
+
 **In ba6fbc56d:**
+
 - `checkAssignmentSetup()` - Checked if user needed to start assignment
 - `proceedToNextStep()` - Advanced to next workflow step
 - `goToStep(step: number)` - Navigated to specific step with unlock checks
@@ -161,12 +174,15 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 - `updateAssignmentStep(step: number)` - Updated step based on navigation
 
 **Current Implementation:**
+
 - ❌ **All navigation functions removed from Sidebar**
 - ✅ Navigation is now handled by `enforceWorkflowNavigation` in layout
 - ❌ No direct step navigation from sidebar UI
 
 #### 3. Child Profile Management
+
 **In ba6fbc56d:**
+
 - `loadChildProfiles()` - Loaded and managed child profiles
 - Child profile state variables:
   ```typescript
@@ -178,12 +194,15 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 - Role-based child profile loading (when `selectedRole === 'kids'`)
 
 **Current Implementation:**
+
 - ❌ **All child profile management removed from Sidebar**
 - ✅ Child profiles are now managed by `childProfileSync` service
 - ❌ No role-based loading logic in Sidebar
 
 #### 4. Personal Store Integration
+
 **In ba6fbc56d:**
+
 - `showPersonalStore: boolean` - Toggle for personal store modal
 - `currentPersonal` - Currently selected personal
 - `loadCurrentPersonal()` - Loaded selected personal from localStorage
@@ -191,12 +210,15 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 - `PersonalStore` component integration
 
 **Current Implementation:**
+
 - ❌ **Personal Store functionality completely removed**
 - ❌ No `PersonalStore` component in current Sidebar
 - ❌ No personal management features
 
 #### 5. Workflow Step UI in Sidebar
+
 **In ba6fbc56d:**
+
 - The Sidebar displayed **clickable workflow step buttons**:
   - Step 1: Child Profile (with unlock checks)
   - Step 2: Moderation Scenario
@@ -210,36 +232,43 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 - Navigation between steps directly from sidebar
 
 **Current Implementation:**
+
 - ❌ **No workflow step UI in Sidebar**
 - ✅ SurveySidebar shows progress but no navigation buttons
 - ❌ Cannot navigate between workflow steps from sidebar
 
 #### 6. Navigation-Based Step Updates
+
 **In ba6fbc56d:**
+
 - Reactive statement that updated `assignmentStep` based on current route:
   ```typescript
   $: if (typeof window !== 'undefined') {
-      const currentPath = window.location.pathname;
-      if (currentPath === '/kids/profile' && assignmentStep < 2) {
-          updateAssignmentStep(1);
-      } else if (currentPath === '/moderation-scenario' && assignmentStep < 3) {
-          updateAssignmentStep(2);
-      } // ... etc
+  	const currentPath = window.location.pathname;
+  	if (currentPath === '/kids/profile' && assignmentStep < 2) {
+  		updateAssignmentStep(1);
+  	} else if (currentPath === '/moderation-scenario' && assignmentStep < 3) {
+  		updateAssignmentStep(2);
+  	} // ... etc
   }
   ```
 
 **Current Implementation:**
+
 - ❌ **No automatic step updates based on navigation**
 - Step tracking is now handled differently in layout
 
 #### 7. Different Icons and Components
+
 **In ba6fbc56d:**
+
 - Used `Home` icon component
 - Used `MagnifyingGlass` icon component
 - Used `AddFilesPlaceholder` component
 - Used `PersonalStore` component
 
 **Current Implementation:**
+
 - ❌ **Different icon set** (`Search`, `UserGroup`, `Sidebar`, `Note`)
 - ❌ No `AddFilesPlaceholder`
 - ❌ No `PersonalStore`
@@ -247,16 +276,16 @@ The original `Sidebar` component in `ba6fbc56d` contained **extensive survey wor
 
 ### Summary of Lost Functionality:
 
-| Feature | ba6fbc56d | Current | Status |
-|---------|-----------|---------|--------|
-| Workflow state tracking | ✅ In Sidebar | ❌ Removed | **LOST** |
-| Step navigation functions | ✅ In Sidebar | ❌ Removed | **LOST** |
-| Child profile management | ✅ In Sidebar | ❌ Removed | **LOST** |
-| Personal Store | ✅ In Sidebar | ❌ Removed | **LOST** |
-| Workflow step UI buttons | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Feature                       | ba6fbc56d     | Current    | Status   |
+| ----------------------------- | ------------- | ---------- | -------- |
+| Workflow state tracking       | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Step navigation functions     | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Child profile management      | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Personal Store                | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Workflow step UI buttons      | ✅ In Sidebar | ❌ Removed | **LOST** |
 | Navigation-based step updates | ✅ In Sidebar | ❌ Removed | **LOST** |
-| Event listeners for workflow | ✅ In Sidebar | ❌ Removed | **LOST** |
-| Unlock flag management | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Event listeners for workflow  | ✅ In Sidebar | ❌ Removed | **LOST** |
+| Unlock flag management        | ✅ In Sidebar | ❌ Removed | **LOST** |
 
 ### Impact:
 
@@ -273,11 +302,13 @@ The original Sidebar was a **central hub for workflow management** - users could
 ## 4. Layout Structure and Code Organization
 
 ### In ba6fbc56d:
+
 - Inline code organization
 - Direct API calls in `onMount`
 - Keyboard shortcuts hardcoded inline
 
 ### Current Implementation:
+
 - **Refactored into helper functions:**
   - `clearChatInputStorage()`
   - `checkLocalDBChats()`
@@ -295,30 +326,33 @@ The original Sidebar was a **central hub for workflow management** - users could
 ## 5. Navigation Guard Improvements
 
 ### In ba6fbc56d:
+
 - No protection against infinite navigation loops
 - Reactive statement could trigger multiple times
 - No guard mechanism
 
 ### Current Implementation:
+
 - **`isEnforcingNavigation` guard** prevents re-entry during navigation enforcement
 - Wrapped in try-finally to ensure guard is always reset
 - Prevents infinite loops from reactive triggers
 
 **Code Addition:**
+
 ```typescript
 // Guard to prevent navigation loop from reactive re-entry
 let isEnforcingNavigation = false;
 
 const enforceWorkflowNavigation = async () => {
-    // Prevent re-entry while already enforcing navigation
-    if (isEnforcingNavigation) return;
-    isEnforcingNavigation = true;
-    
-    try {
-        // ... navigation logic ...
-    } finally {
-        isEnforcingNavigation = false;
-    }
+	// Prevent re-entry while already enforcing navigation
+	if (isEnforcingNavigation) return;
+	isEnforcingNavigation = true;
+
+	try {
+		// ... navigation logic ...
+	} finally {
+		isEnforcingNavigation = false;
+	}
 };
 ```
 
@@ -327,10 +361,12 @@ const enforceWorkflowNavigation = async () => {
 ## 6. Exit Survey Page
 
 ### In ba6fbc56d:
+
 - Exit survey page existed but may have had different implementation details
 - Same basic structure (survey form, save/edit pattern)
 
 ### Current Implementation:
+
 - **Enhanced with SurveySidebar** integration
 - **Help video modal** support (`VideoModal` component)
 - **Assignment time tracking** (`AssignmentTimeTracker` component)
@@ -344,11 +380,13 @@ const enforceWorkflowNavigation = async () => {
 ## 7. Initial Survey Page
 
 ### In ba6fbc56d:
+
 - Initial survey page existed
 - Basic form submission
 - Simple navigation
 
 ### Current Implementation:
+
 - **SurveySidebar integration** (when on survey routes)
 - **Improved navigation** with disabled "Previous Task" button
 - **Better form structure** and styling
@@ -359,10 +397,12 @@ const enforceWorkflowNavigation = async () => {
 ## 8. API Integration
 
 ### In ba6fbc56d:
+
 - Basic API calls
 - No workflow state API
 
 ### Current Implementation:
+
 - **New `getWorkflowState` API** for fetching workflow progress
 - **Enhanced exit quiz API** with better error handling
 - **Child profile sync service** integration
@@ -373,11 +413,13 @@ const enforceWorkflowNavigation = async () => {
 ## 9. User Experience Improvements
 
 ### In ba6fbc56d:
+
 - Blocking workflow - users couldn't access chat interface
 - No progress indication
 - No way to see workflow status
 
 ### Current Implementation:
+
 - **Non-blocking for parent/child users** - they can use chat interface
 - **Progress indicators** in SurveySidebar
 - **"Chat View" button** in SurveySidebar to navigate to chat
@@ -389,6 +431,7 @@ const enforceWorkflowNavigation = async () => {
 ## 10. Import Changes
 
 ### Added Imports:
+
 ```typescript
 import { getUserType } from '$lib/utils';
 import SurveySidebar from '$lib/components/layout/SurveySidebar.svelte';
@@ -396,6 +439,7 @@ import { Shortcut, shortcuts } from '$lib/shortcuts';
 ```
 
 ### Removed Imports:
+
 ```typescript
 import { getKnowledgeBases } from '$lib/apis/knowledge';
 import { getFunctions } from '$lib/apis/functions';

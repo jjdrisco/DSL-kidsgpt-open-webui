@@ -90,7 +90,9 @@ export const getWorkflowState = async (token: string): Promise<WorkflowStateResp
 	return res.json();
 };
 
-export const markInstructionsComplete = async (token: string): Promise<{ status: string; message: string }> => {
+export const markInstructionsComplete = async (
+	token: string
+): Promise<{ status: string; message: string }> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/instructions-complete`, {
 		method: 'POST',
 		headers: {

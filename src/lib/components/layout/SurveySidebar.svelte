@@ -42,7 +42,7 @@
 	// Navigation function
 	async function goToStep(step: number) {
 		console.log('goToStep called with step:', step);
-		
+
 		if (!workflowState) {
 			await fetchWorkflowProgress();
 		}
@@ -53,7 +53,14 @@
 		}
 
 		const canAccess = canAccessStep(step, workflowState);
-		console.log('canAccessStep result:', canAccess, 'for step:', step, 'workflowState:', workflowState);
+		console.log(
+			'canAccessStep result:',
+			canAccess,
+			'for step:',
+			step,
+			'workflowState:',
+			workflowState
+		);
 
 		if (!canAccess) {
 			toast.error('This step is not yet available');
@@ -200,13 +207,13 @@
 				<div class="space-y-2">
 					<!-- Assignment Progress -->
 					{#if !loadingProgress && workflowState}
-					{@const step0 = getStepInfo(0)}
-					{@const step1 = getStepInfo(1)}
-					{@const step2 = getStepInfo(2)}
-					{@const step3 = getStepInfo(3)}
-					{@const step4 = getStepInfo(4)}
-					{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
-					{@const step1Clickable = step1.canAccess && (!onInstructionsPage || step1.isCompleted)}
+						{@const step0 = getStepInfo(0)}
+						{@const step1 = getStepInfo(1)}
+						{@const step2 = getStepInfo(2)}
+						{@const step3 = getStepInfo(3)}
+						{@const step4 = getStepInfo(4)}
+						{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
+						{@const step1Clickable = step1.canAccess && (!onInstructionsPage || step1.isCompleted)}
 						<div class="mb-6">
 							<div
 								class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3"
@@ -414,25 +421,25 @@
 									</span>
 								</button>
 
-							<!-- Step 4: Completion -->
-							<button
-								data-step="4"
-								disabled={!step4.canAccess}
-								on:click|preventDefault|stopPropagation={() => {
-									if (step4.canAccess) {
-										goToStep(4);
-									} else {
-										toast.error('This step is not yet available');
-									}
-								}}
-								class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step4.isCurrentStep
-									? 'bg-blue-100 dark:bg-blue-900'
-									: step4.canAccess
-										? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
-										: 'opacity-50 cursor-not-allowed'}"
-								aria-label="Navigate to {step4.label}"
-								aria-disabled={!step4.canAccess}
-							>
+								<!-- Step 4: Completion -->
+								<button
+									data-step="4"
+									disabled={!step4.canAccess}
+									on:click|preventDefault|stopPropagation={() => {
+										if (step4.canAccess) {
+											goToStep(4);
+										} else {
+											toast.error('This step is not yet available');
+										}
+									}}
+									class="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition {step4.isCurrentStep
+										? 'bg-blue-100 dark:bg-blue-900'
+										: step4.canAccess
+											? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+											: 'opacity-50 cursor-not-allowed'}"
+									aria-label="Navigate to {step4.label}"
+									aria-disabled={!step4.canAccess}
+								>
 									<div
 										class="size-5 rounded-full flex items-center justify-center flex-shrink-0 {step4.isCompleted
 											? 'bg-green-500'

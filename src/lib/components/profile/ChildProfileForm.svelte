@@ -647,7 +647,9 @@
 >
 	<div class="max-w-4xl mx-auto px-4 py-8">
 		<!-- Instructional Message -->
-		<div class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+		<div
+			class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+		>
 			<p class="text-sm text-blue-900 dark:text-blue-200">
 				<strong>Note:</strong> Please provide information about one child you have in mind for this survey.
 			</p>
@@ -783,7 +785,9 @@
 					<div class="space-y-6">
 						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
 						<p class="text-sm text-gray-600 dark:text-gray-400 -mt-2 mb-2">
-							This survey asks you to describe your child. This information will not be used to customize the scenarios you will be shown and will only be used in the context of academic research.
+							This survey asks you to describe your child. This information will not be used to
+							customize the scenarios you will be shown and will only be used in the context of
+							academic research.
 						</p>
 
 						<div>

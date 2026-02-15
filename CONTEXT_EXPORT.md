@@ -10,11 +10,13 @@
 ## What Was Implemented
 
 ### Summary
+
 Restored the lost survey workflow navigation functionality that was removed from the Sidebar component in commit `ba6fbc56d`. The implementation uses the backend API as the single source of truth (no localStorage) and maintains user type differentiation.
 
 ### Key Changes
 
 #### 1. Workflow Utility Functions (`src/lib/utils/workflow.ts`)
+
 - `getStepRoute(step: number)` - Maps step numbers (1-4) to routes
 - `getStepFromRoute(route: string)` - Gets step number from route path
 - `canAccessStep(step: number, workflowState)` - Determines if a step is accessible based on backend state
@@ -22,6 +24,7 @@ Restored the lost survey workflow navigation functionality that was removed from
 - `isStepCompleted(step: number, workflowState)` - Checks completion status
 
 #### 2. Enhanced SurveySidebar (`src/lib/components/layout/SurveySidebar.svelte`)
+
 - **Before**: Static progress indicators (read-only)
 - **After**: Clickable step navigation buttons
 - Features:
@@ -33,6 +36,7 @@ Restored the lost survey workflow navigation functionality that was removed from
   - Navigation to accessible steps
 
 #### 3. Main Sidebar Workflow Section (`src/lib/components/layout/Sidebar.svelte`)
+
 - **New**: Conditional workflow navigation section
 - Only visible for **interviewee users** (determined by `getUserType()`)
 - Hidden for parent/child users
@@ -41,6 +45,7 @@ Restored the lost survey workflow navigation functionality that was removed from
 - Refreshes on route changes
 
 #### 4. Layout Navigation Guard (`src/routes/(app)/+layout.svelte`)
+
 - **Removed**: All localStorage dependencies for workflow state
 - **Added**: Backend API integration using `getWorkflowState()`
 - Uses `next_route` from backend to determine correct navigation
@@ -48,6 +53,7 @@ Restored the lost survey workflow navigation functionality that was removed from
 - Preserves user type differentiation (parent/child/interviewee)
 
 #### 5. Cypress Tests (`cypress/e2e/workflow-navigation.cy.ts`)
+
 - Tests for SurveySidebar navigation
 - Tests for main Sidebar navigation
 - Tests for workflow state integration
@@ -56,6 +62,7 @@ Restored the lost survey workflow navigation functionality that was removed from
 ## Files Changed
 
 ### Created Files
+
 1. `src/lib/utils/workflow.ts` - Workflow utility functions
 2. `cypress/e2e/workflow-navigation.cy.ts` - Cypress tests
 3. `REIMPLEMENTATION_PLAN.md` - Implementation plan
@@ -64,6 +71,7 @@ Restored the lost survey workflow navigation functionality that was removed from
 6. `CONTEXT_EXPORT.md` - This file
 
 ### Modified Files
+
 1. `src/lib/components/layout/SurveySidebar.svelte` - Added clickable navigation
 2. `src/lib/components/layout/Sidebar.svelte` - Added workflow section
 3. `src/routes/(app)/+layout.svelte` - Updated navigation guard
@@ -71,16 +79,19 @@ Restored the lost survey workflow navigation functionality that was removed from
 ## Architecture Decisions
 
 ### ✅ Backend API Only (No localStorage)
+
 - All workflow state comes from `getWorkflowState()` API
 - No localStorage for workflow state
 - Backend is single source of truth
 
 ### ✅ No Centralized Service
+
 - Components call API directly
 - SurveySidebar and Sidebar are mutually exclusive (never visible simultaneously)
 - Utility functions for shared logic only
 
 ### ✅ User Type Differentiation
+
 - **Interviewee users**: See full workflow navigation
 - **Parent/Child users**: Workflow UI hidden
 - **Admin users**: Can see workflow UI (optional)
@@ -94,11 +105,13 @@ Restored the lost survey workflow navigation functionality that was removed from
 ## Testing Status
 
 ### ✅ Code Implementation: Complete
+
 - All code changes committed
 - No linter errors
 - TypeScript types correct
 
 ### ⏳ Cypress Tests: Created but Not Run
+
 - Test file created: `cypress/e2e/workflow-navigation.cy.ts`
 - **Cannot run tests** - requires backend and frontend services running
 - See `TESTING_INSTRUCTIONS.md` for how to run
@@ -108,6 +121,7 @@ Restored the lost survey workflow navigation functionality that was removed from
 ### 1. Start Services
 
 **Backend** (port 8080):
+
 ```bash
 cd backend
 ./start.sh
@@ -115,6 +129,7 @@ cd backend
 ```
 
 **Frontend** (port 5173 or 5174):
+
 ```bash
 npm run dev
 ```
@@ -157,7 +172,9 @@ npx cypress open
 ## Known Issues / Considerations
 
 ### Database Error (from terminal output)
+
 The terminal shows a SQLite database error. This is likely a local environment issue, not related to our changes. The error is:
+
 ```
 sqlite3.OperationalError: unable to open database file
 ```
@@ -165,6 +182,7 @@ sqlite3.OperationalError: unable to open database file
 **To fix**: Ensure database file exists and has correct permissions, or configure database connection properly.
 
 ### Backend API Dependencies
+
 - The implementation depends on `/api/v1/workflow/state` endpoint
 - This endpoint must return `WorkflowStateResponse` with:
   - `next_route`: string (e.g., '/kids/profile', '/moderation-scenario', etc.)
@@ -175,6 +193,7 @@ sqlite3.OperationalError: unable to open database file
     - `exit_survey_completed`: boolean
 
 ### User Type Detection
+
 - Uses `getUserType()` function which checks:
   - User role (admin, child, parent, interviewee)
   - Study ID whitelist for interviewee determination
@@ -187,10 +206,11 @@ sqlite3.OperationalError: unable to open database file
 3. **Run Cypress tests** to verify automated test coverage
 4. **Fix any issues** that arise during testing
 5. **Verify** that all existing tests still pass:
+
    ```bash
    # Run existing workflow tests
    xvfb-run -a npx cypress run --headless --spec cypress/e2e/workflow.cy.ts
-   
+
    # Run existing survey-sidebar tests
    xvfb-run -a npx cypress run --headless --spec cypress/e2e/survey-sidebar.cy.ts
    ```
@@ -198,12 +218,14 @@ sqlite3.OperationalError: unable to open database file
 ## Key Differences from Original Implementation
 
 ### What Was Restored
+
 ✅ Clickable workflow step navigation buttons
 ✅ Visual progress indicators (completed, current, locked)
 ✅ Step navigation from sidebar
 ✅ Workflow state management
 
 ### What Changed from Original
+
 ❌ **No localStorage** - Original used localStorage + backend sync
 ✅ **Backend API only** - Current uses backend as single source of truth
 ❌ **No Personal Store** - Original had Personal Store integration (intentionally not restored)
@@ -220,20 +242,24 @@ sqlite3.OperationalError: unable to open database file
 ## Code Locations
 
 ### Workflow Utilities
+
 - File: `src/lib/utils/workflow.ts`
 - Functions: `getStepRoute`, `canAccessStep`, `getStepLabel`, `isStepCompleted`, `getStepFromRoute`
 
 ### SurveySidebar
+
 - File: `src/lib/components/layout/SurveySidebar.svelte`
 - Key functions: `fetchWorkflowProgress()`, `goToStep()`, `getStepInfo()`
 - Shows on routes: `/exit-survey`, `/initial-survey`
 
 ### Main Sidebar
+
 - File: `src/lib/components/layout/Sidebar.svelte`
 - Key functions: `fetchWorkflowState()`, `goToStep()`, `getStepInfo()`
 - Conditional: Only shows for `isInterviewee === true`
 
 ### Layout Navigation Guard
+
 - File: `src/routes/(app)/+layout.svelte`
 - Function: `enforceWorkflowNavigation()`
 - Uses: `getWorkflowState()` API, `next_route` for navigation decisions
@@ -241,21 +267,23 @@ sqlite3.OperationalError: unable to open database file
 ## API Dependencies
 
 ### Required Endpoint
+
 - `GET /api/v1/workflow/state`
 - Returns: `WorkflowStateResponse`
 - Used by: SurveySidebar, Sidebar, Layout navigation guard
 
 ### Response Structure
+
 ```typescript
 {
-  next_route: string;  // Where user should be
-  substep: string | null;
-  progress_by_section: {
-    has_child_profile: boolean;
-    moderation_completed_count: number;
-    moderation_total: number;
-    exit_survey_completed: boolean;
-  };
+	next_route: string; // Where user should be
+	substep: string | null;
+	progress_by_section: {
+		has_child_profile: boolean;
+		moderation_completed_count: number;
+		moderation_total: number;
+		exit_survey_completed: boolean;
+	}
 }
 ```
 
@@ -266,6 +294,7 @@ sqlite3.OperationalError: unable to open database file
 **Remote**: Pushed to origin
 
 **To continue working**:
+
 ```bash
 git checkout feat/restore-workflow-navigation
 # Start services and test

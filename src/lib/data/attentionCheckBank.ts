@@ -45,7 +45,9 @@ function hashString(str: string): string {
  * // Get one random attention check question
  * const attentionCheck = await getRandomAttentionCheck(localStorage.token);
  */
-export async function getRandomAttentionCheck(token?: string): Promise<AttentionCheckQAPair | null> {
+export async function getRandomAttentionCheck(
+	token?: string
+): Promise<AttentionCheckQAPair | null> {
 	// Try API first if token is available
 	if (token) {
 		try {
@@ -59,12 +61,17 @@ export async function getRandomAttentionCheck(token?: string): Promise<Attention
 					scenarioId: response.scenario_id // Use API-provided scenario_id
 				};
 
-				console.log(`✅ Loaded 1 random attention check question from database with ID: ${response.scenario_id}`);
+				console.log(
+					`✅ Loaded 1 random attention check question from database with ID: ${response.scenario_id}`
+				);
 				return qaPair;
 			}
 		} catch (error: any) {
 			// Log error but continue to fallback
-			console.warn('⚠️ Error loading attention check from API, using fallback:', error?.message || error);
+			console.warn(
+				'⚠️ Error loading attention check from API, using fallback:',
+				error?.message || error
+			);
 		}
 	} else {
 		console.warn('⚠️ No authentication token available, using fallback attention checks');

@@ -1129,7 +1129,9 @@
 										<span class="text-[10px] font-bold text-white">0</span>
 									{/if}
 								</div>
-								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Assignment Instructions')}</span>
+								<span class="text-xs text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Assignment Instructions')}</span
+								>
 							</button>
 
 							<!-- Step 1: Child Profile (not clickable while on assignment-instructions) -->
@@ -1169,7 +1171,9 @@
 										<span class="text-[10px] font-bold text-white">1</span>
 									{/if}
 								</div>
-								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Child Profile')}</span>
+								<span class="text-xs text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Child Profile')}</span
+								>
 							</button>
 
 							<!-- Step 2: Moderation -->
@@ -1209,14 +1213,16 @@
 										</svg>
 									{:else if (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0}
 										<span class="text-[9px] text-white font-semibold">
-											{workflowState?.progress_by_section?.moderation_completed_count ?? 0}/{workflowState?.progress_by_section?.moderation_total ?? 0}
+											{workflowState?.progress_by_section?.moderation_completed_count ??
+												0}/{workflowState?.progress_by_section?.moderation_total ?? 0}
 										</span>
 									{:else}
 										<span class="text-[10px] font-bold text-white">2</span>
 									{/if}
 								</div>
 								<span class="text-xs text-gray-700 dark:text-gray-300">
-									{$i18n.t('Moderation')} ({workflowState?.progress_by_section?.moderation_completed_count ?? 0}/
+									{$i18n.t('Moderation')} ({workflowState?.progress_by_section
+										?.moderation_completed_count ?? 0}/
 									{workflowState?.progress_by_section?.moderation_total ?? 0})
 								</span>
 							</button>
@@ -1258,7 +1264,9 @@
 										<span class="text-[10px] font-bold text-white">3</span>
 									{/if}
 								</div>
-								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Exit Survey')}</span>
+								<span class="text-xs text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Exit Survey')}</span
+								>
 							</button>
 
 							<!-- Step 4: Completion -->
@@ -1298,7 +1306,8 @@
 										<span class="text-[10px] font-bold text-white">4</span>
 									{/if}
 								</div>
-								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Completion')}</span>
+								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Completion')}</span
+								>
 							</button>
 						</div>
 					</div>
