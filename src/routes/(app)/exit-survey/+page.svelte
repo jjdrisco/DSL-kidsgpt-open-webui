@@ -10,7 +10,7 @@
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
 
 	// Survey responses
-	let 		surveyResponses = {
+	let surveyResponses: any = {
 		parentGender: '',
 		parentAge: '',
 		areaOfResidency: '',
@@ -18,7 +18,15 @@
 		parentEthnicity: [],
 		genaiFamiliarity: '',
 		genaiUsageFrequency: '',
-		parentingStyle: [] // Changed to array for multi-select
+		parentingStyle: [], // Changed to array for multi-select
+		// Child profile research fields
+		isOnlyChild: '',
+		childHasAIUse: '',
+		childAIUseContexts: [],
+		parentLLMMonitoringLevel: '',
+		childGenderOther: '',
+		childAIUseContextsOther: '',
+		parentLLMMonitoringOther: ''
 	};
 
 	// API
@@ -33,6 +41,7 @@
 	// Attempt and child context (populated in onMount from backend)
 	let attemptNumber: number = 1;
 	let currentChildId: string | null = null;
+	let currentChildProfile: any = null;
 
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
@@ -94,7 +103,6 @@
 		surveyResponses.childHasAIUse = (ans.childHasAIUse as string) || '';
 		surveyResponses.childAIUseContexts = Array.isArray(ans.childAIUseContexts) ? [...ans.childAIUseContexts] : [];
 		surveyResponses.parentLLMMonitoringLevel = (ans.parentLLMMonitoringLevel as string) || '';
-		surveyResponses.childEmail = (ans.childEmail as string) || '';
 		surveyResponses.childGenderOther = (ans.childGenderOther as string) || '';
 		surveyResponses.childAIUseContextsOther = (ans.childAIUseContextsOther as string) || '';
 		surveyResponses.parentLLMMonitoringOther = (ans.parentLLMMonitoringOther as string) || '';
@@ -113,6 +121,7 @@
 			}
 			const currentChild = childProfileSync.getCurrentChild();
 			currentChildId = currentChild?.id || null;
+			currentChildProfile = currentChild;
 		} catch (e) {
 			console.warn('Failed to get attempt number or child ID', e);
 		}
@@ -225,7 +234,6 @@
 				childHasAIUse: surveyResponses.childHasAIUse,
 				childAIUseContexts: surveyResponses.childAIUseContexts,
 				parentLLMMonitoringLevel: surveyResponses.parentLLMMonitoringLevel,
-				childEmail: surveyResponses.childEmail,
 				childGenderOther: surveyResponses.childGenderOther,
 				childAIUseContextsOther: surveyResponses.childAIUseContextsOther,
 				parentLLMMonitoringOther: surveyResponses.parentLLMMonitoringOther
@@ -396,19 +404,19 @@
 								Parenting Style
 							</div>
 							<p class="text-gray-900 dark:text-white">
-								{surveyResponses.parentingStyle && surveyResponses.parentingStyle.length > 0
-									? surveyResponses.parentingStyle.map((style: string) => {
-											const styleLabels: Record<string, string> = {
-												'A': "I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.",
-												'B': "I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.",
-												'C': "I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.",
-												'D': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.',
-												'E': 'None of these fits me / It depends on the situation.',
-												'prefer-not-to-answer': 'Prefer not to answer'
-											};
-											return styleLabels[style] || style;
-										}).join('; ')
-									: 'Not specified'}
+								{(() => {
+									const arr = Array.isArray(surveyResponses.parentingStyle) ? surveyResponses.parentingStyle : (surveyResponses.parentingStyle ? [surveyResponses.parentingStyle] : []);
+									if (arr.length === 0) return 'Not specified';
+									const styleLabels: Record<string, string> = {
+										'A': "I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.",
+										'B': "I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.",
+										'C': "I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.",
+										'D': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.',
+										'E': 'None of these fits me / It depends on the situation.',
+										'prefer-not-to-answer': 'Prefer not to answer'
+									};
+									return arr.map((style: string) => styleLabels[style] || style).join('; ');
+								})()}
 							</p>
 						</div>
 						<div>
@@ -464,9 +472,55 @@
 								Ethnicity
 							</div>
 							<p class="text-gray-900 dark:text-white">
-								{surveyResponses.parentEthnicity.length > 0
+								{Array.isArray(surveyResponses.parentEthnicity) && surveyResponses.parentEthnicity.length > 0
 									? surveyResponses.parentEthnicity.join(', ')
 									: 'Not specified'}
+							</p>
+						</div>
+						<!-- Child Profile Research Fields -->
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Is this child an only child?
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{surveyResponses.isOnlyChild === 'yes' ? 'Yes' : surveyResponses.isOnlyChild === 'no' ? 'No' : surveyResponses.isOnlyChild === 'prefer_not_to_say' ? 'Prefer not to say' : 'Not specified'}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Has this child used ChatGPT or similar AI tools?
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{surveyResponses.childHasAIUse === 'yes' ? 'Yes' : surveyResponses.childHasAIUse === 'no' ? 'No' : surveyResponses.childHasAIUse === 'unsure' ? 'Not sure' : surveyResponses.childHasAIUse === 'prefer_not_to_say' ? 'Prefer not to say' : 'Not specified'}
+							</p>
+						</div>
+						{#if surveyResponses.childHasAIUse === 'yes'}
+							<div>
+								<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+									In what contexts has this child used these tools?
+								</div>
+								<p class="text-gray-900 dark:text-white">
+									{(() => {
+										const arr = Array.isArray(surveyResponses.childAIUseContexts) ? surveyResponses.childAIUseContexts : [];
+										if (arr.length === 0) return 'Not specified';
+										const labels: Record<string, string> = {
+											school_homework: 'For school or homework',
+											general_knowledge: 'For general knowledge or casual questions',
+											games_chatting: 'For playing games or chatting with the AI',
+											personal_advice: 'For advice on personal or social issues',
+											other: surveyResponses.childAIUseContextsOther || 'Other'
+										};
+										return arr.map((v: string) => labels[v] || v).join('; ');
+									})()}
+								</p>
+							</div>
+						{/if}
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Have you monitored or adjusted your child's use of LLMs like ChatGPT?
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{surveyResponses.parentLLMMonitoringLevel === 'active_rules' ? 'Yes — I actively monitor and set rules/limits' : surveyResponses.parentLLMMonitoringLevel === 'occasional_guidance' ? 'Yes — occasional reminders or guidance' : surveyResponses.parentLLMMonitoringLevel === 'plan_to' ? 'Not yet, but I plan to' : surveyResponses.parentLLMMonitoringLevel === 'no_monitoring' ? 'No — I have not monitored or adjusted' : surveyResponses.parentLLMMonitoringLevel === 'other' ? (surveyResponses.parentLLMMonitoringOther || 'Other') : 'Not specified'}
 							</p>
 						</div>
 					</div>
@@ -1048,6 +1102,25 @@
 								Child Profile Information
 							</h3>
 							
+							<!-- Display current child info to jog memory -->
+							{#if currentChildProfile}
+								<div class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+									<p class="text-sm text-gray-700 dark:text-gray-300">
+										<strong>Answering about:</strong>
+										{#if currentChildProfile.name}
+											{currentChildProfile.name}
+											{#if currentChildProfile.age || currentChildProfile.gender}
+												<span class="text-gray-600 dark:text-gray-400">
+													({[currentChildProfile.age ? `Age ${currentChildProfile.age}` : '', currentChildProfile.gender].filter(Boolean).join(', ')})
+												</span>
+											{/if}
+										{:else}
+											{[currentChildProfile.age ? `Age ${currentChildProfile.age}` : '', currentChildProfile.gender].filter(Boolean).join(', ') || 'Child profile'}
+										{/if}
+									</p>
+								</div>
+							{/if}
+							
 							<!-- Is Only Child -->
 							<div class="mb-6">
 								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1264,20 +1337,6 @@
 								</div>
 							</div>
 
-							<!-- Child Email (optional) -->
-							<div class="mb-6">
-								<label
-									class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-								>
-									Child Email (optional)
-								</label>
-								<input
-									type="email"
-									bind:value={surveyResponses.childEmail}
-									placeholder="child@example.com"
-									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-								/>
-							</div>
 						</div>
 
 						<!-- Submit Button -->

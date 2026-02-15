@@ -138,7 +138,7 @@
 	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n3) Step 3: Select \'I read the instructions\' from the "Attention Check" dropdown under "Step 3: Moderate". ' +
+		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n3) Step 3: Select \'I read the instructions\' from the "Attention Check" dropdown under "Step 3: Moderate". ' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
@@ -3318,6 +3318,18 @@
 		}
 		try {
 			await resetUserWorkflow(token);
+			
+			// Dispatch reset event first so all components can clear their state
+			window.dispatchEvent(new Event('workflow-reset'));
+			
+			// Clear all local state immediately to prevent auto-save with old data
+			scenarioList = [];
+			scenarioIdentifiers = [];
+			scenarioStates.clear();
+			scenarioTimers.clear();
+			selectedScenarioIndex = 0;
+			moderationFinalized = false;
+			
 			toast.success('Survey reset successfully.');
 			window.dispatchEvent(new Event('workflow-updated'));
 			await tick();
@@ -4861,6 +4873,17 @@
 	function onWorkflowUpdateHandler() {
 		fetchWorkflowStateForModeration();
 	}
+	function onWorkflowResetHandler() {
+		// Clear all scenario state immediately when workflow is reset
+		// This prevents auto-save from persisting old scenarios with new attempt number
+		console.log('🔄 Workflow reset detected, clearing scenario state');
+		scenarioList = [];
+		scenarioIdentifiers = [];
+		scenarioStates.clear();
+		scenarioTimers.clear();
+		selectedScenarioIndex = 0;
+		moderationFinalized = false;
+	}
 	function onResizeHandler() {
 		const shouldOpen = window.innerWidth >= 768;
 		if (shouldOpen !== sidebarOpen) {
@@ -4875,6 +4898,7 @@
 
 		await fetchWorkflowStateForModeration();
 		window.addEventListener('workflow-updated', onWorkflowUpdateHandler);
+		window.addEventListener('workflow-reset', onWorkflowResetHandler);
 
 		// Check for admin access via user_id query parameter
 		const adminUserId = $page.url.searchParams.get('user_id');
@@ -5374,6 +5398,7 @@
 		}
 		// Remove event listeners (must be here, not inside async onMount - causes lifecycle_outside_component)
 		window.removeEventListener('workflow-updated', onWorkflowUpdateHandler);
+		window.removeEventListener('workflow-reset', onWorkflowResetHandler);
 		window.removeEventListener('resize', onResizeHandler);
 		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
 	});

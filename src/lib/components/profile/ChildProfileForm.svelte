@@ -646,6 +646,13 @@
 	bind:this={mainPageContainer}
 >
 	<div class="max-w-4xl mx-auto px-4 py-8">
+		<!-- Instructional Message -->
+		<div class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+			<p class="text-sm text-blue-900 dark:text-blue-200">
+				<strong>Note:</strong> Please provide information about one child you have in mind for this survey.
+			</p>
+		</div>
+
 		<!-- Child Selection -->
 		{#if childProfiles && childProfiles.length > 0}
 			<div class="mb-8">

@@ -172,14 +172,18 @@
 			showScrollIndicator = false;
 		};
 
-		const scrollContainer = document.querySelector('.overflow-y-auto');
-		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', handleScroll);
-		}
-		window.addEventListener('scroll', handleScroll);
+		// Wait for component to mount and find the scroll container
+		setTimeout(() => {
+			const scrollContainer = document.querySelector('.overflow-y-auto');
+			if (scrollContainer) {
+				scrollContainer.addEventListener('scroll', handleScroll);
+			}
+			window.addEventListener('scroll', handleScroll);
+		}, 100);
 
 		return () => {
 			clearTimeout(timer);
+			const scrollContainer = document.querySelector('.overflow-y-auto');
 			if (scrollContainer) {
 				scrollContainer.removeEventListener('scroll', handleScroll);
 			}
@@ -263,13 +267,6 @@
 			</div>
 		</div>
 	</nav>
-
-	<!-- Instructional Message -->
-	<div class="px-4 py-3 mx-4 mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-		<p class="text-sm text-blue-900 dark:text-blue-200">
-			<strong>Note:</strong> Consider one kid you are thinking about - consider the oldest etc.
-		</p>
-	</div>
 
 	<!-- Child Profile Form Component (MVP fields only - no research fields, no personality traits) -->
 	<ChildProfileForm

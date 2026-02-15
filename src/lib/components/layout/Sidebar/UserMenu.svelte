@@ -348,6 +348,8 @@
 							if (!confirmed) return;
 						try {
 							await resetUserWorkflow(localStorage.token);
+							// Dispatch reset event so all components can clear their state
+							window.dispatchEvent(new Event('workflow-reset'));
 							toast.success($i18n.t('Survey reset successfully.'));
 							window.dispatchEvent(new Event('workflow-updated'));
 							// Allow sidebar to refetch workflow state before navigating so button states update

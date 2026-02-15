@@ -362,6 +362,8 @@
 						try {
 							const { resetUserWorkflow } = await import('$lib/apis/workflow');
 							await resetUserWorkflow(localStorage.token);
+							// Dispatch reset event so all components can clear their state
+							window.dispatchEvent(new Event('workflow-reset'));
 							window.dispatchEvent(new Event('workflow-updated'));
 						} catch (e) {
 							console.error('Failed to reset workflow for new Prolific session:', e);
