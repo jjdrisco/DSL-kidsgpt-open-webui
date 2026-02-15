@@ -244,6 +244,9 @@ if FROM_INIT_PY:
         os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
     ).resolve()
 
+# Ensure DATA_DIR exists (required for SQLite - parent dir must exist to create webui.db)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 ####################################
 # Database
 ####################################
