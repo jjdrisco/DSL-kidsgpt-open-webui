@@ -45,26 +45,22 @@
 		Personality Traits {#if required}<span class="text-red-500">*</span>{/if}
 	</label>
 	<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-		Select personality traits and choose specific characteristics from one or more
-		traits that describe your child.
+		Select personality traits and choose specific characteristics from one or more traits that
+		describe your child.
 	</p>
 
 	<div class="space-y-3 mb-4">
 		{#each personalityTraits as trait}
-			<div
-				class="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-			>
+			<div class="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
 				<button
 					type="button"
 					on:click={() => toggleTrait(trait.id)}
 					class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors rounded-lg"
 				>
 					<div class="text-left flex-1">
-						<div
-							class="font-medium text-gray-900 dark:text-white flex items-center space-x-2"
-						>
+						<div class="font-medium text-gray-900 dark:text-white flex items-center space-x-2">
 							<span>{trait.name}</span>
-							{#if trait.subCharacteristics.some((sub) => selectedSubCharacteristics.includes(sub.id))}
+							{#if trait.subCharacteristics.some( (sub) => selectedSubCharacteristics.includes(sub.id) )}
 								<span
 									class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
 								>
@@ -98,9 +94,7 @@
 				</button>
 
 				{#if expandedTraits.has(trait.id)}
-					<div
-						class="px-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-600 pt-4"
-					>
+					<div class="px-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-600 pt-4">
 						<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
 							Select characteristics that apply:
 						</p>
@@ -135,7 +129,8 @@
 			class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4"
 		>
 			<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-				Selected: {selectedSubCharacteristics.length} characteristic{selectedSubCharacteristics.length !== 1
+				Selected: {selectedSubCharacteristics.length} characteristic{selectedSubCharacteristics.length !==
+				1
 					? 's'
 					: ''}
 			</div>

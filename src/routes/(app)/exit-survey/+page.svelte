@@ -100,7 +100,9 @@
 				}
 			}
 		}
-		return [...traitGroups.entries()].map(([name, chars]) => `${name}: ${chars.join(', ')}`).join('; ');
+		return [...traitGroups.entries()]
+			.map(([name, chars]) => `${name}: ${chars.join(', ')}`)
+			.join('; ');
 	}
 
 	async function resolveChildId(token: string): Promise<string> {
@@ -782,8 +784,7 @@
 											value={option.value}
 											class="mr-3"
 										/>
-										<span class="text-gray-900 dark:text-white"
-											>{option.value}. {option.label}</span
+										<span class="text-gray-900 dark:text-white">{option.value}. {option.label}</span
 										>
 									</label>
 								{/each}
@@ -1576,8 +1577,8 @@
 								Child personality (Big Five) <span class="text-red-500">*</span>
 							</div>
 							<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-								Select at least one personality characteristic that describes your child, or add additional
-								details below.
+								Select at least one personality characteristic that describes your child, or add
+								additional details below.
 							</p>
 							<ChildPersonalitySection
 								bind:selectedSubCharacteristics={surveyResponses.childPersonalitySubCharacteristics}

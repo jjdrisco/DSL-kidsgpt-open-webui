@@ -220,18 +220,18 @@ To reduce slug size and memory, several packages were removed from `requirements
 
 ## Troubleshooting
 
-| Symptom                                                  | Likely cause                                         | See                                          |
-| -------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
-| 404 on `/` or frontend routes                            | Frontend not built (buildpack) or wrong stack        | [HEROKU_404_FIX.md](HEROKU_404_FIX.md)       |
-| `ModuleNotFoundError: No module named 'azure'`           | azure-identity removed; lazy import in openai router | Ensure latest `routers/openai.py`            |
-| Slug too large                                           | Heavy deps or large files in slug                    | `.slugignore`, `requirements.txt`            |
-| R14 Memory quota exceeded                                | Too many workers or heavy imports                    | `WEB_CONCURRENCY=1`, lazy imports            |
-| Migration fails (UndefinedTable, InvalidTableDefinition) | Release phase or migration script                    | Procfile release, migration `38d63c18f30f`   |
-| CORS errors in browser                                   | `CORS_ALLOW_ORIGIN='*'` in production                | Set explicit origins                         |
-| **Node OOM during build**                                | `npm run build` exceeds heap limit                   | Set `NODE_OPTIONS=--max-old-space-size=4096` |
-| `npm ci` "Missing from lock file"                        | package.json and package-lock.json out of sync       | See [Lockfile Sync](#lockfile-sync) below    |
-| **No module named 'alembic'** / migrations failed at startup | Full `pip install -r requirements.txt` failed during Docker build; image shipped without alembic | Dockerfile now installs alembic in the critical-packages step and verifies it after install. Rebuild and redeploy. |
-| **Error updating models: No module named 'sentence_transformers'** | RAG reranker/embedding code imports sentence_transformers; optional at startup | Non-fatal (app continues). Runtime checker can install it; ensure `sentence-transformers` is in backend/requirements.txt. |
+| Symptom                                                            | Likely cause                                                                                     | See                                                                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| 404 on `/` or frontend routes                                      | Frontend not built (buildpack) or wrong stack                                                    | [HEROKU_404_FIX.md](HEROKU_404_FIX.md)                                                                                    |
+| `ModuleNotFoundError: No module named 'azure'`                     | azure-identity removed; lazy import in openai router                                             | Ensure latest `routers/openai.py`                                                                                         |
+| Slug too large                                                     | Heavy deps or large files in slug                                                                | `.slugignore`, `requirements.txt`                                                                                         |
+| R14 Memory quota exceeded                                          | Too many workers or heavy imports                                                                | `WEB_CONCURRENCY=1`, lazy imports                                                                                         |
+| Migration fails (UndefinedTable, InvalidTableDefinition)           | Release phase or migration script                                                                | Procfile release, migration `38d63c18f30f`                                                                                |
+| CORS errors in browser                                             | `CORS_ALLOW_ORIGIN='*'` in production                                                            | Set explicit origins                                                                                                      |
+| **Node OOM during build**                                          | `npm run build` exceeds heap limit                                                               | Set `NODE_OPTIONS=--max-old-space-size=4096`                                                                              |
+| `npm ci` "Missing from lock file"                                  | package.json and package-lock.json out of sync                                                   | See [Lockfile Sync](#lockfile-sync) below                                                                                 |
+| **No module named 'alembic'** / migrations failed at startup       | Full `pip install -r requirements.txt` failed during Docker build; image shipped without alembic | Dockerfile now installs alembic in the critical-packages step and verifies it after install. Rebuild and redeploy.        |
+| **Error updating models: No module named 'sentence_transformers'** | RAG reranker/embedding code imports sentence_transformers; optional at startup                   | Non-fatal (app continues). Runtime checker can install it; ensure `sentence-transformers` is in backend/requirements.txt. |
 
 ### Lockfile Sync
 
