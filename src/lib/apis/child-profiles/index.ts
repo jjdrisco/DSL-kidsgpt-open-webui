@@ -32,6 +32,8 @@ export interface ChildProfile {
 	child_email?: string;
 	// Selected features for this child (array of feature IDs)
 	selected_features?: string[];
+	// Selected interface modes for this child (array of mode IDs: voice_input, text_input, photo_upload, prompt_buttons)
+	selected_interface_modes?: string[];
 }
 
 export interface ChildProfileForm {
@@ -58,6 +60,8 @@ export interface ChildProfileForm {
 	child_email?: string;
 	// Selected features for this child (array of feature IDs)
 	selected_features?: string[];
+	// Selected interface modes for this child (array of mode IDs: voice_input, text_input, photo_upload, prompt_buttons)
+	selected_interface_modes?: string[];
 }
 
 export const getChildProfiles = async (token: string = '') => {

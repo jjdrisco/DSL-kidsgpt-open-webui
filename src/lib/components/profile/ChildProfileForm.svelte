@@ -13,6 +13,7 @@
 	} from '$lib/data/personalityTraits';
 	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
 	import FeatureSelection from '$lib/components/profile/FeatureSelection.svelte';
+	import InterfaceModeSelection from '$lib/components/profile/InterfaceModeSelection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -59,6 +60,9 @@
 
 	// Feature selection
 	let selectedFeatures: string[] = [];
+	
+	// Interface mode selection
+	let selectedInterfaceModes: string[] = [];
 
 	// Multi-child support
 	let childProfiles: ChildProfile[] = [];
@@ -127,6 +131,7 @@
 		childName = sel?.name || '';
 		childAge = sel?.child_age || '';
 		selectedFeatures = sel?.selected_features || [];
+		selectedInterfaceModes = sel?.selected_interface_modes || [];
 
 		const genderValue = sel?.child_gender || '';
 		if (genderValue.startsWith('Other: ')) {
@@ -211,8 +216,9 @@
 		selectedSubCharacteristics = [];
 	}
 	
-	// Load selected features
+	// Load selected features and interface modes
 	selectedFeatures = sel?.selected_features || [];
+	selectedInterfaceModes = sel?.selected_interface_modes || [];
 	}
 
 	function applyFormToSelectedChild() {
@@ -223,6 +229,7 @@
 		sel.child_age = childAge;
 		sel.child_gender = childGender;
 		sel.selected_features = selectedFeatures;
+		sel.selected_interface_modes = selectedInterfaceModes;
 		const personalityDesc = getPersonalityDescription();
 		const combinedCharacteristics = personalityDesc
 			? childCharacteristics.trim()
@@ -258,6 +265,8 @@
 				childGender = '';
 				childCharacteristics = '';
 				selectedFeatures = [];
+				selectedInterfaceModes = [];
+			selectedInterfaceModes = [];
 			} else {
 				if (selectedChildIndex >= childProfiles.length) {
 					selectedChildIndex = childProfiles.length - 1;
@@ -290,6 +299,9 @@
 		}
 		if (selectedFeatures.length === 0) {
 			return 'Please select at least one feature for your child';
+		}
+		if (selectedInterfaceModes.length === 0) {
+			return 'Please select at least one interface mode for your child';
 		}
 		if (showPersonalityTraits && !childCharacteristics.trim()) {
 			return 'Please enter additional characteristics & interests';
@@ -346,7 +358,8 @@
 				child_gender: childGender === 'Other' ? 'Other' : childGender,
 				child_characteristics: combinedCharacteristics,
 				child_email: childEmail || undefined,
-				selected_features: selectedFeatures
+				selected_features: selectedFeatures,
+				selected_interface_modes: selectedInterfaceModes
 			};
 
 			if (showResearchFields) {
@@ -483,7 +496,8 @@
 					child_gender: childGender === 'Other' ? 'Other' : childGender,
 					child_characteristics: combinedCharacteristics,
 					child_email: childEmail || undefined,
-					selected_features: selectedFeatures
+					selected_features: selectedFeatures,
+					selected_interface_modes: selectedInterfaceModes
 				};
 
 				if (showResearchFields) {
@@ -531,7 +545,8 @@
 						child_gender: childGender,
 						child_characteristics: combinedCharacteristics,
 						child_email: childEmail || undefined,
-						selected_features: selectedFeatures
+						selected_features: selectedFeatures,
+						selected_interface_modes: selectedInterfaceModes
 					};
 
 					if (showResearchFields) {
@@ -817,6 +832,9 @@
 								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 							>
 								<option value="">Select age</option>
+								<option value="6 years old">6 years old</option>
+								<option value="7 years old">7 years old</option>
+								<option value="8 years old">8 years old</option>
 								<option value="9 years old">9 years old</option>
 								<option value="10 years old">10 years old</option>
 								<option value="11 years old">11 years old</option>

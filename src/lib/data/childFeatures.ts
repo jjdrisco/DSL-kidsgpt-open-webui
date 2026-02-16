@@ -20,6 +20,7 @@ export interface AgeGroup {
 	minAge: number;
 	maxAge: number;
 	label: string;
+	piagetStage?: 'preoperational' | 'concrete_operational' | 'formal_operational';
 }
 
 export interface FeatureCapability {
@@ -29,12 +30,12 @@ export interface FeatureCapability {
 	enabled: boolean;
 }
 
-// Age Groups
+// Age Groups (Piaget-Aligned)
 export const AGE_GROUPS: AgeGroup[] = [
-	{ id: '9-11', minAge: 9, maxAge: 11, label: 'Ages 9-11' },
-	{ id: '12-14', minAge: 12, maxAge: 14, label: 'Ages 12-14' },
-	{ id: '15-17', minAge: 15, maxAge: 17, label: 'Ages 15-17' },
-	{ id: '18+', minAge: 18, maxAge: 18, label: 'Age 18+' }
+	{ id: '6-8', minAge: 6, maxAge: 8, label: 'Ages 6-8', piagetStage: 'preoperational' },
+	{ id: '9-12', minAge: 9, maxAge: 12, label: 'Ages 9-12', piagetStage: 'concrete_operational' },
+	{ id: '13-15', minAge: 13, maxAge: 15, label: 'Ages 13-15', piagetStage: 'formal_operational' },
+	{ id: '16-18', minAge: 16, maxAge: 18, label: 'Ages 16-18', piagetStage: 'formal_operational' }
 ];
 
 // Feature Definitions
@@ -44,8 +45,12 @@ export const CHILD_FEATURES: ChildFeature[] = [
 		name: 'School Assignment',
 		description: 'Take a picture and upload assignments, get help with academic questions',
 		icon: '📚',
-		ageGroups: [{ id: '9-11', minAge: 9, maxAge: 11, label: 'Ages 9-11' }],
-		recommendedFor: ['9-11'],
+		ageGroups: [
+			{ id: '9-12', minAge: 9, maxAge: 12, label: 'Ages 9-12' },
+			{ id: '13-15', minAge: 13, maxAge: 15, label: 'Ages 13-15' },
+			{ id: '16-18', minAge: 16, maxAge: 18, label: 'Ages 16-18' }
+		],
+		recommendedFor: ['9-12', '13-15', '16-18'],
 		capabilities: [
 			{
 				id: 'photo_upload',

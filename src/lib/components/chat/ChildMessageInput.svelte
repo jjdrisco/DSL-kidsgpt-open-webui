@@ -2,6 +2,10 @@
 	import { onMount } from 'svelte';
 	import { getCurrentChildProfile, isFeatureEnabled } from '$lib/utils/childFeatures';
 	import { CHILD_FEATURES } from '$lib/data/childFeatures';
+	import {
+		isInterfaceModeEnabled,
+		getEnabledInterfaceModeObjects
+	} from '$lib/utils/interfaceModes';
 
 	export let onSendMessage: ((message: string, files?: File[]) => void) | undefined = undefined;
 	export let disabled: boolean = false;
@@ -13,6 +17,12 @@
 	let showPhotoUpload = false;
 	let photoFile: File | null = null;
 	let photoPreview: string | null = null;
+	
+	// Interface mode flags
+	let voiceEnabled = false;
+	let textEnabled = false;
+	let photoEnabled = false;
+	let buttonsEnabled = false;
 
 	$: if (childProfile) {
 		availableFeatures = CHILD_FEATURES.filter((f) =>
@@ -23,6 +33,12 @@
 		if (availableFeatures.length === 1) {
 			selectedFeature = availableFeatures[0].id;
 		}
+		
+		// Check enabled interface modes
+		voiceEnabled = isInterfaceModeEnabled('voice_input');
+		textEnabled = isInterfaceModeEnabled('text_input');
+		photoEnabled = isInterfaceModeEnabled('photo_upload');
+		buttonsEnabled = isInterfaceModeEnabled('prompt_buttons');
 	}
 
 	$: if (selectedFeature) {
@@ -131,8 +147,8 @@
 	<!-- School Assignment Feature Interface -->
 	{#if selectedFeature === 'school_assignment'}
 		<div class="space-y-4">
-			<!-- Photo Upload Section -->
-			{#if showPhotoUpload}
+			<!-- Photo Upload Section (only if photo mode enabled) -->
+			{#if showPhotoUpload && photoEnabled}
 				<div>
 					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						📷 Take a picture of your assignment
@@ -207,12 +223,13 @@
 				</div>
 			{/if}
 
-			<!-- Prompt Suggestions -->
-			<div>
-				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-					Ask a question about your assignment
-				</label>
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+			<!-- Prompt Suggestions (only if buttons mode enabled) -->
+			{#if buttonsEnabled}
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Ask a question about your assignment
+					</label>
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
 					<button
 						type="button"
 						class="p-3 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm"
@@ -241,13 +258,44 @@
 					>
 						🔢 Help with math problem
 					</button>
+					</div>
 				</div>
+			{/if}
+		</div>
+	{/if}
+
+	<!-- Voice Input (only if voice mode enabled) -->
+	{#if voiceEnabled}
+		<div>
+			<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+				🎤 Speak your question
+			</label>
+			<div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
+				<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+					Voice input will be available soon. For now, please use text input or prompt buttons.
+				</p>
+				<button
+					type="button"
+					disabled
+					class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+						></path>
+					</svg>
+					Voice Input (Coming Soon)
+				</button>
 			</div>
 		</div>
 	{/if}
 
-	<!-- Text Input -->
-	<div>
+	<!-- Text Input (only if text mode enabled) -->
+	{#if textEnabled}
+		<div>
 		<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 			{#if selectedFeature === 'school_assignment'}
 				Type your question here
@@ -262,9 +310,20 @@
 			rows="3"
 			disabled={disabled}
 		></textarea>
-	</div>
+		</div>
+	{:else if !textEnabled && !voiceEnabled}
+		<!-- No input modes enabled - show error -->
+		<div
+			class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+		>
+			<p class="text-sm text-red-800 dark:text-red-200">
+				<strong>Error:</strong> No input modes are enabled. Please contact a parent to enable at least one interface mode.
+			</p>
+		</div>
+	{/if}
 
-	<!-- Send Button -->
+	<!-- Send Button (only if at least one input mode enabled) -->
+	{#if textEnabled || voiceEnabled}
 	<button
 		type="button"
 		on:click={handleSend}
@@ -283,7 +342,8 @@
 				stroke-width="2"
 				d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
 			></path>
-		</svg>
-		Send
-	</button>
+		</svg		>
+			Send
+		</button>
+	{/if}
 </div>
