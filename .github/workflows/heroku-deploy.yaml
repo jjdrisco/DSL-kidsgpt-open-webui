@@ -1,14 +1,14 @@
 name: Deploy to Heroku
 
-# This workflow deploys to different Heroku apps based on branch:
-# - main branch → dsl-kidsgpt-pilot (buildpack deployment using Procfile)
+# This workflow deploys to different Heroku apps based on branch using container deployment:
+# - main branch → dsl-kidsgpt-pilot (container deployment using heroku.yml)
 # - dev branch → dsl-kidsgpt-pilot-alt (container deployment using heroku.yml)
 #
 # Required GitHub Secrets:
 #   - HEROKU_API_KEY: Your Heroku API key (get from: heroku auth:token)
 #
 # App Configuration:
-#   - dsl-kidsgpt-pilot: heroku-24 stack (buildpack)
+#   - dsl-kidsgpt-pilot: container stack
 #   - dsl-kidsgpt-pilot-alt: container stack
 
 on:
@@ -19,8 +19,8 @@ on:
       - dev
 
 jobs:
-  deploy-buildpack:
-    # Deploy main branch using buildpack to dsl-kidsgpt-pilot
+  deploy-main:
+    # Deploy main branch using container to dsl-kidsgpt-pilot
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -33,16 +33,30 @@ jobs:
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
 
-      - name: Deploy to Heroku (buildpack)
+      - name: Login to Heroku Container Registry
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          git remote add heroku https://git.heroku.com/dsl-kidsgpt-pilot.git || true
-          echo "machine git.heroku.com login _ password ${HEROKU_API_KEY}" > ~/.netrc
-          chmod 600 ~/.netrc
-          git push heroku ${{ github.ref }}:main
+          echo ${HEROKU_API_KEY} | docker login --username=_ --password-stdin registry.heroku.com
 
-  deploy-container:
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg BUILD_HASH=${{ github.sha }} \
+            -t registry.heroku.com/dsl-kidsgpt-pilot/web \
+            .
+
+      - name: Push Docker image to Heroku
+        run: |
+          docker push registry.heroku.com/dsl-kidsgpt-pilot/web
+
+      - name: Release to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          heroku container:release web --app dsl-kidsgpt-pilot
+
+  deploy-dev:
     # Deploy dev branch using container to dsl-kidsgpt-pilot-alt
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
