@@ -39,7 +39,8 @@ jobs:
         run: |
           git remote add heroku https://git.heroku.com/dsl-kidsgpt-pilot.git || true
           echo "machine git.heroku.com login _ password ${HEROKU_API_KEY}" > ~/.netrc
-          git push heroku ${{ github.ref }}:main --force
+          chmod 600 ~/.netrc
+          git push heroku ${{ github.ref }}:main
 
   deploy-container:
     # Deploy dev branch using container to dsl-kidsgpt-pilot-alt
