@@ -57,16 +57,16 @@ git push heroku main
 
 ## GitHub Actions Automated Deployment
 
-The repository includes a GitHub Actions workflow (`.github/workflows/heroku-deploy.yaml`) that automatically deploys to different Heroku apps based on the branch:
+The repository includes a GitHub Actions workflow (`.github/workflows/heroku-deploy.yaml`) that automatically deploys to different Heroku apps based on the branch using container deployment:
 
-- **Main branch** → `dsl-kidsgpt-pilot` (buildpack deployment)
+- **Main branch** → `dsl-kidsgpt-pilot` (container deployment)
 - **Dev branch** → `dsl-kidsgpt-pilot-alt` (container deployment)
 
 ### App Configuration
 
 | Branch | App Name | Stack | Deployment Method |
 |--------|----------|-------|-------------------|
-| main | dsl-kidsgpt-pilot | heroku-24 (buildpack) | Git push (uses Procfile) |
+| main | dsl-kidsgpt-pilot | container | Docker container registry |
 | dev | dsl-kidsgpt-pilot-alt | container | Docker container registry |
 
 ### Setup Instructions
@@ -92,24 +92,16 @@ heroku config:set VECTOR_DB=pgvector -a dsl-kidsgpt-pilot-alt
 
 ### Workflow Behavior
 
-**Main Branch (Buildpack Deployment):**
-- **Triggers**: Pushes to `main` branch or manual workflow_dispatch
-- **Process**:
-  1. Checks out the repository
-  2. Installs Heroku CLI
-  3. Configures git authentication with Heroku
-  4. Pushes code to Heroku git remote
-  5. Heroku builds using buildpacks (Node.js + Python)
-  6. Uses Procfile for process definition
+**Both branches use the same container deployment strategy:**
 
-**Dev Branch (Container Deployment):**
-- **Triggers**: Pushes to `dev` branch or manual workflow_dispatch
+- **Triggers**: Pushes to `main` or `dev` branch, or manual workflow_dispatch
 - **Process**:
   1. Checks out the repository
   2. Installs Heroku CLI
-  3. Builds Docker image with BUILD_HASH
-  4. Pushes to Heroku Container Registry
-  5. Releases the container to Heroku app
+  3. Logs into Heroku Container Registry
+  4. Builds Docker image with BUILD_HASH
+  5. Pushes to Heroku Container Registry
+  6. Releases the container to Heroku app
 
 ### Manual Deployment
 
@@ -289,7 +281,7 @@ heroku logs --tail -a YOUR_APP_NAME
 
 | App | Stack | Branch | Deployment Method | Notes |
 |-----|-------|--------|-------------------|-------|
-| `dsl-kidsgpt-pilot` | heroku-24 (buildpack) | main | Git push (GitHub Actions) | Production app - buildpack deployment |
+| `dsl-kidsgpt-pilot` | container | main | Container registry (GitHub Actions) | Production app - Docker container |
 | `dsl-kidsgpt-pilot-alt` | container | dev | Container registry (GitHub Actions) | Development app - Docker container |
 | `contextquiz-openwebui-kidsgpt` | container (Docker) | - | Manual | Legacy production app |
 
