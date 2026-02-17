@@ -1,0 +1,58 @@
+name: Deploy to Heroku
+
+# This workflow deploys the main branch to a Heroku webapp using Docker Container Registry.
+# It builds the base Docker image (without variant suffixes like -cuda, -ollama, -slim).
+#
+# Required GitHub Secrets:
+#   - HEROKU_API_KEY: Your Heroku API key (get from: heroku auth:token)
+#   - HEROKU_APP_NAME: Name of your Heroku app (e.g., my-kidsgpt-app)
+#
+# Prerequisites:
+#   - Heroku app must be configured with container stack: heroku stack:set container
+#   - Heroku app should have the necessary environment variables configured
+#   - PostgreSQL addon should be provisioned: heroku addons:create heroku-postgresql:essential-0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Login to Heroku Container Registry
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          echo ${HEROKU_API_KEY} | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Build Docker image
+        env:
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          docker build \
+            --build-arg BUILD_HASH=${{ github.sha }} \
+            -t registry.heroku.com/${HEROKU_APP_NAME}/web \
+            .
+
+      - name: Push Docker image to Heroku
+        env:
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          docker push registry.heroku.com/${HEROKU_APP_NAME}/web
+
+      - name: Release to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          heroku container:release web --app ${HEROKU_APP_NAME}
