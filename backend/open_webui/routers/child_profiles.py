@@ -29,29 +29,51 @@ router = APIRouter()
 
 def generate_passphrase(num_words=4) -> str:
     """Generate a memorable passphrase using random words
-    
+
     Args:
         num_words: Number of words in the passphrase
-        
+
     Returns:
         A passphrase like 'happy-tree-blue-mountain-42'
     """
     # Simple word list for passphrase generation
-    adjectives = ['happy', 'bright', 'quick', 'calm', 'wise', 'bold', 'kind', 'fair', 'cool', 'warm']
-    nouns = ['tree', 'mountain', 'river', 'ocean', 'star', 'cloud', 'forest', 'meadow', 'valley', 'peak']
-    
+    adjectives = [
+        "happy",
+        "bright",
+        "quick",
+        "calm",
+        "wise",
+        "bold",
+        "kind",
+        "fair",
+        "cool",
+        "warm",
+    ]
+    nouns = [
+        "tree",
+        "mountain",
+        "river",
+        "ocean",
+        "star",
+        "cloud",
+        "forest",
+        "meadow",
+        "valley",
+        "peak",
+    ]
+
     words = []
     for i in range(num_words):
         if i % 2 == 0:
             words.append(secrets.choice(adjectives))
         else:
             words.append(secrets.choice(nouns))
-    
+
     # Add a random 2-digit number for extra security
     number = secrets.randbelow(100)
     words.append(str(number))
-    
-    return '-'.join(words)
+
+    return "-".join(words)
 
 
 class ChildProfileResponse(BaseModel):
@@ -94,7 +116,7 @@ async def create_child_profile(
     """Create a new child profile and optionally a user account"""
     log.info(f"[create_child_profile] Received form_data: {form_data}")
     generated_password = None
-    
+
     try:
         # Determine session_number if not provided
         if form_data.session_number is None:
@@ -124,25 +146,29 @@ async def create_child_profile(
         if form_data.child_email:
             # Check if user with this email already exists
             existing_user = Users.get_user_by_email(form_data.child_email)
-            
+
             if not existing_user:
                 # Generate a secure passphrase
                 generated_password = generate_passphrase()
-                
+
                 try:
                     # Create the user account with "child" role
                     child_user = Auths.insert_new_auth(
                         email=form_data.child_email,
                         password=get_password_hash(generated_password),
                         name=form_data.name,
-                        role="child"
+                        role="child",
                     )
-                    
+
                     if child_user:
                         log.info(f"Created child user account: {child_user.email}")
-                        log.info(f"Generated password for {child_user.email}: {generated_password}")
+                        log.info(
+                            f"Generated password for {child_user.email}: {generated_password}"
+                        )
                     else:
-                        log.warning(f"Failed to create user account for: {form_data.child_email}")
+                        log.warning(
+                            f"Failed to create user account for: {form_data.child_email}"
+                        )
                         # Don't fail the whole request, profile is still created
                         generated_password = None
                 except Exception as user_err:
@@ -182,8 +208,8 @@ async def create_child_profile(
         # Prepare response with generated password (if created)
         response_data = child_profile.model_dump()
         if generated_password:
-            response_data['generated_password'] = generated_password
-        
+            response_data["generated_password"] = generated_password
+
         return ChildProfileResponse(**response_data)
     except HTTPException:
         # Re-raise HTTP exceptions as-is (they already have proper error messages)
@@ -259,9 +285,7 @@ async def update_child_profile(
             raise HTTPException(status_code=404, detail="Child profile not found")
 
         # Sync child user settings.system from selected_features
-        child_email = form_data.child_email or getattr(
-            profile, "child_email", None
-        )
+        child_email = form_data.child_email or getattr(profile, "child_email", None)
         selected = form_data.selected_features or getattr(
             profile, "selected_features", None
         )
@@ -284,7 +308,15 @@ async def update_child_profile(
                 )
                 if updated_user:
                     s = getattr(updated_user, "settings", None)
-                    sys_val = (s.get("system", "") if isinstance(s, dict) else getattr(s, "system", "")) if s else ""
+                    sys_val = (
+                        (
+                            s.get("system", "")
+                            if isinstance(s, dict)
+                            else getattr(s, "system", "")
+                        )
+                        if s
+                        else ""
+                    )
                     log.info(
                         "[update_child_profile] settings populated for child %s, system prompt len=%d",
                         child_email[:30],
@@ -300,6 +332,14 @@ async def update_child_profile(
                     "[update_child_profile] no user found for child_email=%s",
                     (child_email or "")[:30],
                 )
+
+        # Also sync to parent's settings so preview mode picks up the new prompt immediately
+        parent_prompt = build_child_system_prompt(selected)
+        Users.update_user_settings_by_id(current_user.id, {"system": parent_prompt})
+        log.info(
+            "[update_child_profile] synced system prompt to parent %s",
+            current_user.id[:8],
+        )
 
         return ChildProfileResponse(**profile.model_dump())
     except HTTPException:
@@ -325,6 +365,31 @@ async def delete_child_profile(
     except Exception as e:
         log.error(f"Error deleting child profile: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/child-profiles/{profile_id}/apply-preview")
+async def apply_preview_settings(
+    profile_id: str,
+    current_user: UserModel = Depends(get_verified_user),
+):
+    """Apply a child profile's system prompt to the requesting parent's settings.
+
+    Used when a parent enters preview mode: builds the child's whitelist prompt
+    from selected_features and writes it to the parent's own settings.system so
+    the LLM enforces the same constraints the child would see.
+    """
+    profile = ChildProfiles.get_child_profile_by_id(profile_id, current_user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Child profile not found")
+
+    prompt = build_child_system_prompt(getattr(profile, "selected_features", None))
+    Users.update_user_settings_by_id(current_user.id, {"system": prompt})
+    log.info(
+        "[apply_preview_settings] synced system prompt to parent %s for child profile %s",
+        current_user.id[:8],
+        profile_id[:8],
+    )
+    return {"system": prompt}
 
 
 @router.get("/child-profiles/stats", response_model=ChildProfileStatsResponse)
