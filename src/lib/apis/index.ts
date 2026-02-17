@@ -666,6 +666,81 @@ export const generateTitle = async (
 	}
 };
 
+export const generateChildSuggestions = async (
+	token: string = '',
+	model: string,
+	child_age: number | null,
+	selected_features: string[]
+) => {
+	let error = null;
+	console.log('[generateChildSuggestions] called', {
+		model,
+		child_age,
+		selected_features,
+		hasToken: !!token
+	});
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/suggestions/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			child_age: child_age,
+			selected_features: selected_features
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		console.error('[generateChildSuggestions] fetch error', error);
+		throw error;
+	}
+
+	try {
+		const response = res?.choices?.[0]?.message?.content ?? '';
+		const hasChoices = !!res?.choices?.length;
+		console.log('[generateChildSuggestions] raw response', {
+			hasChoices,
+			responseType: typeof response,
+			responseLength: typeof response === 'string' ? response.length : 0,
+			responsePreview:
+				typeof response === 'string' ? response.substring(0, 200) : JSON.stringify(res).slice(0, 200)
+		});
+		const jsonStartIndex = response.indexOf('[');
+		const jsonEndIndex = response.lastIndexOf(']');
+
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
+			const parsed = JSON.parse(jsonResponse);
+
+			if (Array.isArray(parsed)) {
+				console.log('[generateChildSuggestions] parsed successfully', { count: parsed.length });
+				return parsed;
+			}
+		}
+
+		console.warn('[generateChildSuggestions] no valid JSON array in response, returning []');
+		return [];
+	} catch (e) {
+		console.error('Failed to parse suggestions response:', e);
+		return [];
+	}
+};
+
 export const generateFollowUps = async (
 	token: string = '',
 	model: string,

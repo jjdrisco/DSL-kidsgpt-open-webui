@@ -3,7 +3,7 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
-	import ChildProfileForm from '$lib/components/profile/ChildProfileForm.svelte';
+	import ParentAddChildForm from '$lib/components/profile/ParentAddChildForm.svelte';
 
 	let profileSaved = false;
 
@@ -49,18 +49,17 @@
 					</button>
 				</div>
 				<div class="flex w-full">
-					<div class="flex items-center text-xl font-semibold">Add Child View</div>
+					<div class="flex items-center text-xl font-semibold">Add Child</div>
 				</div>
 			</div>
 		</div>
 	</nav>
 
-	<ChildProfileForm
-		showResearchFields={false}
-		requireResearchFields={false}
-		showPersonalityTraits={false}
+	<div class="flex-1 min-h-0 overflow-hidden flex flex-col">
+		<ParentAddChildForm
 		onProfileCreated={handleProfileCreated}
 		onProfileSaved={handleProfileSaved}
 		onChildSelected={handleChildSelected}
-	/>
+		/>
+	</div>
 </div>

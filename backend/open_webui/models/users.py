@@ -1,7 +1,10 @@
+import logging
 import time
 from typing import Optional
 
 from sqlalchemy.orm import Session
+
+log = logging.getLogger(__name__)
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 
 
@@ -678,6 +681,9 @@ class UsersTable:
             with get_db_context(db) as db:
                 user = db.query(User).filter_by(id=id).first()
                 if not user:
+                    log.warning(
+                        "update_user_settings_by_id: user id=%s not found", id
+                    )
                     return None
 
                 user_settings = user.settings
@@ -692,7 +698,10 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-        except Exception:
+        except Exception as e:
+            log.exception(
+                "update_user_settings_by_id failed for id=%s: %s", id, e
+            )
             return None
 
     def delete_user_by_id(self, id: str, db: Optional[Session] = None) -> bool:

@@ -476,6 +476,11 @@
 
 	const getAvailableSettings = () => {
 		return allSettings.filter((tab) => {
+			// Child users: only show Account tab
+			if ($user?.role === 'child') {
+				return tab.id === 'account';
+			}
+
 			if (tab.id === 'connections') {
 				return $config?.features?.enable_direct_connections;
 			}
@@ -574,6 +579,10 @@
 		setFilteredSettings();
 
 		config.subscribe((configData) => {
+			availableSettings = getAvailableSettings();
+			setFilteredSettings();
+		});
+		user.subscribe(() => {
 			availableSettings = getAvailableSettings();
 			setFilteredSettings();
 		});

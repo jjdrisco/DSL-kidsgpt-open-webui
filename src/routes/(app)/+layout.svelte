@@ -104,8 +104,13 @@
 			}
 		}
 
-		if (userSettings?.ui) {
-			settings.set(userSettings.ui);
+		if (userSettings) {
+			// Merge full settings: ui subtree + top-level system, params (child whitelist prompt lives in system)
+			settings.set({
+				...(userSettings.ui ?? {}),
+				system: userSettings.system,
+				params: userSettings.params
+			});
 		}
 
 		if (cb) {
@@ -114,12 +119,15 @@
 	};
 
 	const setModels = async () => {
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
+		const loadedModels = await getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 		);
+		console.log('[+layout] Models loaded:', {
+			count: loadedModels?.length ?? 0,
+			modelIds: loadedModels?.map((m: any) => m.id).slice(0, 20) ?? []
+		});
+		models.set(loadedModels);
 	};
 
 	const setToolServers = async () => {
@@ -424,8 +432,14 @@
 				return;
 			}
 
-			// Allow child users to access / freely
+			// Child users: redirect / to /kids/chat
 			if (userType === 'child' && currentPath === '/') {
+				await goto('/kids/chat');
+				return;
+			}
+
+			// Allow child users to access /kids/chat
+			if (userType === 'child' && currentPath.startsWith('/kids/chat')) {
 				return;
 			}
 

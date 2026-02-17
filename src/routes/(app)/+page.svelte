@@ -35,7 +35,7 @@
 		}
 
 		if (userType === 'child') {
-			showChat = true;
+			goto('/kids/chat');
 			return;
 		}
 

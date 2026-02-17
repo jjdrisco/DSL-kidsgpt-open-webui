@@ -27,12 +27,19 @@ def get_task_model_id(
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model
-    if models[task_model_id].get("connection_type") == "local":
-        if task_model and task_model in models:
-            task_model_id = task_model
+    # Guard: default_model_id must be in models before accessing
+    if task_model_id in models:
+        model_info = models[task_model_id]
+        if model_info.get("connection_type") == "local":
+            if task_model and task_model in models:
+                task_model_id = task_model
+        else:
+            if task_model_external and task_model_external in models:
+                task_model_id = task_model_external
     else:
-        if task_model_external and task_model_external in models:
-            task_model_id = task_model_external
+        log.warning(
+            f"get_task_model_id: default_model_id '{task_model_id}' not in models, returning as-is"
+        )
 
     log.info(f"DEBUG: get_task_model_id returning: {task_model_id}")
     return task_model_id

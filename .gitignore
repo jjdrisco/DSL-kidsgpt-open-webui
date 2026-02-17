@@ -316,6 +316,9 @@ cypress/screenshots
 backend/db_output.txt
 data/webui.db
 
+# User import data (local/test)
+backend/open_webui/static/user-import.csv
+
 # i18n locale overrides (local edits)
 src/lib/i18n/locales/uz-Latn-UZ/translation.json
 # Trigger new build

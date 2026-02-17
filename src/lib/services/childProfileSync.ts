@@ -289,6 +289,131 @@ class ChildProfileSyncService {
 	}
 
 	/**
+	 * Get the child profile for the currently logged-in user
+	 * 
+	 * This method handles THREE scenarios:
+	 * 1. Child user (role: 'child'): Returns a virtual profile with all interface modes enabled
+	 *    (Child users have full access - gating only applies to parent testing)
+	 * 2. Parent user (role: 'parent'): Uses selectedChildId to fetch and apply that child's restrictions
+	 * 3. Other users (admin, interviewee): Returns null (no child profile access)
+	 * 
+	 * NOTE: Only fetches from backend for parent testing; child users get full access
+	 * 
+	 * @returns The child profile for the current user, or null
+	 */
+	async getChildProfileForCurrentUser(): Promise<ChildProfile | null> {
+		const currentUser = get(user);
+		if (!currentUser?.id) return null;
+
+		let token = currentUser.token as string | undefined;
+
+		// Scenario 1: User has role "child" - fetch their real profile from backend
+		if (currentUser.role === 'child') {
+			console.log('[getChildProfileForCurrentUser] Child user detected, fetching profile', {
+				email: currentUser.email,
+				hasToken: !!token
+			});
+			if (!token && typeof localStorage !== 'undefined') {
+				const lt = localStorage.getItem('token');
+				if (lt && lt.length > 0) token = lt;
+			}
+			if (token) {
+				try {
+					const profiles = await getChildProfiles(token);
+					console.log('[getChildProfileForCurrentUser] API response:', {
+						profilesCount: profiles?.length ?? 0,
+						profiles: profiles,
+						firstProfileSelectedFeatures: profiles?.[0]?.selected_features
+					});
+					if (profiles && Array.isArray(profiles) && profiles.length > 0) {
+						const profile = profiles[0];
+						const result = {
+							...profile,
+							selected_features: profile.selected_features ?? [],
+							selected_interface_modes:
+								(profile.selected_interface_modes?.length ?? 0) > 0
+									? profile.selected_interface_modes
+									: ['voice_input', 'text_input', 'photo_upload', 'prompt_buttons']
+						};
+						console.log('[getChildProfileForCurrentUser] Returning real profile:', {
+							id: result.id,
+							selected_features: result.selected_features
+						});
+						return result;
+					}
+				} catch (error) {
+					console.warn('[getChildProfileForCurrentUser] Failed to fetch child profile:', error);
+				}
+			}
+			console.log('[getChildProfileForCurrentUser] Using fallback virtual profile (no backend profile found)');
+			// Fallback: virtual profile with full access when no backend profile found
+			return {
+				id: 'virtual-child-profile',
+				user_id: currentUser.id,
+				name: currentUser.name,
+				child_email: currentUser.email,
+				child_age: undefined,
+				child_gender: undefined,
+				child_characteristics: undefined,
+				selected_features: [],
+				selected_interface_modes: [
+					'voice_input',
+					'text_input',
+					'photo_upload',
+					'prompt_buttons'
+				],
+				created_at: Date.now() / 1000,
+				updated_at: Date.now() / 1000,
+				attempt_number: 1,
+				is_current: true,
+				session_number: 1
+			} as ChildProfile;
+		}
+
+		if (!token && typeof localStorage !== 'undefined') {
+			const lt = localStorage.getItem('token');
+			if (lt && lt.length > 0) token = lt;
+		}
+		if (!token) return null;
+
+		// Scenario 2: User has role "parent" - use selectedChildId approach
+		if (currentUser.role === 'parent') {
+			const selectedChildId = this.getCurrentChildId();
+			console.log('[getChildProfileForCurrentUser] Parent user, selectedChildId:', selectedChildId);
+			if (!selectedChildId) return null;
+			
+			try {
+				const profiles = await getChildProfiles(token);
+				console.log('[getChildProfileForCurrentUser] Parent API response:', {
+					profilesCount: profiles?.length ?? 0,
+					profileIds: profiles?.map((p) => p.id),
+					selectedFeaturesByProfile: profiles?.map((p) => ({ id: p.id, selected_features: p.selected_features }))
+				});
+				if (!profiles || !Array.isArray(profiles)) {
+					return null;
+				}
+				
+				const found = profiles.find((p) => p.id === selectedChildId) || null;
+				if (found) {
+					console.log('[getChildProfileForCurrentUser] Parent returning profile:', {
+						id: found.id,
+						selected_features: found.selected_features
+					});
+				} else {
+					console.warn('[getChildProfileForCurrentUser] Parent: no profile matched selectedChildId', selectedChildId);
+				}
+				return found;
+			} catch (error) {
+				console.error('Error fetching child profiles:', error);
+				return null;
+			}
+		}
+
+		// Scenario 3: Other user types (admin, interviewee, etc.) - no child profile access
+		return null;
+	}
+
+	/**
 	 * Get the currently selected child ID from settings store
 	 *
 	 * IMPORTANT: Reads from `settings` store, NOT `user.settings`.

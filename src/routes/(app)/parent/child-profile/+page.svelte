@@ -6,7 +6,7 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
-	import ChildProfileForm from '$lib/components/profile/ChildProfileForm.svelte';
+	import ParentAddChildForm from '$lib/components/profile/ParentAddChildForm.svelte';
 
 	let profileSaved: boolean = false;
 
@@ -103,12 +103,11 @@
 	</nav>
 
 	<!-- Child Profile Form Component (without research fields or personality traits) -->
-	<ChildProfileForm
-		showResearchFields={false}
-		requireResearchFields={false}
-		showPersonalityTraits={false}
+	<div class="flex-1 min-h-0 overflow-hidden flex flex-col">
+		<ParentAddChildForm
 		onProfileCreated={handleProfileCreated}
 		onProfileSaved={handleProfileSaved}
 		onChildSelected={handleChildSelected}
-	/>
+		/>
+	</div>
 </div>

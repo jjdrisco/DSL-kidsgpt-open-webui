@@ -23,6 +23,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 	import { childProfileSync } from '$lib/services/childProfileSync';
+	import { loadChildProfileForCurrentUser } from '$lib/utils/interfaceModes';
 
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
@@ -76,14 +77,16 @@
 					mayFetchWhitelist: sessionUser?.role === 'admin'
 				});
 
-				// Route based on user type
-				if (userType === 'parent') {
-					redirectPath = '/parent';
-				} else if (userType === 'child') {
-					redirectPath = '/';
-				} else if (userType === 'admin') {
-					redirectPath = '/admin/users';
-				} else if (userType === 'interviewee') {
+			// Route based on user type
+			if (userType === 'parent') {
+				redirectPath = '/parent';
+			} else if (userType === 'child') {
+				// Load child profile into cache before navigation
+				await loadChildProfileForCurrentUser();
+				redirectPath = '/';
+			} else if (userType === 'admin') {
+				redirectPath = '/admin/users';
+			} else if (userType === 'interviewee') {
 					// For interviewees, fetch workflow state and redirect to next route
 					try {
 						const state = await getWorkflowState(sessionUser.token);
@@ -241,13 +244,20 @@
 				localStorage.setItem('lastProlificSessionId', sessionId);
 				localStorage.setItem('lastUserId', authResponse.user.id);
 
-				// Pass the redirect path to setSessionUser
-				await setSessionUser(sessionUser, prolificRedirectPath);
-				if (authResponse.new_child_id) {
-					await childProfileSync.setCurrentChildId(authResponse.new_child_id);
-				}
-				// Sidebar and pages use getWorkflowState from backend - no localStorage needed
-				return true;
+			// Pass the redirect path to setSessionUser
+			await setSessionUser(sessionUser, prolificRedirectPath);
+			if (authResponse.new_child_id) {
+				await childProfileSync.setCurrentChildId(authResponse.new_child_id);
+				prolificRedirectPath = '/kids/chat';
+			}
+			
+			// For child users, load their profile into cache
+			if (sessionUser.role === 'child') {
+				await loadChildProfileForCurrentUser();
+				prolificRedirectPath = '/kids/chat';
+			}
+			// Sidebar and pages use getWorkflowState from backend - no localStorage needed
+			return true;
 			}
 		} catch (error) {
 			toast.error(`Prolific authentication failed: ${error}`);

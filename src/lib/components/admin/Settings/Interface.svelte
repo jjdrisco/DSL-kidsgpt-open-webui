@@ -34,6 +34,8 @@
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
 		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
+		ENABLE_SUGGESTION_GENERATION: true,
+		SUGGESTION_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
 		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
@@ -292,6 +294,36 @@
 						>
 							<Textarea
 								bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+
+				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Suggestion Generation')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_SUGGESTION_GENERATION} />
+				</div>
+
+				{#if taskConfig.ENABLE_SUGGESTION_GENERATION}
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">
+							{$i18n.t('Suggestion Generation Prompt')}
+						</div>
+
+						<Tooltip
+							content={$i18n.t(
+								'Generate age-appropriate prompt suggestions for children. Leave empty to use the default prompt.'
+							)}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={taskConfig.SUGGESTION_GENERATION_PROMPT_TEMPLATE}
 								placeholder={$i18n.t(
 									'Leave empty to use the default prompt, or enter a custom prompt'
 								)}

@@ -13,6 +13,8 @@ export interface ChildFeature {
 	ageGroups: AgeGroup[];
 	recommendedFor: string[]; // Age group IDs where this is recommended
 	capabilities: FeatureCapability[];
+	/** Snippet appended to system prompt when feature is enabled. Backend is source of truth. */
+	systemPromptSnippet?: string;
 }
 
 export interface AgeGroup {
@@ -46,11 +48,12 @@ export const CHILD_FEATURES: ChildFeature[] = [
 		description: 'Take a picture and upload assignments, get help with academic questions',
 		icon: '📚',
 		ageGroups: [
+			{ id: '6-8', minAge: 6, maxAge: 8, label: 'Ages 6-8' },
 			{ id: '9-12', minAge: 9, maxAge: 12, label: 'Ages 9-12' },
 			{ id: '13-15', minAge: 13, maxAge: 15, label: 'Ages 13-15' },
 			{ id: '16-18', minAge: 16, maxAge: 18, label: 'Ages 16-18' }
 		],
-		recommendedFor: ['9-12', '13-15', '16-18'],
+		recommendedFor: ['6-8', '9-12', '13-15', '16-18'],
 		capabilities: [
 			{
 				id: 'photo_upload',
@@ -64,7 +67,9 @@ export const CHILD_FEATURES: ChildFeature[] = [
 				description: 'Get help with school assignments and academic questions',
 				enabled: true
 			}
-		]
+		],
+		systemPromptSnippet:
+			'School assignments and homework: help with understanding, explaining concepts, guiding through problems; accept photo uploads. Do not solve completely; encourage reasoning.'
 	}
 	// Additional features can be added here as they're developed
 ];

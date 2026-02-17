@@ -1,56 +1,77 @@
 <script lang="ts">
 	import {
-		CHILD_FEATURES,
-		AGE_GROUPS,
-		getRecommendedFeatures,
 		getAvailableFeatures,
-		getAgeGroupFromString,
 		validateFeaturesForAge,
 		type ChildFeature
 	} from '$lib/data/childFeatures';
+	import { getAgeGroupFromValue } from '$lib/utils/ageGroups';
 
-	export let childAge: string = '';
+	export let childAge: string | number = '';
 	export let selectedFeatures: string[] = [];
 	export let onFeaturesChange: ((features: string[]) => void) | undefined = undefined;
 
 	let availableFeatures: ChildFeature[] = [];
-	let recommendedFeatures: ChildFeature[] = [];
+	let autoSelectedFeatureIds: string[] = [];
 	let ageGroupLabel: string = '';
+	let lastAppliedAge: number | null = null;
 
 	$: if (childAge) {
-		const ageMatch = childAge.match(/(\d+)/);
-		const age = ageMatch ? parseInt(ageMatch[1]) : 0;
+		// Parse age (could be string from select or number from profile)
+		const age = typeof childAge === 'number' ? childAge : parseInt(childAge, 10);
 		
-		availableFeatures = getAvailableFeatures(age);
-		recommendedFeatures = getRecommendedFeatures(age);
-		
-		const ageGroup = AGE_GROUPS.find(
-			(group) => age >= group.minAge && age <= group.maxAge
-		);
-		ageGroupLabel = ageGroup?.label || '';
+		if (!isNaN(age)) {
+			availableFeatures = getAvailableFeatures(age);
+			
+			const ageGroup = getAgeGroupFromValue(age);
+			ageGroupLabel = ageGroup?.label || '';
+
+			// Auto-selected features: School Assignment when available
+			autoSelectedFeatureIds = availableFeatures.some((f) => f.id === 'school_assignment')
+				? ['school_assignment']
+				: [];
+
+			// Only overwrite selection when AGE changes - not on every reactive run.
+			// This prevents re-renders from blocking button clicks.
+			if (lastAppliedAge !== age) {
+				lastAppliedAge = age;
+				if (autoSelectedFeatureIds.length > 0) {
+					selectedFeatures = [...autoSelectedFeatureIds];
+					onFeaturesChange?.(selectedFeatures);
+				} else {
+					selectedFeatures = [];
+					onFeaturesChange?.(selectedFeatures);
+				}
+			}
+		} else {
+			lastAppliedAge = null;
+		}
+	} else {
+		lastAppliedAge = null;
 	}
 
 	function toggleFeature(featureId: string) {
+		let next: string[];
 		if (selectedFeatures.includes(featureId)) {
-			selectedFeatures = selectedFeatures.filter((id) => id !== featureId);
+			next = selectedFeatures.filter((id) => id !== featureId);
 		} else {
-			// Validate before adding
-			const ageMatch = childAge.match(/(\d+)/);
-			const age = ageMatch ? parseInt(ageMatch[1]) : 0;
-			const validation = validateFeaturesForAge([...selectedFeatures, featureId], age);
-			
-			if (validation.valid) {
-				selectedFeatures = [...selectedFeatures, featureId];
+			const age = typeof childAge === 'number' ? childAge : parseInt(childAge, 10);
+			if (!isNaN(age)) {
+				const validation = validateFeaturesForAge([...selectedFeatures, featureId], age);
+				if (validation.valid) {
+					next = [...selectedFeatures, featureId];
+				} else {
+					return;
+				}
+			} else {
+				return;
 			}
 		}
-		
-		if (onFeaturesChange) {
-			onFeaturesChange(selectedFeatures);
-		}
+		selectedFeatures = next;
+		onFeaturesChange?.(next);
 	}
 
-	function isRecommended(featureId: string): boolean {
-		return recommendedFeatures.some((f) => f.id === featureId);
+	function isAutoSelected(featureId: string): boolean {
+		return autoSelectedFeatureIds.includes(featureId);
 	}
 
 	function isSelected(featureId: string): boolean {
@@ -65,30 +86,23 @@
 				Select Features for {ageGroupLabel}
 			</h3>
 			<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-				Choose which features your child can use. Recommended features are marked with a star.
+				Choose which features your child can use. Pre-selected features for this age are marked with a star.
 			</p>
 		</div>
 
 		<div class="space-y-4">
 			{#each availableFeatures as feature}
-				{@const isRec = isRecommended(feature.id)}
-				{@const isSel = isSelected(feature.id)}
+				{@const isAuto = isAutoSelected(feature.id)}
+				{@const isSel = selectedFeatures.includes(feature.id)}
 				
-				<div
-					class={`border rounded-lg p-4 transition-all cursor-pointer ${
+				<button
+					type="button"
+					class={`w-full text-left border rounded-lg p-4 transition-all cursor-pointer ${
 						isSel
 							? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800'
 							: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
 					}`}
 					on:click={() => toggleFeature(feature.id)}
-					role="button"
-					tabindex="0"
-					on:keydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							toggleFeature(feature.id);
-						}
-					}}
 				>
 					<div class="flex items-start justify-between">
 						<div class="flex-1">
@@ -99,10 +113,10 @@
 								<h4 class="text-base font-semibold text-gray-900 dark:text-white">
 									{feature.name}
 								</h4>
-								{#if isRec}
+								{#if isAuto}
 									<span
 										class="text-yellow-500 text-sm"
-										title="Recommended for this age group"
+										title="Pre-selected for this age"
 									>
 										★
 									</span>
@@ -156,7 +170,7 @@
 							</div>
 						</div>
 					</div>
-				</div>
+				</button>
 			{/each}
 		</div>
 

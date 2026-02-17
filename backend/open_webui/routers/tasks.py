@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, status, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from pydantic import BaseModel
@@ -60,6 +60,8 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
+        "ENABLE_SUGGESTION_GENERATION": request.app.state.config.ENABLE_SUGGESTION_GENERATION,
+        "SUGGESTION_GENERATION_PROMPT_TEMPLATE": request.app.state.config.SUGGESTION_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_TITLE_GENERATION": request.app.state.config.ENABLE_TITLE_GENERATION,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
@@ -81,6 +83,8 @@ class TaskConfigForm(BaseModel):
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_FOLLOW_UP_GENERATION: bool
+    ENABLE_SUGGESTION_GENERATION: bool
+    SUGGESTION_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_TAGS_GENERATION: bool
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
@@ -105,6 +109,12 @@ async def update_task_config(
     )
     request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (
         form_data.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
+    )
+    request.app.state.config.ENABLE_SUGGESTION_GENERATION = (
+        form_data.ENABLE_SUGGESTION_GENERATION
+    )
+    request.app.state.config.SUGGESTION_GENERATION_PROMPT_TEMPLATE = (
+        form_data.SUGGESTION_GENERATION_PROMPT_TEMPLATE
     )
 
     request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
@@ -152,6 +162,8 @@ async def update_task_config(
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_SUGGESTION_GENERATION": request.app.state.config.ENABLE_SUGGESTION_GENERATION,
+        "SUGGESTION_GENERATION_PROMPT_TEMPLATE": request.app.state.config.SUGGESTION_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
@@ -311,6 +323,121 @@ async def generate_follow_ups(
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "An internal error has occurred."},
+        )
+
+
+@router.post("/suggestions/completions")
+async def generate_child_suggestions(
+    request: Request,
+    form_data: dict = Body(...),
+    user=Depends(get_verified_user),
+):
+    """Generate age and feature-appropriate prompt suggestions for a child"""
+
+    if not request.app.state.config.ENABLE_SUGGESTION_GENERATION:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Suggestion generation is disabled"},
+        )
+
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {request.state.model["id"]: request.state.model}
+    else:
+        models = request.app.state.MODELS
+
+    model_id = form_data.get("model")
+    log.info(
+        "[suggestions] model resolution: requested=%s, models_count=%d, model_ids=%s",
+        model_id,
+        len(models),
+        list(models.keys())[:20],
+    )
+    # Use task model when chat model not provided or not found (e.g. child chat uses gpt-5.2-chat-latest like regular chat)
+    if not model_id or model_id not in models:
+        task_model = request.app.state.config.TASK_MODEL
+        task_model_external = request.app.state.config.TASK_MODEL_EXTERNAL
+        if task_model and task_model in models:
+            model_id = task_model
+            log.info("[suggestions] fallback: using TASK_MODEL=%s", task_model)
+        elif task_model_external and task_model_external in models:
+            model_id = task_model_external
+            log.info("[suggestions] fallback: using TASK_MODEL_EXTERNAL=%s", task_model_external)
+        elif models:
+            model_id = next(iter(models.keys()))
+            log.info("[suggestions] fallback: using first available model=%s", model_id)
+        else:
+            log.error("[suggestions] no models available, raising 404")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Model not found",
+            )
+
+    task_model_id = get_task_model_id(
+        model_id,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+    log.info("[suggestions] task_model_id=%s (in models: %s)", task_model_id, task_model_id in models)
+
+    if task_model_id not in models:
+        log.error("[suggestions] task_model_id '%s' not in models, raising 404", task_model_id)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model '{task_model_id}' not found",
+        )
+
+    child_age = form_data.get("child_age")
+    selected_features = form_data.get("selected_features", [])
+
+    feature_names = ", ".join(selected_features) if selected_features else "general conversation"
+
+    piaget_stage = "general"
+    if child_age:
+        if 6 <= child_age <= 8:
+            piaget_stage = "Preoperational (6-8): concrete thinking, learning to write"
+        elif 9 <= child_age <= 12:
+            piaget_stage = "Concrete Operational (9-12): logical reasoning, developing fluency"
+        elif 13 <= child_age <= 15:
+            piaget_stage = "Early Formal Operational (13-15): abstract reasoning emerging"
+        elif 16 <= child_age <= 18:
+            piaget_stage = "Formal Operational (16-18): adult-like reasoning"
+
+    template = request.app.state.config.SUGGESTION_GENERATION_PROMPT_TEMPLATE
+    content = template.replace("{{CHILD_AGE}}", str(child_age or "unknown"))
+    content = content.replace("{{ENABLED_FEATURES}}", feature_names)
+    content = content.replace("{{PIAGET_STAGE}}", piaget_stage)
+
+    max_tokens = models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 2000)
+
+    payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        **(
+            {"max_tokens": max_tokens}
+            if models[task_model_id].get("owned_by") == "ollama"
+            else {"max_completion_tokens": max_tokens}
+        ),
+        "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
+            "task": str(TASKS.SUGGESTION_GENERATION),
+            "task_body": form_data,
+        },
+    }
+
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
+    try:
+        return await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception as e:
+        log.error("[suggestions] Exception occurred: %s", e, exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": "An internal error has occurred."},

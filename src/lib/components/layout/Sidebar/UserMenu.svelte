@@ -11,6 +11,7 @@
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
 	import { showSettings, mobile, showSidebar, showShortcuts, user, config } from '$lib/stores';
+	import { clearSuggestionsCache } from '$lib/stores/suggestions';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -24,7 +25,6 @@
 	import Code from '$lib/components/icons/Code.svelte';
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
-	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import UserStatusModal from './UserStatusModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -184,22 +184,6 @@
 									</button>
 								</Tooltip>
 							</div>
-						</button>
-					</div>
-				{:else}
-					<div class="mx-1">
-						<button
-							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
-							type="button"
-							on:click={() => {
-								show = false;
-								showUserStatusModal = true;
-							}}
-						>
-							<div class=" self-center">
-								<FaceSmile className="size-4" strokeWidth="1.5" />
-							</div>
-							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
 						</button>
 					</div>
 				{/if}
@@ -430,6 +414,7 @@
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
+					clearSuggestionsCache();
 					user.set(null);
 					localStorage.removeItem('token');
 

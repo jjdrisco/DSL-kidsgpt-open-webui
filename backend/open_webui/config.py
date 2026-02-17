@@ -1861,6 +1861,35 @@ ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_SUGGESTION_GENERATION = PersistentConfig(
+    "ENABLE_SUGGESTION_GENERATION",
+    "tasks.suggestion_generation.enable",
+    os.environ.get("ENABLE_SUGGESTION_GENERATION", "True").lower() == "true",
+)
+
+SUGGESTION_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "SUGGESTION_GENERATION_PROMPT_TEMPLATE",
+    "tasks.suggestion_generation.template",
+    os.environ.get(
+        "SUGGESTION_GENERATION_PROMPT_TEMPLATE",
+        """Generate 6 age-appropriate, engaging prompt suggestions for a child.
+
+Child Profile:
+- Age: {{CHILD_AGE}} years old
+- Enabled Features: {{ENABLED_FEATURES}}
+- Cognitive Stage: {{PIAGET_STAGE}}
+
+Requirements:
+- Each suggestion should be appropriate for the child's age and cognitive level
+- Only suggest prompts related to the enabled features
+- Format as JSON array with structure: [{"title": ["short", "subtitle"], "content": "full prompt text"}]
+- Make prompts engaging, clear, and educational
+- Use age-appropriate language complexity
+
+Return ONLY the JSON array, no other text.""",
+    ),
+)
+
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
     "task.tags.enable",

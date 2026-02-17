@@ -115,6 +115,22 @@ This is a fork of Open WebUI customized for a research study involving children 
 
 **Testing**: See `cypress/e2e/kids-profile.cy.ts` and `cypress/e2e/parent-child-profile.cy.ts`
 
+### 5. Parent-Child Chat Navigation Unification (Planned)
+
+**Status**: Planned – not yet implemented  
+**Documentation**: See `docs/PLANS/parent_child_chat_navigation_unification.md`
+
+**Goal**: Parents should see the same ChildChat UI and /kids/chat routes that their selected child will see, instead of the main Chat at / and /c/. Currently parents land on Chat.svelte at / while children use ChildChat.svelte at /kids/chat.
+
+**Key Changes**:
+
+- Redirect parents from / to /kids/chat
+- Sidebar: use /kids/chat paths for parent (same as child)
+- ChatItem: role-aware href
+- /c/[id]: redirect parent to /kids/chat/[id]
+- ChildChat: treat parent like child for path logic
+- kids/profile/preview: navigate to /kids/chat
+
 ---
 
 ## GitHub Token Requirements

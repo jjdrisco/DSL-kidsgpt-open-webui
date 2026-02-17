@@ -75,14 +75,14 @@ export const INTERFACE_MODES: InterfaceMode[] = [
 		icon: '🎤',
 		piagetStages: ['6-8', '9-12', '13-15', '16-18'],
 		recommendedFor: ['6-8', '9-12', '13-15', '16-18'],
-		autoSelectFor: ['6-8', '16-18']
+		autoSelectFor: ['6-8', '9-12', '13-15', '16-18'] // All age groups
 	},
 	{
 		id: 'text_input',
 		name: 'Text Input',
 		description: 'Type your questions in a text box',
 		icon: '⌨️',
-		piagetStages: ['9-12', '13-15', '16-18'],
+		piagetStages: ['6-8', '9-12', '13-15', '16-18'], // Available for all ages; starred only for 9-12, 13-15, 16-18
 		recommendedFor: ['9-12', '13-15', '16-18'],
 		autoSelectFor: ['9-12', '13-15', '16-18']
 	},
@@ -91,9 +91,9 @@ export const INTERFACE_MODES: InterfaceMode[] = [
 		name: 'Photo Upload',
 		description: 'Take a picture or upload a photo of your assignment',
 		icon: '📷',
-		piagetStages: ['6-8', '9-12', '13-15', '16-18'],
-		recommendedFor: ['9-12', '13-15', '16-18'],
-		autoSelectFor: ['9-12', '13-15', '16-18']
+		piagetStages: ['6-8', '9-12', '13-15', '16-18'], // Available for all; auto-select 13-15+ only
+		recommendedFor: ['13-15', '16-18'],
+		autoSelectFor: ['13-15', '16-18'] // Not auto-selected for 9-12; least-to-most progression
 	},
 	{
 		id: 'prompt_buttons',
@@ -101,8 +101,8 @@ export const INTERFACE_MODES: InterfaceMode[] = [
 		description: 'Choose from suggested questions and prompts',
 		icon: '🔘',
 		piagetStages: ['6-8', '9-12', '13-15', '16-18'],
-		recommendedFor: ['6-8', '9-12'],
-		autoSelectFor: ['6-8', '9-12']
+		recommendedFor: ['6-8', '9-12', '13-15', '16-18'],
+		autoSelectFor: ['6-8', '9-12', '13-15', '16-18'] // Including 15-17 (13-15, 16-18)
 	}
 ];
 

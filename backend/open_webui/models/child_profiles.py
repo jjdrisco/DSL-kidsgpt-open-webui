@@ -14,6 +14,7 @@ from sqlalchemy import (
     Boolean,
     Integer,
     inspect,
+    func,
 )
 from open_webui.internal.db import JSONField
 
@@ -33,7 +34,7 @@ class ChildProfile(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)  # Link to parent user
     name = Column(String, nullable=False)  # Child's name
-    child_age = Column(String, nullable=True)  # Age range (e.g., "5-7", "8-10")
+    child_age = Column(Integer, nullable=True)  # Numeric age (e.g., 6, 9, 13, 16)
     child_gender = Column(String, nullable=True)  # Gender (e.g., "Male", "Female")
     child_characteristics = Column(
         Text, nullable=True
@@ -66,6 +67,10 @@ class ChildProfile(Base):
     # Child account email (stored for display; account created via /users/child)
     child_email = Column(String, nullable=True)
 
+    # Interface modes and content features (Piaget-aligned whitelist)
+    selected_features = Column(JSONField, nullable=True)  # e.g. ["school_assignment"]
+    selected_interface_modes = Column(JSONField, nullable=True)  # e.g. ["voice_input", "text_input"]
+
     # Indexes for efficient querying
     __table_args__ = (
         Index("idx_child_profile_user_id", "user_id"),
@@ -87,7 +92,7 @@ class ChildProfileModel(BaseModel):
     id: str
     user_id: str
     name: str
-    child_age: Optional[str] = None
+    child_age: Optional[int] = None
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
@@ -104,11 +109,13 @@ class ChildProfileModel(BaseModel):
     created_at: int
     updated_at: int
     child_email: Optional[str] = None
+    selected_features: Optional[list[str]] = None
+    selected_interface_modes: Optional[list[str]] = None
 
 
 class ChildProfileForm(BaseModel):
     name: str
-    child_age: Optional[str] = None
+    child_age: Optional[int] = None
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     # parenting_style removed - now collected in exit survey
@@ -122,6 +129,8 @@ class ChildProfileForm(BaseModel):
     parent_llm_monitoring_other: Optional[str] = None
     session_number: Optional[int] = None  # If None, defaults to 1 in insert function
     child_email: Optional[str] = None
+    selected_features: Optional[list[str]] = None
+    selected_interface_modes: Optional[list[str]] = None
 
 
 class ChildProfileTable:
@@ -153,6 +162,8 @@ class ChildProfileTable:
                     "child_ai_use_contexts_other": form_data.child_ai_use_contexts_other,
                     "parent_llm_monitoring_other": form_data.parent_llm_monitoring_other,
                     "child_email": getattr(form_data, "child_email", None),
+                    "selected_features": getattr(form_data, "selected_features", None),
+                    "selected_interface_modes": getattr(form_data, "selected_interface_modes", None),
                     "attempt_number": attempt_number,
                     "is_current": True,
                     "session_number": session_number,
@@ -195,6 +206,62 @@ class ChildProfileTable:
             db.commit()
             db.refresh(result)
             return ChildProfileModel.model_validate(result) if result else None
+
+    def get_child_profile_by_child_email(
+        self, child_email: str
+    ) -> Optional[ChildProfileModel]:
+        """Get the current child profile for a child user (matches by child_email).
+        Uses case-insensitive comparison and strips whitespace.
+        First tries is_current=True; if none found, falls back to any matching profile.
+        """
+        if not child_email:
+            return None
+        email_clean = (child_email or "").strip().lower()
+        if not email_clean:
+            return None
+        with get_db() as db:
+            # Case-insensitive match (trim input in Python; DB compare via lower())
+            # Filter out NULL child_email first
+            email_match = func.lower(ChildProfile.child_email) == email_clean
+            profile = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.child_email.isnot(None),
+                    email_match,
+                    ChildProfile.is_current == True,
+                )
+                .order_by(ChildProfile.updated_at.desc())
+                .first()
+            )
+            if profile:
+                log.debug(
+                    "get_child_profile_by_child_email: found profile (is_current=True) id=%s for email=%s",
+                    profile.id,
+                    email_clean[:20],
+                )
+                return ChildProfileModel.model_validate(profile)
+            # Fallback: any profile with matching email (is_current may be False)
+            profile = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.child_email.isnot(None),
+                    email_match,
+                )
+                .order_by(ChildProfile.updated_at.desc())
+                .first()
+            )
+            if profile:
+                log.debug(
+                    "get_child_profile_by_child_email: found profile (fallback) id=%s for email=%s",
+                    profile.id,
+                    email_clean[:20],
+                )
+                return ChildProfileModel.model_validate(profile)
+            log.warning(
+                "get_child_profile_by_child_email: no profile found for email=%s (trimmed/lower)",
+                email_clean[:30],
+            )
+            return None
 
     def get_child_profiles_by_user(self, user_id: str) -> list[ChildProfileModel]:
         """Get all current child profiles for a specific parent user (only is_current=True)."""
@@ -253,6 +320,10 @@ class ChildProfileTable:
                     updated.parent_llm_monitoring_other
                 )
                 profile.child_email = getattr(updated, "child_email", None)
+                profile.selected_features = getattr(updated, "selected_features", None)
+                profile.selected_interface_modes = getattr(
+                    updated, "selected_interface_modes", None
+                )
                 profile.updated_at = ts
 
                 db.commit()
@@ -342,6 +413,10 @@ class ChildProfileTable:
                 child_ai_use_contexts_other=current.child_ai_use_contexts_other,
                 parent_llm_monitoring_other=current.parent_llm_monitoring_other,
                 child_email=getattr(current, "child_email", None),
+                selected_features=getattr(current, "selected_features", None),
+                selected_interface_modes=getattr(
+                    current, "selected_interface_modes", None
+                ),
                 attempt_number=current.attempt_number,
                 is_current=True,
                 session_number=new_session_number,

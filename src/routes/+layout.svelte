@@ -40,6 +40,7 @@
 	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { clearSuggestionsCache } from '$lib/stores/suggestions';
 	import { applyTheme } from '$lib/utils/theme';
 	import { submitConsent } from '$lib/apis/prolific';
 	import ConsentModal from '$lib/components/common/ConsentModal.svelte';
@@ -602,6 +603,7 @@
 
 		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
 			const res = await userSignOut();
+			clearSuggestionsCache();
 			user.set(null);
 			localStorage.removeItem('token');
 
@@ -769,7 +771,11 @@
 
 				const userSettings = await getUserSettings(localStorage.token);
 				if (userSettings) {
-					settings.set(userSettings.ui);
+					settings.set({
+						...(userSettings.ui ?? {}),
+						system: userSettings.system,
+						params: userSettings.params
+					});
 				} else {
 					settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 				}

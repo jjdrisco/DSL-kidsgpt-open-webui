@@ -4,7 +4,7 @@ export interface ChildProfile {
 	id: string;
 	user_id: string;
 	name: string;
-	child_age?: string;
+	child_age?: number;
 	child_gender?: string;
 	child_characteristics?: string;
 	parenting_style?: string;
@@ -34,11 +34,13 @@ export interface ChildProfile {
 	selected_features?: string[];
 	// Selected interface modes for this child (array of mode IDs: voice_input, text_input, photo_upload, prompt_buttons)
 	selected_interface_modes?: string[];
+	// Generated password (only included when creating a new profile with user account)
+	generated_password?: string;
 }
 
 export interface ChildProfileForm {
 	name: string;
-	child_age?: string;
+	child_age?: number;
 	child_gender?: string;
 	child_characteristics?: string;
 	// New optional research fields
@@ -123,6 +125,8 @@ export const getChildProfileById = async (token: string = '', profileId: string)
 export const createChildProfile = async (token: string = '', formData: ChildProfileForm) => {
 	let error = null;
 
+	console.log('[createChildProfile API] Sending formData:', formData);
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/child-profiles`, {
 		method: 'POST',
 		headers: {
@@ -133,12 +137,18 @@ export const createChildProfile = async (token: string = '', formData: ChildProf
 		body: JSON.stringify(formData)
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const errorData = await res.json();
+				console.error('[createChildProfile API] Error response:', errorData);
+				console.error('[createChildProfile API] Error detail:', JSON.stringify(errorData.detail, null, 2));
+				throw errorData;
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			console.error(err);
+			console.error('[createChildProfile API] Caught error:', err);
 			if ('detail' in err) {
+				console.error('[createChildProfile API] Validation errors:', err.detail);
 				error = err.detail;
 			} else {
 				error = err;

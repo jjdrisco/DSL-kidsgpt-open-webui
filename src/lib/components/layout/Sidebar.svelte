@@ -622,6 +622,13 @@
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
 
+	const getMainChatPath = () => ($user?.role === 'child' ? '/kids/chat' : '/');
+	const getChatPath = (id: string) => ($user?.role === 'child' ? `/kids/chat/${id}` : `/c/${id}`);
+	const isOnChatPage = () => {
+		const p = $page.url.pathname;
+		return p.startsWith('/c/') || p.startsWith('/kids/chat');
+	};
+
 	const newChatHandler = async () => {
 		selectedChatId = null;
 		selectedFolder.set(null);
@@ -632,29 +639,25 @@
 			await temporaryChatEnabled.set(false);
 		}
 
-		// Check if we're already on a chat page
-		const currentPath = $page.url.pathname;
-		const isOnChatPage = currentPath.startsWith('/c/');
+		const mainPath = getMainChatPath();
 
 		// If not on a chat page, try to navigate to an existing chat or main chat
-		if (!isOnChatPage) {
+		if (!isOnChatPage()) {
 			try {
-				// Try to get the most recent chat and navigate directly to it
-				// This works for all user types including admins
 				const chatList = await getChatList(localStorage.token, 1);
 
 				if (chatList && chatList.length > 0) {
-					// Navigate directly to the most recent chat
-					await goto(`/c/${chatList[0].id}`);
+					await goto(getChatPath(chatList[0].id));
 				} else {
-					// No chats exist, navigate to main chat interface at /
-					await goto('/');
+					await goto(mainPath);
 				}
 			} catch (error) {
 				console.error('Error navigating to chat:', error);
-				// Fallback: navigate to main chat interface
-				await goto('/');
+				await goto(mainPath);
 			}
+		} else {
+			// Already on chat page: navigate to main path to start new chat (handles /kids/chat/id -> /kids/chat)
+			await goto(mainPath);
 		}
 
 		setTimeout(() => {
@@ -758,7 +761,7 @@
 	id="sidebar-new-chat-button"
 	class="hidden"
 	on:click={() => {
-		goto('/');
+		goto(getMainChatPath());
 		newChatHandler();
 	}}
 />
@@ -818,13 +821,13 @@
 					>
 						<a
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
-							href="/"
+							href={getMainChatPath()}
 							draggable="false"
 							on:click={async (e) => {
 								e.stopImmediatePropagation();
 								e.preventDefault();
 
-								goto('/');
+								goto(getMainChatPath());
 								newChatHandler();
 							}}
 							aria-label={$user?.role === 'parent'
@@ -1020,7 +1023,7 @@
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
-					href="/"
+					href={getMainChatPath()}
 					draggable="false"
 					on:click={newChatHandler}
 				>
@@ -1032,14 +1035,14 @@
 					/>
 				</a>
 
-				<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
-					<div
-						id="sidebar-webui-name"
-						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
-					>
-						DataSmithGPT
-					</div>
-				</a>
+			<a href={getMainChatPath()} class="flex flex-1 px-1.5" on:click={newChatHandler}>
+				<div
+					id="sidebar-webui-name"
+					class=" self-center font-medium text-gray-850 dark:text-white font-primary"
+				>
+					{$page.url.pathname.startsWith('/kids/chat') ? 'AI Smith GPT Kids' : 'AI Smith GPT'}
+				</div>
+			</a>
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					placement="bottom"
@@ -1318,7 +1321,7 @@
 						<a
 							id="sidebar-new-chat-button"
 							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-							href="/"
+							href={getMainChatPath()}
 							draggable="false"
 							on:click={newChatHandler}
 							aria-label={$user?.role === 'parent'
@@ -1381,7 +1384,7 @@
 						</div>
 					{/if}
 
-					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && !$page.url.pathname.startsWith('/kids/chat')}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-notes-button"

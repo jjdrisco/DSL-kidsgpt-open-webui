@@ -268,11 +268,12 @@
 		</div>
 	</nav>
 
-	<!-- Child Profile Form Component (MVP fields only - no research fields, no personality traits) -->
+	<!-- Child Profile Form Component (survey workflow - show survey messages) -->
 	<ChildProfileForm
 		showResearchFields={false}
 		requireResearchFields={false}
 		showPersonalityTraits={false}
+		showSurveyMessages={true}
 		onProfileCreated={handleProfileCreated}
 		onProfileSaved={handleProfileSaved}
 		onChildSelected={handleChildSelected}

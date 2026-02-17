@@ -3,7 +3,7 @@ import logging
 import markdown
 
 from open_webui.models.chats import ChatTitleMessagesForm
-from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
+from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT, STATIC_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
@@ -18,6 +18,15 @@ from open_webui.utils.code_interpreter import execute_code_jupyter
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get("/favicon")
+async def get_favicon():
+    """Return the application favicon (logo) image."""
+    favicon_path = STATIC_DIR / "favicon.png"
+    if favicon_path.exists():
+        return FileResponse(str(favicon_path), media_type="image/png")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 @router.get("/gravatar")

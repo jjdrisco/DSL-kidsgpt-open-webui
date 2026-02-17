@@ -66,7 +66,11 @@
 		});
 
 		if (userSettings) {
-			settings.set(userSettings.ui);
+			settings.set({
+				...(userSettings.ui ?? {}),
+				system: userSettings.system,
+				params: userSettings.params
+			});
 		} else {
 			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
 

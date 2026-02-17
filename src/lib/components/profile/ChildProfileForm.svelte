@@ -14,6 +14,8 @@
 	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
 	import FeatureSelection from '$lib/components/profile/FeatureSelection.svelte';
 	import InterfaceModeSelection from '$lib/components/profile/InterfaceModeSelection.svelte';
+	import { CHILD_FEATURES } from '$lib/data/childFeatures';
+	import { INTERFACE_MODES } from '$lib/data/interfaceModes';
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +25,8 @@
 	export let showPersonalityTraits: boolean = true;
 	export let allowEmptyProfiles: boolean = true;
 	export let initialSelectedIndex: number = -1;
+	/** When true, show survey-specific messages (e.g. "one child for this survey", "academic research"). Use in survey workflow only, not parent add-child. */
+	export let showSurveyMessages: boolean = false;
 
 	// Callbacks
 	export let onProfileSaved: ((profile: ChildProfile) => void | Promise<void>) | undefined =
@@ -126,10 +130,19 @@
 	function hydrateFormFromSelectedChild() {
 		ensureAtLeastOneChild();
 		const sel = childProfiles[selectedChildIndex];
+		console.log('[ChildProfileForm] hydrateFormFromSelectedChild', {
+			selectedChildIndex,
+			hasSel: !!sel,
+			selKeys: sel ? Object.keys(sel) : [],
+			child_age_raw: sel?.child_age,
+			child_age_type: sel?.child_age != null ? typeof sel.child_age : 'n/a'
+		});
 		if (!sel) return;
 
 		childName = sel?.name || '';
-		childAge = sel?.child_age || '';
+		// child_age is stored as number; select options use numeric values "6", "7", "9", etc.
+		childAge = sel?.child_age != null && sel.child_age !== '' ? String(sel.child_age) : '';
+		console.log('[ChildProfileForm] childAge after hydrate:', JSON.stringify(childAge));
 		selectedFeatures = sel?.selected_features || [];
 		selectedInterfaceModes = sel?.selected_interface_modes || [];
 
@@ -352,9 +365,10 @@
 					: personalityDesc
 				: childCharacteristics;
 
+			const numericAge = childAge ? parseInt(String(childAge), 10) : undefined;
 			const profileData: any = {
 				name: childName,
-				child_age: childAge,
+				child_age: !isNaN(numericAge as number) ? numericAge : undefined,
 				child_gender: childGender === 'Other' ? 'Other' : childGender,
 				child_characteristics: combinedCharacteristics,
 				child_email: childEmail || undefined,
@@ -440,6 +454,10 @@
 			if (!childProfiles || !Array.isArray(childProfiles)) {
 				childProfiles = [];
 			}
+			console.log('[ChildProfileForm] loadChildProfile', {
+				profileCount: childProfiles.length,
+				profiles: childProfiles.map((p) => ({ id: p.id, name: p.name, child_age: p.child_age }))
+			});
 
 			if (childProfiles.length > 0) {
 				const currentChildId = childProfileSync.getCurrentChildId();
@@ -490,9 +508,10 @@
 						: personalityDesc
 					: childCharacteristics;
 
+				const numericAge = childAge ? parseInt(String(childAge), 10) : undefined;
 				const profileData: any = {
 					name: childName,
-					child_age: childAge,
+					child_age: !isNaN(numericAge as number) ? numericAge : undefined,
 					child_gender: childGender === 'Other' ? 'Other' : childGender,
 					child_characteristics: combinedCharacteristics,
 					child_email: childEmail || undefined,
@@ -539,9 +558,10 @@
 							: personalityDesc
 						: childCharacteristics;
 
+					const numericAge = childAge ? parseInt(String(childAge), 10) : undefined;
 					const updateData: any = {
 						name: childName,
-						child_age: childAge,
+						child_age: !isNaN(numericAge as number) ? numericAge : undefined,
 						child_gender: childGender,
 						child_characteristics: combinedCharacteristics,
 						child_email: childEmail || undefined,
@@ -610,8 +630,14 @@
 	}
 
 	function startEditing() {
+		console.log('[ChildProfileForm] startEditing', {
+			selectedChildIndex,
+			profileCount: childProfiles.length,
+			selectedProfile_child_age: childProfiles[selectedChildIndex]?.child_age
+		});
 		if (selectedChildIndex >= 0 && selectedChildIndex < childProfiles.length) {
 			hydrateFormFromSelectedChild();
+			console.log('[ChildProfileForm] after hydrate in startEditing, childAge=', childAge);
 			isEditing = true;
 			showForm = true;
 		} else {
@@ -659,14 +685,16 @@
 	bind:this={mainPageContainer}
 >
 	<div class="max-w-4xl mx-auto px-4 py-8">
-		<!-- Instructional Message -->
-		<div
-			class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-		>
-			<p class="text-sm text-blue-900 dark:text-blue-200">
-				<strong>Note:</strong> Please provide information about one child you have in mind for this survey.
-			</p>
-		</div>
+		<!-- Instructional Message (survey workflow only) -->
+		{#if showSurveyMessages}
+			<div
+				class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+			>
+				<p class="text-sm text-blue-900 dark:text-blue-200">
+					<strong>Note:</strong> Please provide information about one child you have in mind for this survey.
+				</p>
+			</div>
+		{/if}
 
 		<!-- Child Selection -->
 		{#if childProfiles && childProfiles.length > 0}
@@ -739,6 +767,53 @@
 							{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}
 						</p>
 					</div>
+
+					<!-- Interface Modes (how child inputs) -->
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+							Interface Modes
+						</div>
+						<div class="flex flex-wrap gap-2">
+							{#each childProfiles[selectedChildIndex]?.selected_interface_modes ?? [] as modeId}
+								{@const mode = INTERFACE_MODES.find((m) => m.id === modeId)}
+								{#if mode}
+									<span
+										class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 text-sm"
+									>
+										<span>{mode.icon}</span>
+										<span>{mode.name}</span>
+									</span>
+								{/if}
+							{/each}
+							{#if !(childProfiles[selectedChildIndex]?.selected_interface_modes?.length)}
+								<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Content Features -->
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+							Content Features
+						</div>
+						<div class="flex flex-wrap gap-2">
+							{#each childProfiles[selectedChildIndex]?.selected_features ?? [] as featureId}
+								{@const feature = CHILD_FEATURES.find((f) => f.id === featureId)}
+								{#if feature}
+									<span
+										class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200 text-sm"
+									>
+										<span>{feature.icon ?? '📋'}</span>
+										<span>{feature.name}</span>
+									</span>
+								{/if}
+							{/each}
+							{#if !(childProfiles[selectedChildIndex]?.selected_features?.length)}
+								<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+							{/if}
+						</div>
+					</div>
+
 					{#if showPersonalityTraits}
 						<div>
 							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -797,11 +872,13 @@
 				<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
 					<div class="space-y-6">
 						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
-						<p class="text-sm text-gray-600 dark:text-gray-400 -mt-2 mb-2">
-							This survey asks you to describe your child. This information will not be used to
-							customize the scenarios you will be shown and will only be used in the context of
-							academic research.
-						</p>
+						{#if showSurveyMessages}
+							<p class="text-sm text-gray-600 dark:text-gray-400 -mt-2 mb-2">
+								This survey asks you to describe your child. This information will not be used to
+								customize the scenarios you will be shown and will only be used in the context of
+								academic research.
+							</p>
+						{/if}
 
 						<div>
 							<label
@@ -832,19 +909,9 @@
 								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 							>
 								<option value="">Select age</option>
-								<option value="6 years old">6 years old</option>
-								<option value="7 years old">7 years old</option>
-								<option value="8 years old">8 years old</option>
-								<option value="9 years old">9 years old</option>
-								<option value="10 years old">10 years old</option>
-								<option value="11 years old">11 years old</option>
-								<option value="12 years old">12 years old</option>
-								<option value="13 years old">13 years old</option>
-								<option value="14 years old">14 years old</option>
-								<option value="15 years old">15 years old</option>
-								<option value="16 years old">16 years old</option>
-								<option value="17 years old">17 years old</option>
-								<option value="18 years old">18 years old</option>
+								{#each Array.from({ length: 13 }, (_, i) => i + 6) as age}
+									<option value={String(age)}>{age} years old</option>
+								{/each}
 							</select>
 						</div>
 
@@ -887,11 +954,22 @@
 							/>
 						{/if}
 
-						<!-- Feature Selection -->
+						<!-- Interface Mode Selection (how child inputs: voice, text, photo, buttons) -->
+						<div>
+							<InterfaceModeSelection
+								childAge={childAge}
+								bind:selectedModes={selectedInterfaceModes}
+								onModesChange={(modes) => {
+									selectedInterfaceModes = modes;
+								}}
+							/>
+						</div>
+
+						<!-- Feature Selection (what content: School Assignment, etc.) -->
 						<div>
 							<FeatureSelection
 								bind:childAge
-								bind:selectedFeatures
+								selectedFeatures={selectedFeatures}
 								onFeaturesChange={(features) => {
 									selectedFeatures = features;
 								}}

@@ -6,28 +6,59 @@ CHILD PROFILE: FastAPI router for child profile management
 """
 
 import logging
+import secrets
+import string
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.auth import get_verified_user, get_admin_user, get_password_hash
+from open_webui.utils.child_feature_prompts import build_child_system_prompt
 from open_webui.models.child_profiles import (
     ChildProfileModel,
     ChildProfileForm,
     ChildProfiles,
 )
-from open_webui.models.users import UserModel
+from open_webui.models.users import UserModel, Users
+from open_webui.models.auths import Auths, SignupForm
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
+def generate_passphrase(num_words=4) -> str:
+    """Generate a memorable passphrase using random words
+    
+    Args:
+        num_words: Number of words in the passphrase
+        
+    Returns:
+        A passphrase like 'happy-tree-blue-mountain-42'
+    """
+    # Simple word list for passphrase generation
+    adjectives = ['happy', 'bright', 'quick', 'calm', 'wise', 'bold', 'kind', 'fair', 'cool', 'warm']
+    nouns = ['tree', 'mountain', 'river', 'ocean', 'star', 'cloud', 'forest', 'meadow', 'valley', 'peak']
+    
+    words = []
+    for i in range(num_words):
+        if i % 2 == 0:
+            words.append(secrets.choice(adjectives))
+        else:
+            words.append(secrets.choice(nouns))
+    
+    # Add a random 2-digit number for extra security
+    number = secrets.randbelow(100)
+    words.append(str(number))
+    
+    return '-'.join(words)
+
+
 class ChildProfileResponse(BaseModel):
     id: str
     user_id: str
     name: str
-    child_age: Optional[str] = None
+    child_age: Optional[int] = None
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
@@ -46,6 +77,9 @@ class ChildProfileResponse(BaseModel):
     created_at: int
     updated_at: int
     child_email: Optional[str] = None
+    selected_features: Optional[list[str]] = None
+    selected_interface_modes: Optional[list[str]] = None
+    generated_password: Optional[str] = None  # Only included on creation
 
 
 class ChildProfileStatsResponse(BaseModel):
@@ -57,7 +91,10 @@ class ChildProfileStatsResponse(BaseModel):
 async def create_child_profile(
     form_data: ChildProfileForm, current_user: UserModel = Depends(get_verified_user)
 ):
-    """Create a new child profile"""
+    """Create a new child profile and optionally a user account"""
+    log.info(f"[create_child_profile] Received form_data: {form_data}")
+    generated_password = None
+    
     try:
         # Determine session_number if not provided
         if form_data.session_number is None:
@@ -74,6 +111,7 @@ async def create_child_profile(
         else:
             session_number = form_data.session_number
 
+        # Create the child profile
         child_profile = ChildProfiles.insert_new_child_profile(
             form_data, current_user.id, session_number=session_number
         )
@@ -82,7 +120,71 @@ async def create_child_profile(
                 status_code=500, detail="Failed to create child profile"
             )
 
-        return ChildProfileResponse(**child_profile.model_dump())
+        # Create user account if email is provided
+        if form_data.child_email:
+            # Check if user with this email already exists
+            existing_user = Users.get_user_by_email(form_data.child_email)
+            
+            if not existing_user:
+                # Generate a secure passphrase
+                generated_password = generate_passphrase()
+                
+                try:
+                    # Create the user account with "child" role
+                    child_user = Auths.insert_new_auth(
+                        email=form_data.child_email,
+                        password=get_password_hash(generated_password),
+                        name=form_data.name,
+                        role="child"
+                    )
+                    
+                    if child_user:
+                        log.info(f"Created child user account: {child_user.email}")
+                        log.info(f"Generated password for {child_user.email}: {generated_password}")
+                    else:
+                        log.warning(f"Failed to create user account for: {form_data.child_email}")
+                        # Don't fail the whole request, profile is still created
+                        generated_password = None
+                except Exception as user_err:
+                    log.error(f"Error creating child user account: {user_err}")
+                    # Don't fail the whole request, profile is still created
+                    generated_password = None
+
+        # Sync child user settings.system from selected_features
+        log.info(
+            "[create_child_profile] child_email=%s, selected_features=%s",
+            (form_data.child_email or "")[:30] or None,
+            form_data.selected_features,
+        )
+        if form_data.child_email:
+            child_user_to_update = Users.get_user_by_email(form_data.child_email)
+            if child_user_to_update:
+                prompt = build_child_system_prompt(form_data.selected_features)
+                updated = Users.update_user_settings_by_id(
+                    child_user_to_update.id, {"system": prompt}
+                )
+                if updated:
+                    log.info(
+                        "Synced system prompt for child user %s from profile",
+                        form_data.child_email[:30],
+                    )
+                else:
+                    log.warning(
+                        "Sync failed: update_user_settings_by_id returned None for child %s",
+                        form_data.child_email[:30],
+                    )
+            else:
+                log.warning(
+                    "Sync skipped: no user found for child_email=%s",
+                    form_data.child_email[:30],
+                )
+
+        # Prepare response with generated password (if created)
+        response_data = child_profile.model_dump()
+        if generated_password:
+            response_data['generated_password'] = generated_password
+        
+        return ChildProfileResponse(**response_data)
     except HTTPException:
         # Re-raise HTTP exceptions as-is (they already have proper error messages)
         raise
@@ -97,8 +199,26 @@ async def create_child_profile(
 
 @router.get("/child-profiles", response_model=List[ChildProfileResponse])
 async def get_child_profiles(current_user: UserModel = Depends(get_verified_user)):
-    """Get all child profiles for the current user"""
+    """Get all child profiles for the current user (parents) or own profile (child users)."""
     try:
+        if current_user.role == "child":
+            log.info(
+                "[get_child_profiles] Child user request, email=%s",
+                (current_user.email or "")[:30],
+            )
+            profile = ChildProfiles.get_child_profile_by_child_email(current_user.email)
+            if profile:
+                log.info(
+                    "[get_child_profiles] Found profile id=%s, selected_features=%s",
+                    profile.id,
+                    getattr(profile, "selected_features", None),
+                )
+            else:
+                log.warning(
+                    "[get_child_profiles] No profile found for child email=%s",
+                    (current_user.email or "")[:30],
+                )
+            return [ChildProfileResponse(**profile.model_dump())] if profile else []
         profiles = ChildProfiles.get_child_profiles_by_user(current_user.id)
         return [ChildProfileResponse(**profile.model_dump()) for profile in profiles]
     except Exception as e:
@@ -137,6 +257,49 @@ async def update_child_profile(
         )
         if not profile:
             raise HTTPException(status_code=404, detail="Child profile not found")
+
+        # Sync child user settings.system from selected_features
+        child_email = form_data.child_email or getattr(
+            profile, "child_email", None
+        )
+        selected = form_data.selected_features or getattr(
+            profile, "selected_features", None
+        )
+        log.info(
+            "[update_child_profile] child_email=%s selected_features=%s",
+            (child_email or "")[:30] or None,
+            selected,
+        )
+        if child_email:
+            child_user_to_update = Users.get_user_by_email(child_email)
+            if child_user_to_update:
+                prompt = build_child_system_prompt(selected)
+                log.info(
+                    "[update_child_profile] building prompt for child %s, prompt_len=%d",
+                    child_email[:30],
+                    len(prompt) if prompt else 0,
+                )
+                updated_user = Users.update_user_settings_by_id(
+                    child_user_to_update.id, {"system": prompt}
+                )
+                if updated_user:
+                    s = getattr(updated_user, "settings", None)
+                    sys_val = (s.get("system", "") if isinstance(s, dict) else getattr(s, "system", "")) if s else ""
+                    log.info(
+                        "[update_child_profile] settings populated for child %s, system prompt len=%d",
+                        child_email[:30],
+                        len(sys_val),
+                    )
+                else:
+                    log.warning(
+                        "[update_child_profile] update_user_settings_by_id returned None for child %s",
+                        child_email[:30],
+                    )
+            else:
+                log.warning(
+                    "[update_child_profile] no user found for child_email=%s",
+                    (child_email or "")[:30],
+                )
 
         return ChildProfileResponse(**profile.model_dump())
     except HTTPException:

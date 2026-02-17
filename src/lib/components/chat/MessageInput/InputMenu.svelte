@@ -46,6 +46,9 @@
 	export let onUpload: Function;
 	export let onClose: Function;
 
+	/** When true, hide Attach Notes and Attach Knowledge (used in kids chat) */
+	export let hideNotesAndKnowledge = false;
+
 	let show = false;
 	let tab = '';
 
@@ -207,7 +210,7 @@
 						</DropdownMenu.Item>
 					</Tooltip>
 
-					{#if $config?.features?.enable_notes ?? false}
+					{#if !hideNotesAndKnowledge && ($config?.features?.enable_notes ?? false)}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -239,6 +242,7 @@
 						</Tooltip>
 					{/if}
 
+					{#if !hideNotesAndKnowledge}
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
 							? $i18n.t('Model(s) do not support file upload')
@@ -268,6 +272,7 @@
 							</div>
 						</button>
 					</Tooltip>
+					{/if}
 
 					{#if ($chats ?? []).length > 0}
 						<Tooltip
