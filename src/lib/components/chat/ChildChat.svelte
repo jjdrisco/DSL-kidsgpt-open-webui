@@ -93,6 +93,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import PlaceholderChild from './PlaceholderChild.svelte';
+	import ParentPreviewBanner from './ParentPreviewBanner.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -100,6 +101,9 @@
 	import Image from '../common/Image.svelte';
 
 	export let chatIdProp = '';
+
+	// True for both child users and parents in preview mode — used to route to /kids/chat paths
+	$: isChildChatUser = $user?.role === 'child' || $user?.role === 'parent';
 
 	let loading = true;
 
@@ -211,7 +215,7 @@
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
 		} else {
-			const mainPath = $user?.role === 'child' ? '/kids/chat' : '/';
+			const mainPath = isChildChatUser ? '/kids/chat' : '/';
 			await goto(mainPath);
 		}
 	};
@@ -556,9 +560,11 @@
 		// Load child profile before rendering (ensures interface modes work)
 		await loadChildProfileForCurrentUser();
 
-		// Refetch user settings for child users - ensures settings.system (whitelist prompt) is fresh
-		// after parent updates profile; otherwise $settings.system would be stale
-		if ($user?.role === 'child' && localStorage.token) {
+		// Refetch user settings for child/parent users - ensures settings.system (whitelist prompt) is fresh.
+		// For child users: parent may have updated the child's profile.
+		// For parent users in preview: settings.system should already be synced by setCurrentChildId(),
+		// but we refetch here to pick up any stale state on initial mount.
+		if (($user?.role === 'child' || $user?.role === 'parent') && localStorage.token) {
 			const userSettings = await getUserSettings(localStorage.token).catch(() => null);
 			if (userSettings) {
 				settings.set({
@@ -578,7 +584,7 @@
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
 
 		pageSubscribe = page.subscribe(async (p) => {
-			const isMainChatPath = p.url.pathname === '/' || ($user?.role === 'child' && p.url.pathname === '/kids/chat');
+			const isMainChatPath = p.url.pathname === '/' || (isChildChatUser && p.url.pathname === '/kids/chat');
 			if (isMainChatPath) {
 				await tick();
 				initNewChat();
@@ -931,7 +937,7 @@
 		await showOverview.set(false);
 		await showArtifacts.set(false);
 
-		const mainPath = $user?.role === 'child' ? '/kids/chat' : '/';
+		const mainPath = isChildChatUser ? '/kids/chat' : '/';
 		if ($page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', mainPath);
 		} else if ($page.url.pathname.includes('/kids/chat/')) {
@@ -1017,7 +1023,7 @@
 		}
 
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			const mainPath = $user?.role === 'child' ? '/kids/chat' : '/';
+			const mainPath = isChildChatUser ? '/kids/chat' : '/';
 			await goto(mainPath);
 			return null;
 		});
@@ -2234,7 +2240,7 @@
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
-			const chatPath = $user?.role === 'child' ? `/kids/chat/${_chatId}` : `/c/${_chatId}`;
+			const chatPath = isChildChatUser ? `/kids/chat/${_chatId}` : `/c/${_chatId}`;
 			window.history.replaceState(history.state, '', chatPath);
 
 			await tick();
@@ -2354,6 +2360,8 @@
 >
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
+			<ParentPreviewBanner />
+
 			{#if $selectedFolder && $selectedFolder?.meta?.background_image_url}
 				<div
 					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
@@ -2425,7 +2433,7 @@
 									chatId.set(savedChat.id);
 									chats.set(await getChatList(localStorage.token, $currentChatPage));
 
-									const chatPath = $user?.role === 'child' ? `/kids/chat/${savedChat.id}` : `/c/${savedChat.id}`;
+									const chatPath = isChildChatUser ? `/kids/chat/${savedChat.id}` : `/c/${savedChat.id}`;
 									await goto(chatPath);
 									toast.success($i18n.t('Conversation saved successfully'));
 								}

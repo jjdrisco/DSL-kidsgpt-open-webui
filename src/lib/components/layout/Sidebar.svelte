@@ -622,8 +622,10 @@
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
 
-	const getMainChatPath = () => ($user?.role === 'child' ? '/kids/chat' : '/');
-	const getChatPath = (id: string) => ($user?.role === 'child' ? `/kids/chat/${id}` : `/c/${id}`);
+	const getMainChatPath = () =>
+		$user?.role === 'child' || $user?.role === 'parent' ? '/kids/chat' : '/';
+	const getChatPath = (id: string) =>
+		$user?.role === 'child' || $user?.role === 'parent' ? `/kids/chat/${id}` : `/c/${id}`;
 	const isOnChatPage = () => {
 		const p = $page.url.pathname;
 		return p.startsWith('/c/') || p.startsWith('/kids/chat');

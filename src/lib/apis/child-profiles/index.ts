@@ -232,6 +232,38 @@ export const deleteChildProfile = async (token: string = '', profileId: string) 
 	return res;
 };
 
+export const applyPreviewSettings = async (token: string = '', profileId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/child-profiles/${profileId}/apply-preview`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json(); // { system: string }
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res as { system: string };
+};
+
 export const getChildProfilesForUser = async (token: string = '', userId: string) => {
 	let error = null;
 

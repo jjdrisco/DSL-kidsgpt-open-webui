@@ -24,7 +24,7 @@
 			try {
 				const profiles = await getChildProfiles(localStorage.token);
 				if (profiles && profiles.length > 0) {
-					showChat = true;
+					goto('/kids/chat');
 					return;
 				}
 			} catch (e) {

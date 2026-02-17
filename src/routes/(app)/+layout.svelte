@@ -432,6 +432,11 @@
 				return;
 			}
 
+			// Allow parent users to access /kids/chat for preview
+			if (userType === 'parent' && currentPath.startsWith('/kids/chat')) {
+				return;
+			}
+
 			// Child users: redirect / to /kids/chat
 			if (userType === 'child' && currentPath === '/') {
 				await goto('/kids/chat');

@@ -20,7 +20,7 @@
 			mayFetchWhitelist: $user?.role === 'admin'
 		});
 
-		if (userType === 'child') {
+		if (userType === 'child' || userType === 'parent') {
 			goto(`/kids/chat/${$page.params.id}`);
 			return;
 		}

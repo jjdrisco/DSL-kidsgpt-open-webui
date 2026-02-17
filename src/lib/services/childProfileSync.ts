@@ -31,6 +31,7 @@ import {
 	createChildProfile,
 	updateChildProfile,
 	deleteChildProfile,
+	applyPreviewSettings,
 	type ChildProfile,
 	type ChildProfileForm
 } from '$lib/apis/child-profiles';
@@ -471,6 +472,20 @@ class ChildProfileSyncService {
 					const { selectedChildId, ...rest } = s as Record<string, unknown>;
 					return rest;
 				});
+			}
+
+			// For parent users: sync the selected child's system prompt to the parent's
+			// backend settings so the LLM enforces the same whitelist during preview.
+			if (childId && userData.role === 'parent') {
+				try {
+					const result = await applyPreviewSettings(userData.token, childId);
+					if (result?.system !== undefined) {
+						settings.update((s) => ({ ...s, system: result.system }));
+					}
+				} catch (err) {
+					console.warn('Failed to sync child system prompt for preview:', err);
+					// Non-fatal: preview continues without the system prompt sync
+				}
 			}
 		} catch (error) {
 			console.error('Failed to update selected child in settings:', error);

@@ -83,6 +83,11 @@
 	// Use atSelectedModel or resolved model when available; otherwise pass chat model (gpt-5.2-chat-latest).
 	// Backend falls back to TASK_MODEL when chat model not found.
 	$: profile = $currentUserChildProfile;
+	
+	// Reactive check for prompt_buttons mode (must depend on $currentUserChildProfile for reactivity)
+	$: showPromptButtons = profile?.selected_interface_modes?.includes('prompt_buttons') ?? 
+		(!profile?.selected_interface_modes || profile?.selected_interface_modes.length === 0);
+	
 	$: _debugSuggestions = console.log('[PlaceholderChild] suggestions block check', {
 		selectedModels: selectedModels?.length ?? 0,
 		modelsCount: $_models?.length ?? 0,
@@ -291,7 +296,7 @@
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else}
-		{#if isInterfaceModeEnabled('prompt_buttons')}
+		{#if showPromptButtons}
 			<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 				<div class="mx-5">
 					{#if loadingSuggestions}

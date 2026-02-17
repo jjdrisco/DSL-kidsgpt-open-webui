@@ -27,7 +27,8 @@
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		user
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -395,7 +396,9 @@
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{id}"
+			href={$user?.role === 'child' || $user?.role === 'parent'
+					? `/kids/chat/${id}`
+					: `/c/${id}`}
 			on:click={() => {
 				dispatch('select');
 
