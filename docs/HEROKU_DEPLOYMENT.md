@@ -57,56 +57,65 @@ git push heroku main
 
 ## GitHub Actions Automated Deployment
 
-The repository includes a GitHub Actions workflow (`.github/workflows/heroku-deploy.yaml`) that automatically deploys the main branch to Heroku.
+The repository includes a GitHub Actions workflow (`.github/workflows/heroku-deploy.yaml`) that automatically deploys to different Heroku apps based on the branch:
+
+- **Main branch** → `dsl-kidsgpt-pilot` (buildpack deployment)
+- **Dev branch** → `dsl-kidsgpt-pilot-alt` (container deployment)
+
+### App Configuration
+
+| Branch | App Name | Stack | Deployment Method |
+|--------|----------|-------|-------------------|
+| main | dsl-kidsgpt-pilot | heroku-24 (buildpack) | Git push (uses Procfile) |
+| dev | dsl-kidsgpt-pilot-alt | container | Docker container registry |
 
 ### Setup Instructions
 
-1. **Create a Heroku app** (if not already created):
-   ```bash
-   heroku create YOUR_APP_NAME
-   heroku stack:set container -a YOUR_APP_NAME
-   heroku addons:create heroku-postgresql:essential-0 -a YOUR_APP_NAME
-   ```
+**Required GitHub Secret:**
+- Go to GitHub repository → Settings → Secrets and variables → Actions
+- Add: `HEROKU_API_KEY` (get from: `heroku auth:token`)
 
-2. **Get your Heroku API key**:
-   ```bash
-   heroku auth:token
-   ```
+**Configure environment variables** on Heroku apps:
+```bash
+# For main app (dsl-kidsgpt-pilot)
+heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a dsl-kidsgpt-pilot
+heroku config:set OPENAI_API_KEY=your-openai-key -a dsl-kidsgpt-pilot
+heroku config:set CORS_ALLOW_ORIGIN="https://dsl-kidsgpt-pilot.herokuapp.com" -a dsl-kidsgpt-pilot
+heroku config:set VECTOR_DB=pgvector -a dsl-kidsgpt-pilot
 
-3. **Add GitHub Secrets** to your repository:
-   - Go to GitHub repository → Settings → Secrets and variables → Actions
-   - Add the following secrets:
-     - `HEROKU_API_KEY`: Your Heroku API token from step 2
-     - `HEROKU_APP_NAME`: Your Heroku app name (e.g., `my-kidsgpt-app`)
-
-4. **Configure environment variables** on Heroku:
-   ```bash
-   heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a YOUR_APP_NAME
-   heroku config:set OPENAI_API_KEY=your-openai-key -a YOUR_APP_NAME
-   heroku config:set CORS_ALLOW_ORIGIN="https://YOUR_APP_NAME.herokuapp.com" -a YOUR_APP_NAME
-   heroku config:set VECTOR_DB=pgvector -a YOUR_APP_NAME
-   ```
-
-5. **Push to main branch** to trigger deployment:
-   ```bash
-   git push origin main
-   ```
+# For dev app (dsl-kidsgpt-pilot-alt)
+heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a dsl-kidsgpt-pilot-alt
+heroku config:set OPENAI_API_KEY=your-openai-key -a dsl-kidsgpt-pilot-alt
+heroku config:set CORS_ALLOW_ORIGIN="https://dsl-kidsgpt-pilot-alt.herokuapp.com" -a dsl-kidsgpt-pilot-alt
+heroku config:set VECTOR_DB=pgvector -a dsl-kidsgpt-pilot-alt
+```
 
 ### Workflow Behavior
 
-- **Triggers**: Automatically on pushes to `main` branch, or manually via workflow_dispatch
+**Main Branch (Buildpack Deployment):**
+- **Triggers**: Pushes to `main` branch or manual workflow_dispatch
 - **Process**:
   1. Checks out the repository
   2. Installs Heroku CLI
-  3. Builds the base Docker image (no variant suffixes)
+  3. Configures git authentication with Heroku
+  4. Pushes code to Heroku git remote
+  5. Heroku builds using buildpacks (Node.js + Python)
+  6. Uses Procfile for process definition
+
+**Dev Branch (Container Deployment):**
+- **Triggers**: Pushes to `dev` branch or manual workflow_dispatch
+- **Process**:
+  1. Checks out the repository
+  2. Installs Heroku CLI
+  3. Builds Docker image with BUILD_HASH
   4. Pushes to Heroku Container Registry
-  5. Releases the new version to your Heroku app
-- **Build Args**: Includes `BUILD_HASH` for version tracking
+  5. Releases the container to Heroku app
 
 ### Manual Deployment
 
-You can also trigger deployment manually from GitHub:
-- Go to Actions → Deploy to Heroku → Run workflow → Select main branch
+You can trigger deployment manually from GitHub:
+- Go to Actions → Deploy to Heroku → Run workflow
+- Select the branch (main or dev) to deploy
 
 ---
 
@@ -278,10 +287,11 @@ heroku logs --tail -a YOUR_APP_NAME
 
 ## Known Heroku Apps
 
-| App | Stack | Notes |
-|-----|-------|-------|
-| `contextquiz-openwebui-kidsgpt` | container (Docker) | Primary production app |
-| `dsl-kidsgpt-pilot` | heroku-24 (buildpack) | Node.js + Python buildpacks |
+| App | Stack | Branch | Deployment Method | Notes |
+|-----|-------|--------|-------------------|-------|
+| `dsl-kidsgpt-pilot` | heroku-24 (buildpack) | main | Git push (GitHub Actions) | Production app - buildpack deployment |
+| `dsl-kidsgpt-pilot-alt` | container | dev | Container registry (GitHub Actions) | Development app - Docker container |
+| `contextquiz-openwebui-kidsgpt` | container (Docker) | - | Manual | Legacy production app |
 
 ---
 
