@@ -1,25 +1,49 @@
 name: Deploy to Heroku
 
-# This workflow deploys the main branch to a Heroku webapp using Docker Container Registry.
-# It builds the base Docker image (without variant suffixes like -cuda, -ollama, -slim).
+# This workflow deploys to different Heroku apps based on branch:
+# - main branch → dsl-kidsgpt-pilot (buildpack deployment using Procfile)
+# - dev branch → dsl-kidsgpt-pilot-alt (container deployment using heroku.yml)
 #
 # Required GitHub Secrets:
 #   - HEROKU_API_KEY: Your Heroku API key (get from: heroku auth:token)
-#   - HEROKU_APP_NAME: Name of your Heroku app (e.g., my-kidsgpt-app)
 #
-# Prerequisites:
-#   - Heroku app must be configured with container stack: heroku stack:set container
-#   - Heroku app should have the necessary environment variables configured
-#   - PostgreSQL addon should be provisioned: heroku addons:create heroku-postgresql:essential-0
+# App Configuration:
+#   - dsl-kidsgpt-pilot: heroku-24 stack (buildpack)
+#   - dsl-kidsgpt-pilot-alt: container stack
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - dev
 
 jobs:
-  deploy:
+  deploy-buildpack:
+    # Deploy main branch using buildpack to dsl-kidsgpt-pilot
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Deploy to Heroku (buildpack)
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          git remote add heroku https://git.heroku.com/dsl-kidsgpt-pilot.git || true
+          echo "machine git.heroku.com login _ password ${HEROKU_API_KEY}" > ~/.netrc
+          git push heroku ${{ github.ref }}:main --force
+
+  deploy-container:
+    # Deploy dev branch using container to dsl-kidsgpt-pilot-alt
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,23 +62,18 @@ jobs:
           echo ${HEROKU_API_KEY} | docker login --username=_ --password-stdin registry.heroku.com
 
       - name: Build Docker image
-        env:
-          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         run: |
           docker build \
             --build-arg BUILD_HASH=${{ github.sha }} \
-            -t registry.heroku.com/${HEROKU_APP_NAME}/web \
+            -t registry.heroku.com/dsl-kidsgpt-pilot-alt/web \
             .
 
       - name: Push Docker image to Heroku
-        env:
-          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         run: |
-          docker push registry.heroku.com/${HEROKU_APP_NAME}/web
+          docker push registry.heroku.com/dsl-kidsgpt-pilot-alt/web
 
       - name: Release to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         run: |
-          heroku container:release web --app ${HEROKU_APP_NAME}
+          heroku container:release web --app dsl-kidsgpt-pilot-alt
