@@ -1,6 +1,6 @@
 # Heroku Deployment Guide
 
-**Last Updated**: 2026-02-05  
+**Last Updated**: 2026-02-17  
 **Project**: DSL KidsGPT Open WebUI
 
 This document consolidates all Heroku deployment configuration, debugging history, and troubleshooting for this project.
@@ -10,12 +10,13 @@ This document consolidates all Heroku deployment configuration, debugging histor
 ## Table of Contents
 
 1. [Deployment Options](#deployment-options)
-2. [Configuration Files](#configuration-files)
-3. [Environment Variables](#environment-variables)
-4. [Optional Packages (Lazy Imports)](#optional-packages-lazy-imports)
-5. [Debugging History](#debugging-history)
-6. [Troubleshooting](#troubleshooting)
-7. [Known Heroku Apps](#known-heroku-apps)
+2. [GitHub Actions Automated Deployment](#github-actions-automated-deployment)
+3. [Configuration Files](#configuration-files)
+4. [Environment Variables](#environment-variables)
+5. [Optional Packages (Lazy Imports)](#optional-packages-lazy-imports)
+6. [Debugging History](#debugging-history)
+7. [Troubleshooting](#troubleshooting)
+8. [Known Heroku Apps](#known-heroku-apps)
 
 ---
 
@@ -51,6 +52,61 @@ git push heroku main
 **Important**: `NPM_CONFIG_PRODUCTION=false` ensures devDependencies (vite, svelte, etc.) are installed for the frontend build.
 
 **Key files**: `Procfile`, `app.json`, `requirements.txt` (root)
+
+---
+
+## GitHub Actions Automated Deployment
+
+The repository includes a GitHub Actions workflow (`.github/workflows/heroku-deploy.yaml`) that automatically deploys the main branch to Heroku.
+
+### Setup Instructions
+
+1. **Create a Heroku app** (if not already created):
+   ```bash
+   heroku create YOUR_APP_NAME
+   heroku stack:set container -a YOUR_APP_NAME
+   heroku addons:create heroku-postgresql:essential-0 -a YOUR_APP_NAME
+   ```
+
+2. **Get your Heroku API key**:
+   ```bash
+   heroku auth:token
+   ```
+
+3. **Add GitHub Secrets** to your repository:
+   - Go to GitHub repository → Settings → Secrets and variables → Actions
+   - Add the following secrets:
+     - `HEROKU_API_KEY`: Your Heroku API token from step 2
+     - `HEROKU_APP_NAME`: Your Heroku app name (e.g., `my-kidsgpt-app`)
+
+4. **Configure environment variables** on Heroku:
+   ```bash
+   heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a YOUR_APP_NAME
+   heroku config:set OPENAI_API_KEY=your-openai-key -a YOUR_APP_NAME
+   heroku config:set CORS_ALLOW_ORIGIN="https://YOUR_APP_NAME.herokuapp.com" -a YOUR_APP_NAME
+   heroku config:set VECTOR_DB=pgvector -a YOUR_APP_NAME
+   ```
+
+5. **Push to main branch** to trigger deployment:
+   ```bash
+   git push origin main
+   ```
+
+### Workflow Behavior
+
+- **Triggers**: Automatically on pushes to `main` branch, or manually via workflow_dispatch
+- **Process**:
+  1. Checks out the repository
+  2. Installs Heroku CLI
+  3. Builds the base Docker image (no variant suffixes)
+  4. Pushes to Heroku Container Registry
+  5. Releases the new version to your Heroku app
+- **Build Args**: Includes `BUILD_HASH` for version tracking
+
+### Manual Deployment
+
+You can also trigger deployment manually from GitHub:
+- Go to Actions → Deploy to Heroku → Run workflow → Select main branch
 
 ---
 
