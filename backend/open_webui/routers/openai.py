@@ -1049,7 +1049,7 @@ async def generate_chat_completion(
                         validation_result = await validate_response_against_whitelist(
                             response_text=response_text,
                             whitelist_system_prompt=system,
-                            original_child_prompt=child_prompt if 'child_prompt' in locals() else None,
+                            original_child_prompt=child_prompt if child_prompt else None,
                         )
                         
                         # Determine if response should be blocked
@@ -1061,7 +1061,7 @@ async def generate_chat_completion(
                             child_id=getattr(user, "child_profile_id", None),
                             response_text=response_text,
                             whitelist_system_prompt=system,
-                            original_child_prompt=child_prompt if 'child_prompt' in locals() else None,
+                            original_child_prompt=child_prompt if child_prompt else None,
                             is_compliant=validation_result["is_compliant"],
                             severity=validation_result["severity"],
                             violations=validation_result["violations"],
