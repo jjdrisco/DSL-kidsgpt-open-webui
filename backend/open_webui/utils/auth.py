@@ -458,11 +458,16 @@ def is_interviewee_user(study_id: Optional[str]) -> bool:
 
 def get_user_type(user, study_id: Optional[str] = None) -> str:
     """
-    Determine user type based on role and STUDY_ID whitelist.
-    Returns: "interviewee", "parent", "child", "admin", or "user"
+    Determine user type based on role, Prolific identifiers, and STUDY_ID whitelist.
+    Returns: "prolific", "interviewee", "parent", "child", "admin", or "user"
     """
     if user.role == "admin":
         return "admin"
+
+    # Prolific participants are identified by the `prolific_pid` column on the user model
+    # Treat Prolific as a distinct derived user type used by the onboarding/workflow guards.
+    if hasattr(user, "prolific_pid") and getattr(user, "prolific_pid"):
+        return "prolific"
 
     if user.role == "child":
         return "child"
@@ -473,8 +478,7 @@ def get_user_type(user, study_id: Optional[str] = None) -> str:
     if user.role == "interviewee":
         return "interviewee"
 
-    # For users with role "user", check STUDY_ID to determine if they should be interviewee
-    # If they have parent_id, they're a child
+    # For users with role "user", check if they're a child (parent_id present)
     if hasattr(user, "parent_id") and user.parent_id:
         return "child"
 

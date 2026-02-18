@@ -50,6 +50,11 @@
 
 	const dispatch = createEventDispatcher();
 
+	// Derived flag: treat user as Prolific if either the server-side user object
+	// contains `prolific_pid` or the browser localStorage contains `prolificPid`.
+	let isProlific = false;
+	$: isProlific = !!($user?.prolific_pid || (typeof window !== 'undefined' && localStorage.getItem('prolificPid')));
+
 	let usage = null;
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
@@ -256,7 +261,7 @@
 			{@const isParentOrChild =
 				$user?.role === 'parent' || $user?.role === 'child' || ($user as any)?.parent_id}
 
-			{#if isSurveyOrWorkflowRoute}
+			{#if isSurveyOrWorkflowRoute && !isProlific}
 				<DropdownMenu.Item
 					as="a"
 					href="/"
