@@ -18,23 +18,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up QEMU (cross-build)
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Login to Heroku Container Registry
-        run: |
-          echo "${{ secrets.HEROKU_API_KEY }}" | docker login --username=_ --password-stdin registry.heroku.com
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        uses: docker/login-action@v2
+        with:
+          registry: registry.heroku.com
+          username: _
+          password: ${{ secrets.HEROKU_API_KEY }}
 
-      - name: Build Docker image
-        run: |
-          # Heroku Container Registry rejects manifest lists/attestations (error: unsupported).
-          # Build a single-platform image with attestations disabled so push succeeds.
-          docker build --provenance=false --sbom=false -t registry.heroku.com/$HEROKU_APP_NAME/web .
-        env:
-          DOCKER_DEFAULT_PLATFORM: linux/amd64
-
-      - name: Push to Heroku Container Registry
-        run: |
-          docker push registry.heroku.com/$HEROKU_APP_NAME/web
+      - name: Build and push Docker image (linux/amd64)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: registry.heroku.com/${{ env.HEROKU_APP_NAME }}/web:latest
+          platforms: linux/amd64
 
       - name: Install Heroku CLI
         run: |
