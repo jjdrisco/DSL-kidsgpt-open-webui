@@ -50,10 +50,10 @@
 
 	const dispatch = createEventDispatcher();
 
-	// Derived flag: treat user as Prolific if either the server-side user object
-	// contains `prolific_pid` or the browser localStorage contains `prolificPid`.
+	// Derived flag: treat user as Prolific based on server-derived `user_type`.
+	// Do NOT rely on localStorage/prolific_pid for UI gating — use `user_type`.
 	let isProlific = false;
-	$: isProlific = !!($user?.prolific_pid || (typeof window !== 'undefined' && localStorage.getItem('prolificPid')));
+	$: isProlific = $user?.user_type === 'prolific';
 
 	let usage = null;
 	const getUsageInfo = async () => {

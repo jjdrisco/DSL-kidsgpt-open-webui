@@ -150,6 +150,10 @@ async def get_session_user(
         user.id, request.app.state.config.USER_PERMISSIONS, db=db
     )
 
+    # Compute derived user type and include it in session response so frontend
+    # can rely on `user_type` instead of checking prolific_pid/localStorage.
+    from open_webui.utils.auth import get_user_type
+
     response_data = {
         "token": token,
         "token_type": "Bearer",
@@ -158,6 +162,7 @@ async def get_session_user(
         "email": user.email,
         "name": user.name,
         "role": user.role,
+        "user_type": get_user_type(user),
         "profile_image_url": user.profile_image_url,
         "bio": user.bio,
         "gender": user.gender,

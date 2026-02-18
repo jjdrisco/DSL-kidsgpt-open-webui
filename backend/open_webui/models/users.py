@@ -106,6 +106,10 @@ class UserModel(BaseModel):
     profile_image_url: str
     profile_banner_image_url: Optional[str] = None
 
+    # Derived user type (computed server-side via `get_user_type`)
+    # Possible values: "prolific", "interviewee", "parent", "child", "admin", "user"
+    user_type: Optional[str] = None
+
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None

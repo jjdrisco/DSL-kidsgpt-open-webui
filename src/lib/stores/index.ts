@@ -443,4 +443,6 @@ export type SessionUser = {
 	parent_id?: string | null;
 	consent_given?: boolean | null;
 	current_session_id?: string | null;
+	// Server-derived user type ("prolific" | "interviewee" | "parent" | "child" | "admin" | "user")
+	user_type?: string;
 };

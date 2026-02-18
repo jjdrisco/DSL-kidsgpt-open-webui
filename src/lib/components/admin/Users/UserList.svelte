@@ -352,6 +352,9 @@
 								<Badge
 									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
 									content={$i18n.t(user.role)}
+							{#if user.user_type === 'prolific'}
+								<Badge type="success" content="Prolific" />
+							{/if}
 								/>
 							</button>
 						</td>
