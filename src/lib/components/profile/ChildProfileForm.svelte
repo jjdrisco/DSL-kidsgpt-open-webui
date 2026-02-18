@@ -650,10 +650,10 @@
 							<div class="relative group flex flex-col">
 								<button
 									type="button"
-									class={`w-full px-6 py-4 rounded-full transition-all duration-200 ${i === selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
+									class={`w-full px-6 py-4 rounded-md transition-all duration-200 ${i === selectedChildIndex ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50' : 'bg-gray-700 text-white ring-1 ring-gray-500/30 hover:bg-gray-600 hover:ring-gray-400/50'}`}
 									on:click={() => selectChild(i)}
 								>
-									<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
+									<span class="font-medium">{c.name || `Child ${i + 1}`}</span>
 								</button>
 
 								<button
@@ -764,7 +764,7 @@
 			>
 				<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
 					<div class="space-y-6">
-						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
+						<h3 class="text-base font-medium text-gray-900 dark:text-white">Child Information</h3>
 						<p class="text-sm text-gray-600 dark:text-gray-400 -mt-2 mb-2">
 							This survey asks you to describe your child. This information will not be used to
 							customize the scenarios you will be shown and will only be used in the context of
@@ -1072,7 +1072,7 @@
 						{/if}
 						<button
 							type="submit"
-							class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+							class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
 						>
 							Save Profile
 						</button>

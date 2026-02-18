@@ -292,9 +292,9 @@
 			>
 				<div class="text-center mb-6">
 					<div
-						class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"
+						class="w-12 h-12 bg-green-600 rounded-md flex items-center justify-center mx-auto mb-4"
 					>
-						<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
@@ -303,7 +303,7 @@
 							></path>
 						</svg>
 					</div>
-					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Task 1 Complete</h3>
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Profile Complete</h3>
 					<p class="text-gray-600 dark:text-gray-400">
 						Would you like to proceed to the next step?
 					</p>
@@ -312,7 +312,7 @@
 				<div class="flex flex-col space-y-3">
 					<button
 						on:click={proceedToNextStep}
-						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+						class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
 					>
 						Yes, Proceed to the Next Step
 					</button>
