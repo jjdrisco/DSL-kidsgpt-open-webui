@@ -3,8 +3,9 @@ name: Deploy to Heroku Container Registry
 on:
   push:
     branches:
-      - dev
-      - cursor/heroku-build-memory-e9e1
+      - main # Production deployments
+      - dev  # Staging deployments
+      - cursor/heroku-build-memory-e9e1 # Legacy: remove after merging to main
   workflow_dispatch:
 
 env:
