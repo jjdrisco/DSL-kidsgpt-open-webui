@@ -406,18 +406,18 @@ async def compare_child_prompt_to_system(
     """
     Compare the child's prompt against the system prompt to detect potential violations
     or concerning patterns before generating a response.
-    
+
     This function uses an LLM to analyze whether the child's prompt:
     - Attempts to bypass safety guidelines in the system prompt
     - Contains requests that violate system prompt rules
     - Shows patterns of manipulation or jailbreaking attempts
-    
+
     Args:
         child_prompt: The child's input message
         system_prompt: The system prompt containing safety guidelines
         api_key: OpenAI API key
         model: OpenAI model to use for analysis
-        
+
     Returns:
         Dict with:
         - is_compliant: bool - Whether the prompt is compliant
@@ -432,7 +432,7 @@ async def compare_child_prompt_to_system(
             raise ValueError(
                 "OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter."
             )
-    
+
     # Create the analysis prompt
     analysis_prompt = f"""You are an AI safety analyzer. Your job is to compare a child's prompt against a system prompt containing safety guidelines and determine if there are any concerns.
 
@@ -466,18 +466,18 @@ Be conservative but fair. Not every question is a violation - children ask curio
         },
         {"role": "user", "content": analysis_prompt},
     ]
-    
+
     client = OpenAI(api_key=api_key)
     resp = client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=0.3,  # Lower temperature for more consistent analysis
     )
-    
+
     # Parse response
     raw = resp.choices[0].message.content or ""
     data = json.loads(_strip_fences(raw))
-    
+
     return {
         "is_compliant": data.get("is_compliant", True),
         "concern_level": data.get("concern_level", "none"),
@@ -497,20 +497,20 @@ async def validate_response_against_whitelist(
     """
     Validate that the AI's response complies with whitelist rules defined in
     the system prompt. This is a second layer of safety checking after response generation.
-    
+
     This function uses an LLM to verify:
     - The response follows all safety guidelines
     - The response doesn't contain age-inappropriate content
     - The response doesn't provide harmful information
     - The response doesn't bypass intended restrictions
-    
+
     Args:
         response_text: The AI-generated response to validate
         whitelist_system_prompt: The system prompt containing whitelist rules
         original_child_prompt: Optional - the child's original prompt for context
         api_key: OpenAI API key
         model: OpenAI model to use for validation
-        
+
     Returns:
         Dict with:
         - is_compliant: bool - Whether the response passes whitelist check
@@ -526,7 +526,7 @@ async def validate_response_against_whitelist(
             raise ValueError(
                 "OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter."
             )
-    
+
     # Create the validation prompt
     context_section = ""
     if original_child_prompt:
@@ -534,7 +534,7 @@ async def validate_response_against_whitelist(
 ORIGINAL CHILD'S PROMPT (for context):
 {original_child_prompt}
 """
-    
+
     validation_prompt = f"""You are an AI response validator. Your job is to check if an AI-generated response complies with the whitelist safety rules.
 
 WHITELIST SYSTEM PROMPT (Safety Rules):
@@ -568,18 +568,18 @@ Set should_block to true for medium severity or higher violations that pose actu
         },
         {"role": "user", "content": validation_prompt},
     ]
-    
+
     client = OpenAI(api_key=api_key)
     resp = client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=0.3,  # Lower temperature for consistent validation
     )
-    
+
     # Parse response
     raw = resp.choices[0].message.content or ""
     data = json.loads(_strip_fences(raw))
-    
+
     return {
         "is_compliant": data.get("is_compliant", True),
         "severity": data.get("severity", "none"),
@@ -588,4 +588,3 @@ Set should_block to true for medium severity or higher violations that pose actu
         "should_block": data.get("should_block", False),
         "model_used": resp.model,
     }
-

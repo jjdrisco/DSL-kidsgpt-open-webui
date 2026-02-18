@@ -825,7 +825,7 @@ async def generate_chat_completion(
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id, db=db)
-    
+
     # Initialize variables for whitelist enforcement
     system = None
     child_prompt = None
@@ -849,16 +849,20 @@ async def generate_chat_completion(
             payload = apply_model_params_to_body_openai(params, payload)
             if not bypass_system_prompt:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
-                
+
                 # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
                 if user.role == "child" and system:
                     # Extract the last user message (child's prompt)
                     messages = payload.get("messages", [])
                     child_prompt = next(
-                        (msg["content"] for msg in reversed(messages) if msg.get("role") == "user"),
-                        None
+                        (
+                            msg["content"]
+                            for msg in reversed(messages)
+                            if msg.get("role") == "user"
+                        ),
+                        None,
                     )
-                    
+
                     if child_prompt:
                         try:
                             # Perform async prompt comparison
@@ -866,7 +870,7 @@ async def generate_chat_completion(
                                 child_prompt=child_prompt,
                                 system_prompt=system,
                             )
-                            
+
                             # Store the comparison result in database
                             PromptComparisonChecksTable.insert_check(
                                 user_id=user.id,
@@ -880,18 +884,21 @@ async def generate_chat_completion(
                                 model_used=comparison_result["model_used"],
                                 session_number=getattr(user, "session_number", None),
                             )
-                            
+
                             # Log high-concern prompts
-                            if comparison_result["concern_level"] in ["high", "critical"]:
+                            if comparison_result["concern_level"] in [
+                                "high",
+                                "critical",
+                            ]:
                                 log.warning(
                                     f"High-concern child prompt detected for user {user.id}: "
                                     f"level={comparison_result['concern_level']}, "
                                     f"concerns={comparison_result['concerns']}"
                                 )
-                            
+
                             # Note: We don't block the request here, just log for analysis
                             # Future enhancement: could add blocking logic for critical violations
-                            
+
                         except Exception as e:
                             # Don't block the request if validation fails
                             log.error(f"Error in prompt comparison check: {e}")
@@ -1043,25 +1050,29 @@ async def generate_chat_completion(
                         choice = response["choices"][0]
                         if "message" in choice and "content" in choice["message"]:
                             response_text = choice["message"]["content"]
-                    
+
                     if response_text and system:
                         # Perform response validation
                         validation_result = await validate_response_against_whitelist(
                             response_text=response_text,
                             whitelist_system_prompt=system,
-                            original_child_prompt=child_prompt if child_prompt else None,
+                            original_child_prompt=(
+                                child_prompt if child_prompt else None
+                            ),
                         )
-                        
+
                         # Determine if response should be blocked
                         should_block = validation_result["should_block"]
-                        
+
                         # Store the validation result in database
                         ResponseValidationChecksTable.insert_check(
                             user_id=user.id,
                             child_id=getattr(user, "child_profile_id", None),
                             response_text=response_text,
                             whitelist_system_prompt=system,
-                            original_child_prompt=child_prompt if child_prompt else None,
+                            original_child_prompt=(
+                                child_prompt if child_prompt else None
+                            ),
                             is_compliant=validation_result["is_compliant"],
                             severity=validation_result["severity"],
                             violations=validation_result["violations"],
@@ -1071,7 +1082,7 @@ async def generate_chat_completion(
                             model_used=validation_result["model_used"],
                             session_number=getattr(user, "session_number", None),
                         )
-                        
+
                         # Log violations
                         if validation_result["severity"] in ["high", "critical"]:
                             log.warning(
@@ -1079,7 +1090,7 @@ async def generate_chat_completion(
                                 f"severity={validation_result['severity']}, "
                                 f"violations={validation_result['violations']}"
                             )
-                        
+
                         # Block the response if needed
                         if should_block:
                             log.error(
@@ -1089,19 +1100,21 @@ async def generate_chat_completion(
                             return JSONResponse(
                                 status_code=200,
                                 content={
-                                    "choices": [{
-                                        "message": {
-                                            "role": "assistant",
-                                            "content": "I'm sorry, but I can't provide that response. Please ask me something else, or talk to a trusted adult if you need help."
-                                        },
-                                        "finish_reason": "content_filter"
-                                    }],
+                                    "choices": [
+                                        {
+                                            "message": {
+                                                "role": "assistant",
+                                                "content": "I'm sorry, but I can't provide that response. Please ask me something else, or talk to a trusted adult if you need help.",
+                                            },
+                                            "finish_reason": "content_filter",
+                                        }
+                                    ],
                                     "id": response.get("id", "blocked"),
                                     "model": response.get("model", "unknown"),
                                     "object": "chat.completion",
-                                }
+                                },
                             )
-                        
+
                 except Exception as e:
                     # Don't block the response if validation fails
                     log.error(f"Error in response validation check: {e}")

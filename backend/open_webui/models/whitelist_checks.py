@@ -27,22 +27,24 @@ class PromptComparisonCheck(Base):
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
     child_id = Column(Text, nullable=True)  # Optional child profile link
-    
+
     # The prompts being compared
     child_prompt = Column(Text, nullable=False)
     system_prompt = Column(Text, nullable=False)
-    
+
     # Analysis results
     is_compliant = Column(Boolean, nullable=False, default=True)
-    concern_level = Column(Text, nullable=False, default="none")  # none, low, medium, high
+    concern_level = Column(
+        Text, nullable=False, default="none"
+    )  # none, low, medium, high
     concerns = Column(JSONField, nullable=True)  # List of specific concerns
     reasoning = Column(Text, nullable=True)
     model_used = Column(Text, nullable=True)  # Model used for analysis
-    
+
     # Metadata
     session_number = Column(BigInteger, nullable=True)
     created_at = Column(BigInteger, nullable=False)
-    
+
     __table_args__ = (
         Index("idx_prompt_check_user_id", "user_id"),
         Index("idx_prompt_check_child_id", "child_id"),
@@ -62,25 +64,29 @@ class ResponseValidationCheck(Base):
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
     child_id = Column(Text, nullable=True)  # Optional child profile link
-    
+
     # The content being validated
     response_text = Column(Text, nullable=False)
     whitelist_system_prompt = Column(Text, nullable=False)
     original_child_prompt = Column(Text, nullable=True)  # For context
-    
+
     # Validation results
     is_compliant = Column(Boolean, nullable=False, default=True)
-    severity = Column(Text, nullable=False, default="none")  # none, low, medium, high, critical
+    severity = Column(
+        Text, nullable=False, default="none"
+    )  # none, low, medium, high, critical
     violations = Column(JSONField, nullable=True)  # List of specific violations
     reasoning = Column(Text, nullable=True)
     should_block = Column(Boolean, nullable=False, default=False)
-    was_blocked = Column(Boolean, nullable=False, default=False)  # Whether it was actually blocked
+    was_blocked = Column(
+        Boolean, nullable=False, default=False
+    )  # Whether it was actually blocked
     model_used = Column(Text, nullable=True)  # Model used for validation
-    
+
     # Metadata
     session_number = Column(BigInteger, nullable=True)
     created_at = Column(BigInteger, nullable=False)
-    
+
     __table_args__ = (
         Index("idx_response_check_user_id", "user_id"),
         Index("idx_response_check_child_id", "child_id"),
@@ -93,7 +99,7 @@ class ResponseValidationCheck(Base):
 # Pydantic models for API responses
 class PromptComparisonCheckModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: str
     user_id: str
     child_id: Optional[str] = None
@@ -110,7 +116,7 @@ class PromptComparisonCheckModel(BaseModel):
 
 class ResponseValidationCheckModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: str
     user_id: str
     child_id: Optional[str] = None
@@ -131,7 +137,7 @@ class ResponseValidationCheckModel(BaseModel):
 # Database table classes
 class PromptComparisonChecks:
     """Database operations for prompt comparison checks"""
-    
+
     def insert_check(
         self,
         user_id: str,
@@ -149,7 +155,7 @@ class PromptComparisonChecks:
         with get_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
-            
+
             check = PromptComparisonCheck(
                 id=id,
                 user_id=user_id,
@@ -164,13 +170,15 @@ class PromptComparisonChecks:
                 session_number=session_number,
                 created_at=ts,
             )
-            
+
             db.add(check)
             db.commit()
             db.refresh(check)
             return PromptComparisonCheckModel.model_validate(check) if check else None
-    
-    def get_checks_by_user(self, user_id: str, limit: int = 100) -> List[PromptComparisonCheckModel]:
+
+    def get_checks_by_user(
+        self, user_id: str, limit: int = 100
+    ) -> List[PromptComparisonCheckModel]:
         """Get recent prompt checks for a user"""
         with get_db() as db:
             checks = (
@@ -180,12 +188,14 @@ class PromptComparisonChecks:
                 .limit(limit)
                 .all()
             )
-            return [PromptComparisonCheckModel.model_validate(check) for check in checks]
+            return [
+                PromptComparisonCheckModel.model_validate(check) for check in checks
+            ]
 
 
 class ResponseValidationChecks:
     """Database operations for response validation checks"""
-    
+
     def insert_check(
         self,
         user_id: str,
@@ -206,7 +216,7 @@ class ResponseValidationChecks:
         with get_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
-            
+
             check = ResponseValidationCheck(
                 id=id,
                 user_id=user_id,
@@ -224,13 +234,15 @@ class ResponseValidationChecks:
                 session_number=session_number,
                 created_at=ts,
             )
-            
+
             db.add(check)
             db.commit()
             db.refresh(check)
             return ResponseValidationCheckModel.model_validate(check) if check else None
-    
-    def get_checks_by_user(self, user_id: str, limit: int = 100) -> List[ResponseValidationCheckModel]:
+
+    def get_checks_by_user(
+        self, user_id: str, limit: int = 100
+    ) -> List[ResponseValidationCheckModel]:
         """Get recent response validation checks for a user"""
         with get_db() as db:
             checks = (
@@ -240,7 +252,9 @@ class ResponseValidationChecks:
                 .limit(limit)
                 .all()
             )
-            return [ResponseValidationCheckModel.model_validate(check) for check in checks]
+            return [
+                ResponseValidationCheckModel.model_validate(check) for check in checks
+            ]
 
 
 # Global instances

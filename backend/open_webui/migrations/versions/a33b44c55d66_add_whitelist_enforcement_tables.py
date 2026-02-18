@@ -24,7 +24,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     # Determine JSON type based on database dialect
     json_type = JSONB if conn.dialect.name == "postgresql" else sa.JSON
 
@@ -45,7 +45,7 @@ def upgrade() -> None:
             sa.Column("session_number", sa.BigInteger(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=False),
         )
-        
+
         # Create indexes for prompt_comparison_check
         op.create_index(
             "idx_prompt_check_user_id",
@@ -88,7 +88,7 @@ def upgrade() -> None:
             sa.Column("session_number", sa.BigInteger(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=False),
         )
-        
+
         # Create indexes for response_validation_check
         op.create_index(
             "idx_response_check_user_id",
@@ -124,7 +124,9 @@ def downgrade() -> None:
 
     # Drop response_validation_check table and its indexes
     if "response_validation_check" in existing_tables:
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("response_validation_check")]
+        existing_indexes = [
+            idx["name"] for idx in inspector.get_indexes("response_validation_check")
+        ]
         for idx_name in [
             "idx_response_check_blocked",
             "idx_response_check_compliant",
@@ -134,12 +136,14 @@ def downgrade() -> None:
         ]:
             if idx_name in existing_indexes:
                 op.drop_index(idx_name, table_name="response_validation_check")
-        
+
         op.drop_table("response_validation_check")
 
     # Drop prompt_comparison_check table and its indexes
     if "prompt_comparison_check" in existing_tables:
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("prompt_comparison_check")]
+        existing_indexes = [
+            idx["name"] for idx in inspector.get_indexes("prompt_comparison_check")
+        ]
         for idx_name in [
             "idx_prompt_check_compliant",
             "idx_prompt_check_created_at",
@@ -148,5 +152,5 @@ def downgrade() -> None:
         ]:
             if idx_name in existing_indexes:
                 op.drop_index(idx_name, table_name="prompt_comparison_check")
-        
+
         op.drop_table("prompt_comparison_check")

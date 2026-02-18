@@ -186,7 +186,7 @@ async def send_post_request(
             )
         else:
             res = await r.json()
-            
+
             # WHITELIST ENFORCEMENT: Validate response against whitelist for child users
             # Note: This only handles non-streaming responses. Streaming validation needs different approach.
             if user and user.role == "child" and isinstance(res, dict):
@@ -195,11 +195,11 @@ async def send_post_request(
                     response_text = None
                     if "message" in res and "content" in res["message"]:
                         response_text = res["message"]["content"]
-                    
+
                     # Get system prompt from metadata if available
                     system_prompt = metadata.get("system_prompt") if metadata else None
                     child_prompt = metadata.get("child_prompt") if metadata else None
-                    
+
                     if response_text and system_prompt:
                         # Perform response validation
                         validation_result = await validate_response_against_whitelist(
@@ -207,10 +207,10 @@ async def send_post_request(
                             whitelist_system_prompt=system_prompt,
                             original_child_prompt=child_prompt,
                         )
-                        
+
                         # Determine if response should be blocked
                         should_block = validation_result["should_block"]
-                        
+
                         # Store the validation result in database
                         ResponseValidationChecksTable.insert_check(
                             user_id=user.id,
@@ -227,7 +227,7 @@ async def send_post_request(
                             model_used=validation_result["model_used"],
                             session_number=getattr(user, "session_number", None),
                         )
-                        
+
                         # Log violations
                         if validation_result["severity"] in ["high", "critical"]:
                             log.warning(
@@ -235,7 +235,7 @@ async def send_post_request(
                                 f"severity={validation_result['severity']}, "
                                 f"violations={validation_result['violations']}"
                             )
-                        
+
                         # Block the response if needed
                         if should_block:
                             log.error(
@@ -245,16 +245,16 @@ async def send_post_request(
                             return {
                                 "message": {
                                     "role": "assistant",
-                                    "content": "I'm sorry, but I can't provide that response. Please ask me something else, or talk to a trusted adult if you need help."
+                                    "content": "I'm sorry, but I can't provide that response. Please ask me something else, or talk to a trusted adult if you need help.",
                                 },
                                 "done": True,
                                 "model": res.get("model", "unknown"),
                             }
-                        
+
                 except Exception as e:
                     # Don't block the response if validation fails
                     log.error(f"Error in Ollama response validation check: {e}")
-            
+
             return res
 
     except HTTPException as e:
@@ -1373,16 +1373,20 @@ async def generate_chat_completion(
             payload = apply_model_params_to_body_ollama(params, payload)
             if not bypass_system_prompt:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
-                
+
                 # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
                 if user.role == "child" and system:
                     # Extract the last user message (child's prompt)
                     messages = payload.get("messages", [])
                     child_prompt = next(
-                        (msg["content"] for msg in reversed(messages) if msg.get("role") == "user"),
-                        None
+                        (
+                            msg["content"]
+                            for msg in reversed(messages)
+                            if msg.get("role") == "user"
+                        ),
+                        None,
                     )
-                    
+
                     if child_prompt:
                         try:
                             # Perform async prompt comparison
@@ -1390,7 +1394,7 @@ async def generate_chat_completion(
                                 child_prompt=child_prompt,
                                 system_prompt=system,
                             )
-                            
+
                             # Store the comparison result in database
                             PromptComparisonChecksTable.insert_check(
                                 user_id=user.id,
@@ -1404,22 +1408,25 @@ async def generate_chat_completion(
                                 model_used=comparison_result["model_used"],
                                 session_number=getattr(user, "session_number", None),
                             )
-                            
+
                             # Log high-concern prompts
-                            if comparison_result["concern_level"] in ["high", "critical"]:
+                            if comparison_result["concern_level"] in [
+                                "high",
+                                "critical",
+                            ]:
                                 log.warning(
                                     f"High-concern child prompt detected for user {user.id}: "
                                     f"level={comparison_result['concern_level']}, "
                                     f"concerns={comparison_result['concerns']}"
                                 )
-                            
+
                             # Note: We don't block the request here, just log for analysis
                             # Future enhancement: could add blocking logic for critical violations
-                            
+
                         except Exception as e:
                             # Don't block the request if validation fails
                             log.error(f"Error in prompt comparison check: {e}")
-                        
+
                         # Add to metadata for response validation
                         if metadata is None:
                             metadata = {}
