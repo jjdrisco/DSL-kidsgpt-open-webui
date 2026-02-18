@@ -38,6 +38,8 @@ jobs:
           push: true
           tags: registry.heroku.com/${{ env.HEROKU_APP_NAME }}/web:latest
           platforms: linux/amd64
+          provenance: false
+          sbom: false
 
       - name: Install Heroku CLI
         run: |
