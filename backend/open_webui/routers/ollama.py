@@ -47,6 +47,14 @@ from open_webui.models.models import Models
 from open_webui.utils.misc import (
     calculate_sha256,
 )
+from open_webui.utils.moderation import (
+    compare_child_prompt_to_system,
+    validate_response_against_whitelist,
+)
+from open_webui.models.whitelist_checks import (
+    PromptComparisonChecksTable,
+    ResponseValidationChecksTable,
+)
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
@@ -178,6 +186,75 @@ async def send_post_request(
             )
         else:
             res = await r.json()
+
+            # WHITELIST ENFORCEMENT: Validate response against whitelist for child users
+            # Note: This only handles non-streaming responses. Streaming validation needs different approach.
+            if user and user.role == "child" and isinstance(res, dict):
+                try:
+                    # Extract response text from Ollama format
+                    response_text = None
+                    if "message" in res and "content" in res["message"]:
+                        response_text = res["message"]["content"]
+
+                    # Get system prompt from metadata if available
+                    system_prompt = metadata.get("system_prompt") if metadata else None
+                    child_prompt = metadata.get("child_prompt") if metadata else None
+
+                    if response_text and system_prompt:
+                        # Perform response validation
+                        validation_result = await validate_response_against_whitelist(
+                            response_text=response_text,
+                            whitelist_system_prompt=system_prompt,
+                            original_child_prompt=child_prompt,
+                        )
+
+                        # Determine if response should be blocked
+                        should_block = validation_result["should_block"]
+
+                        # Store the validation result in database
+                        ResponseValidationChecksTable.insert_check(
+                            user_id=user.id,
+                            child_id=getattr(user, "child_profile_id", None),
+                            response_text=response_text,
+                            whitelist_system_prompt=system_prompt,
+                            original_child_prompt=child_prompt,
+                            is_compliant=validation_result["is_compliant"],
+                            severity=validation_result["severity"],
+                            violations=validation_result["violations"],
+                            reasoning=validation_result["reasoning"],
+                            should_block=should_block,
+                            was_blocked=should_block,
+                            model_used=validation_result["model_used"],
+                            session_number=getattr(user, "session_number", None),
+                        )
+
+                        # Log violations
+                        if validation_result["severity"] in ["high", "critical"]:
+                            log.warning(
+                                f"High-severity response violation for user {user.id}: "
+                                f"severity={validation_result['severity']}, "
+                                f"violations={validation_result['violations']}"
+                            )
+
+                        # Block the response if needed
+                        if should_block:
+                            log.error(
+                                f"Blocking non-compliant response for user {user.id}: "
+                                f"violations={validation_result['violations']}"
+                            )
+                            return {
+                                "message": {
+                                    "role": "assistant",
+                                    "content": "I'm sorry, but I can't provide that response. Please ask me something else, or talk to a trusted adult if you need help.",
+                                },
+                                "done": True,
+                                "model": res.get("model", "unknown"),
+                            }
+
+                except Exception as e:
+                    # Don't block the response if validation fails
+                    log.error(f"Error in Ollama response validation check: {e}")
+
             return res
 
     except HTTPException as e:
@@ -1296,6 +1373,65 @@ async def generate_chat_completion(
             payload = apply_model_params_to_body_ollama(params, payload)
             if not bypass_system_prompt:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
+
+                # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
+                if user.role == "child" and system:
+                    # Extract the last user message (child's prompt)
+                    messages = payload.get("messages", [])
+                    child_prompt = next(
+                        (
+                            msg["content"]
+                            for msg in reversed(messages)
+                            if msg.get("role") == "user"
+                        ),
+                        None,
+                    )
+
+                    if child_prompt:
+                        try:
+                            # Perform async prompt comparison
+                            comparison_result = await compare_child_prompt_to_system(
+                                child_prompt=child_prompt,
+                                system_prompt=system,
+                            )
+
+                            # Store the comparison result in database
+                            PromptComparisonChecksTable.insert_check(
+                                user_id=user.id,
+                                child_id=getattr(user, "child_profile_id", None),
+                                child_prompt=child_prompt,
+                                system_prompt=system,
+                                is_compliant=comparison_result["is_compliant"],
+                                concern_level=comparison_result["concern_level"],
+                                concerns=comparison_result["concerns"],
+                                reasoning=comparison_result["reasoning"],
+                                model_used=comparison_result["model_used"],
+                                session_number=getattr(user, "session_number", None),
+                            )
+
+                            # Log high-concern prompts
+                            if comparison_result["concern_level"] in [
+                                "high",
+                                "critical",
+                            ]:
+                                log.warning(
+                                    f"High-concern child prompt detected for user {user.id}: "
+                                    f"level={comparison_result['concern_level']}, "
+                                    f"concerns={comparison_result['concerns']}"
+                                )
+
+                            # Note: We don't block the request here, just log for analysis
+                            # Future enhancement: could add blocking logic for critical violations
+
+                        except Exception as e:
+                            # Don't block the request if validation fails
+                            log.error(f"Error in prompt comparison check: {e}")
+
+                        # Add to metadata for response validation
+                        if metadata is None:
+                            metadata = {}
+                        metadata["system_prompt"] = system
+                        metadata["child_prompt"] = child_prompt
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
