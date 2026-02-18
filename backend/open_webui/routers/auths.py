@@ -763,6 +763,7 @@ async def signup(
             form_data.name,
             form_data.profile_image_url,
             role,
+            prolific_pid=form_data.prolific_pid,
             db=db,
         )
 

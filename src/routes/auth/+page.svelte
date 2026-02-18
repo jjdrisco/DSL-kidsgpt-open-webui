@@ -123,23 +123,29 @@
 			}
 		}
 
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
-			(error) => {
-				const msg = `${error}`;
-				console.log('[AUTH] signup failed:', msg);
-				if (
-					msg?.toLowerCase().includes('access') ||
-					msg?.toLowerCase().includes('prohibited') ||
-					msg?.toLowerCase().includes('permission')
-				) {
-					signupServerDisabled = true;
-					toast.error('Sign up is disabled by the server. Please contact your administrator.');
-				} else {
-					toast.error(msg);
-				}
-				return null;
+		const prolificPid = typeof window !== 'undefined' ? localStorage.getItem('prolificPid') : null;
+
+		const sessionUser = await userSignUp(
+			name,
+			email,
+			password,
+			generateInitialsImage(name),
+			prolificPid
+		).catch((error) => {
+			const msg = `${error}`;
+			console.log('[AUTH] signup failed:', msg);
+			if (
+				msg?.toLowerCase().includes('access') ||
+				msg?.toLowerCase().includes('prohibited') ||
+				msg?.toLowerCase().includes('permission')
+			) {
+				signupServerDisabled = true;
+				toast.error('Sign up is disabled by the server. Please contact your administrator.');
+			} else {
+				toast.error(msg);
 			}
-		);
+			return null;
+		});
 
 		await setSessionUser(sessionUser);
 	};

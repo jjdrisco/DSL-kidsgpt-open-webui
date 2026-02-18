@@ -279,22 +279,27 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth: Optional[dict] = None,
+        prolific_pid: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
         with get_db_context(db) as db:
-            user = UserModel(
-                **{
-                    "id": id,
-                    "email": email,
-                    "name": name,
-                    "role": role,
-                    "profile_image_url": profile_image_url,
-                    "last_active_at": int(time.time()),
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                    "oauth": oauth,
-                }
-            )
+            user_data = {
+                "id": id,
+                "email": email,
+                "name": name,
+                "role": role,
+                "profile_image_url": profile_image_url,
+                "last_active_at": int(time.time()),
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+                "oauth": oauth,
+            }
+
+            # Include Prolific PID when provided
+            if prolific_pid:
+                user_data["prolific_pid"] = prolific_pid
+
+            user = UserModel(**user_data)
             result = User(**user.model_dump())
             db.add(result)
             db.commit()
