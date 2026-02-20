@@ -48,6 +48,7 @@ class ModerationSessionPayload(BaseModel):
     attempt_number: int
     version_number: int
     session_number: int = 1
+    scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
@@ -89,6 +90,7 @@ async def create_or_update_session(
             attempt_number=form_data.attempt_number,
             version_number=form_data.version_number,
             session_number=form_data.session_number,
+            scenario_id=form_data.scenario_id,
             scenario_prompt=form_data.scenario_prompt,
             original_response=form_data.original_response,
             initial_decision=form_data.initial_decision,

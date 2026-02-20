@@ -41,11 +41,7 @@ export interface ModerationSessionPayload {
 	user_id: string;
 	child_id: string;
 	scenario_index: number;
-	attempt_number: number;
-	version_number: number;
-	session_number?: number;
-	scenario_prompt: string;
-	original_response: string;
+    scenario_id?: string;
 	initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
 	concern_level?: number;
 	concern_reason?: string;
@@ -74,11 +70,7 @@ export interface ModerationSessionResponse {
 	user_id: string;
 	child_id: string;
 	scenario_index: number;
-	attempt_number: number;
-	version_number: number;
-	session_number?: number;
-	scenario_prompt: string;
-	original_response: string;
+    scenario_id?: string;
 	initial_decision?: string;
 	is_final_version: boolean;
 	concern_level?: number;
