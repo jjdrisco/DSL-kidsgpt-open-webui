@@ -182,21 +182,21 @@
 			</div>
 		</div>
 
-			<div class="flex flex-col gap-1.5">
-				<!-- User-type filter pills -->
-				<div class="flex flex-wrap gap-1">
-					{#each [['', 'All'], ['admin', 'Admin'], ['parent', 'Parent'], ['prolific', 'Prolific'], ['child', 'Child'], ['interviewee', 'Interviewee']] as [val, label]}
-						<button
-							class="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors
+		<div class="flex flex-col gap-1.5">
+			<!-- User-type filter pills -->
+			<div class="flex flex-wrap gap-1">
+				{#each [['', 'All'], ['admin', 'Admin'], ['parent', 'Parent'], ['prolific', 'Prolific'], ['child', 'Child'], ['interviewee', 'Interviewee']] as [val, label]}
+					<button
+						class="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors
 								{userTypeFilter === val
-									? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900'
-									: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}"
-							on:click={() => (userTypeFilter = val)}
-						>
-							{label}
-						</button>
-					{/each}
-				</div>
+							? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900'
+							: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}"
+						on:click={() => (userTypeFilter = val)}
+					>
+						{label}
+					</button>
+				{/each}
+			</div>
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
@@ -371,12 +371,18 @@
 								}}
 							>
 								<Badge
-								type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : user.role === 'prolific' ? 'success' : 'muted'}
+									type={user.role === 'admin'
+										? 'info'
+										: user.role === 'user'
+											? 'success'
+											: user.role === 'prolific'
+												? 'success'
+												: 'muted'}
 									content={$i18n.t(user.role)}
-							/>
-						{#if user.user_type === 'prolific' && user.role !== 'prolific'}
-								<Badge type="success" content="Prolific" />
-							{/if}
+								/>
+								{#if user.user_type === 'prolific' && user.role !== 'prolific'}
+									<Badge type="success" content="Prolific" />
+								{/if}
 							</button>
 						</td>
 						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">

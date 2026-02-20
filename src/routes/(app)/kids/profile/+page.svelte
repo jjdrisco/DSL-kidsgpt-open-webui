@@ -23,8 +23,6 @@
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
 
-
-
 	// Function to determine session number for new child profile
 	async function determineSessionNumberForUser(userId: string, token: string): Promise<number> {
 		try {
@@ -226,7 +224,6 @@
 
 			<!-- Navigation Buttons -->
 			<div class="flex items-center space-x-2">
-
 				<button
 					on:click={() => goto('/assignment-instructions')}
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
@@ -342,6 +339,4 @@
 
 	<!-- Assignment Time Tracker -->
 	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
-
-
 </div>

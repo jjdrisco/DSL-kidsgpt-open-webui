@@ -299,7 +299,7 @@ export const userSignUp = async (
 		name: name,
 		email: email,
 		password: password,
-		profile_image_url: profile_image_url,
+		profile_image_url: profile_image_url
 	};
 
 	if (prolificPid) body.prolific_pid = prolificPid;
