@@ -23,6 +23,8 @@ class ModerationSession(Base):
     session_number = Column(BigInteger, nullable=False, default=1)
 
     scenario_prompt = Column(Text, nullable=False)
+    # link back to the canonical scenario record (from scenarios table)
+    scenario_id = Column(Text, nullable=True, index=True)
     original_response = Column(Text, nullable=False)
 
     # Initial decision and confirmation flags
@@ -128,6 +130,7 @@ class ModerationSessionForm(BaseModel):
     attempt_number: int
     version_number: int
     session_number: Optional[int] = None
+    scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
@@ -198,8 +201,12 @@ class ModerationSessionTable:
 
             if obj:
                 # Update this exact version row
+                if form.scenario_id is not None:
+                    obj.scenario_id = form.scenario_id
                 obj.scenario_prompt = form.scenario_prompt
                 obj.original_response = form.original_response
+
+                # apply rest of form fields
                 obj.initial_decision = form.initial_decision
                 obj.concern_level = form.concern_level
                 obj.concern_reason = form.concern_reason
@@ -242,6 +249,7 @@ class ModerationSessionTable:
                     attempt_number=form.attempt_number,
                     version_number=form.version_number,
                     session_number=resolved_session_number,
+                    scenario_id=form.scenario_id,
                     scenario_prompt=form.scenario_prompt,
                     original_response=form.original_response,
                     initial_decision=form.initial_decision,

@@ -428,6 +428,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId,
 					session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 					active_ms_cumulative: sessionActiveMs
 				});
 				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/moderation/session-activity`, payload);
@@ -442,6 +443,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId,
 				session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 				active_ms_cumulative: sessionActiveMs
 			});
 		} catch (e) {
@@ -3625,6 +3627,7 @@
 					attempt_number: 1,
 					version_number: versionNumber,
 					session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: confirmedVersionIndex === -1 ? 'accept_original' : 'moderate',
@@ -3784,6 +3787,7 @@
 							attempt_number: 1,
 							version_number: 0,
 							session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 							scenario_prompt: childPrompt1,
 							original_response: originalResponse1,
 							initial_decision: undefined,
@@ -4011,6 +4015,14 @@
 		};
 	}
 
+	// helper to grab the canonical scenario_id associated with the currently selected
+	// assignment. this value is included in each moderation-session payload so the
+	// database row can be joined back to the scenarios table during analysis.
+	function getCurrentScenarioId(): string | undefined {
+		const identifier = getScenarioId(selectedScenarioIndex);
+		return scenarioStates.get(identifier)?.scenario_id || undefined;
+	}
+
 	/**
 	 * Step 1: Complete highlighting or skip scenario.
 	 *
@@ -4087,6 +4099,7 @@
 					attempt_number: 1,
 					version_number: 0,
 					session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: 'not_applicable',
@@ -4163,6 +4176,7 @@
 					attempt_number: 1,
 					version_number: 0,
 					session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: undefined, // No decision yet, just saving highlights
@@ -4323,6 +4337,7 @@
 				attempt_number: 1,
 				version_number: 0,
 				session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
@@ -4400,6 +4415,7 @@
 				attempt_number: 1,
 				version_number: versionNumber,
 				session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'moderate',
@@ -4528,6 +4544,7 @@
 				attempt_number: 1,
 				version_number: 0,
 				session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'not_applicable',
@@ -4724,6 +4741,7 @@
 						attempt_number: 1,
 						version_number: currentVersionIndex + 1,
 						session_number: sessionNumber,
+                    scenario_id: getCurrentScenarioId(),
 						scenario_prompt: childPrompt1,
 						original_response: originalResponse1,
 						initial_decision: 'moderate',

@@ -162,6 +162,7 @@ def main():
             ms.version_number,
             ms.session_number,
             ms.scenario_prompt,
+            ms.scenario_id,
             ms.original_response,
             ms.initial_decision,
             ms.is_final_version,
