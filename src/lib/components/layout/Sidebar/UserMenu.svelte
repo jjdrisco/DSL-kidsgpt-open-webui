@@ -50,11 +50,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	// Derived flag: treat user as Prolific based on server-derived `user_type` or explicit DB role.
-	// Do NOT rely on localStorage/prolific_pid for UI gating — prefer server values.
-	let isProlific = false;
-	$: isProlific = $user?.user_type === 'prolific' || $user?.role === 'prolific';
-
 	let usage = null;
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
@@ -259,9 +254,9 @@
 				$page.url.pathname.startsWith('/moderation-scenario') ||
 				$page.url.pathname === '/completion'}
 			{@const isParentOrChild =
-				['parent', 'prolific', 'child'].includes($user?.role) || ($user as any)?.parent_id}
+				$user?.role === 'parent' || $user?.role === 'child' || ($user as any)?.parent_id}
 
-			{#if isSurveyOrWorkflowRoute && !isProlific}
+			{#if isSurveyOrWorkflowRoute}
 				<DropdownMenu.Item
 					as="a"
 					href="/"

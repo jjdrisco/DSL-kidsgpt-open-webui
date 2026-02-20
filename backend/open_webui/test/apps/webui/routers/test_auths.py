@@ -116,26 +116,6 @@ class TestAuths(AbstractPostgresTest):
         assert data["token"] is not None and len(data["token"]) > 0
         assert data["token_type"] == "Bearer"
 
-    def test_signup_with_prolific_pid(self):
-        payload = {
-            "name": "Prolific User",
-            "email": "prolific@example.test",
-            "password": "pw",
-            "prolific_pid": "PROL-123",
-        }
-        response = self.fast_api_client.post(self.create_url("/signup"), json=payload)
-        assert response.status_code == 200
-
-        # Ensure prolific_pid was persisted on the user record
-        db_user = self.users.get_user_by_email("prolific@example.test")
-        assert db_user is not None
-        assert db_user.prolific_pid == "PROL-123"
-
-        # Derived user-type should be 'prolific'
-        from open_webui.utils.auth import get_user_type
-
-        assert get_user_type(db_user) == "prolific"
-
     def test_add_user(self):
         with mock_webui_user():
             response = self.fast_api_client.post(

@@ -1627,7 +1627,7 @@ async def chat_completion(
                 if m.strip()
             ]
             skip_access_check = (
-                user.role in ("parent", "child", "prolific")
+                user.role in ("parent", "child")
                 and model_id
                 and model_id in default_model_ids
             )
@@ -2070,8 +2070,7 @@ async def get_app_config(request: Request):
                     else {}
                 ),
             }
-            if user is not None
-            and (user.role in ["admin", "user", "parent", "child", "prolific"])
+            if user is not None and (user.role in ["admin", "user", "parent", "child"])
             else {
                 **(
                     {

@@ -80,8 +80,6 @@ async def get_users(
 
     filter["direction"] = direction
 
-    from open_webui.utils.auth import get_user_type
-
     result = Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
 
     users = result["users"]
@@ -91,20 +89,18 @@ async def get_users(
     user_ids = [user.id for user in users]
     user_groups = Groups.get_groups_by_member_ids(user_ids, db=db)
 
-    # Include server-derived `user_type` so admin UI and other callers can rely on
-    # the authoritative user type instead of checking prolific_pid/localStorage.
-    users_out = []
-    for user in users:
-        user_dict = user.model_dump()
-        user_dict["group_ids"] = [group.id for group in user_groups.get(user.id, [])]
-        # compute derived user_type
-        try:
-            user_dict["user_type"] = get_user_type(user)
-        except Exception:
-            user_dict["user_type"] = None
-        users_out.append(UserGroupIdsModel(**user_dict))
-
-    return {"users": users_out, "total": total}
+    return {
+        "users": [
+            UserGroupIdsModel(
+                **{
+                    **user.model_dump(),
+                    "group_ids": [group.id for group in user_groups.get(user.id, [])],
+                }
+            )
+            for user in users
+        ],
+        "total": total,
+    }
 
 
 @router.get("/all", response_model=UserInfoListResponse)
@@ -835,8 +831,7 @@ async def create_child_account(
             detail="Failed to link child account to parent",
         )
 
-    # Ensure user has role "parent" in DB (for Sidebar display).
-    # Note: prolific users keep their "prolific" role — do not upgrade to "parent".
+    # Ensure parent has role "parent" in DB (for Sidebar display)
     if user.role == "user":
         Users.update_user_role_by_id(user.id, "parent", db=db)
 
