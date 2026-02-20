@@ -81,7 +81,9 @@
 						if (idx > 0) {
 							if (
 								columns.length === 4 &&
-									['admin', 'user', 'pending', 'parent', 'prolific', 'child'].includes(columns[3].toLowerCase())
+								['admin', 'user', 'pending', 'parent', 'prolific', 'child'].includes(
+									columns[3].toLowerCase()
+								)
 							) {
 								const res = await addUser(
 									localStorage.token,

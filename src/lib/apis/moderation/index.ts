@@ -41,7 +41,7 @@ export interface ModerationSessionPayload {
 	user_id: string;
 	child_id: string;
 	scenario_index: number;
-    scenario_id?: string;
+	scenario_id?: string;
 	initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
 	concern_level?: number;
 	concern_reason?: string;
@@ -70,7 +70,7 @@ export interface ModerationSessionResponse {
 	user_id: string;
 	child_id: string;
 	scenario_index: number;
-    scenario_id?: string;
+	scenario_id?: string;
 	initial_decision?: string;
 	is_final_version: boolean;
 	concern_level?: number;
@@ -157,11 +157,11 @@ export const getModerationSessions = async (
 	let url: URL;
 	try {
 		if (base.startsWith('http://') || base.startsWith('https://')) {
-			url = new URL(`${base.replace(/\/+$/,'')}/moderation/sessions`);
+			url = new URL(`${base.replace(/\/+$/, '')}/moderation/sessions`);
 		} else {
 			// treat as relative path
 			const prefix = window.location.origin;
-			url = new URL(`${prefix}${base.replace(/\/+$/,'')}/moderation/sessions`);
+			url = new URL(`${prefix}${base.replace(/\/+$/, '')}/moderation/sessions`);
 		}
 	} catch (e) {
 		console.error('getModerationSessions invalid base URL', WEBUI_API_BASE_URL, e);

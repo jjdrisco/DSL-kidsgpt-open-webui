@@ -218,7 +218,9 @@ async def submit_consent(
     if form_data.consented:
         # Ensure prolific fields are present (defensive — should already be set at auth)
         if not user.prolific_pid:
-            role = "interviewee" if is_interviewee_user(form_data.study_id) else "prolific"
+            role = (
+                "interviewee" if is_interviewee_user(form_data.study_id) else "prolific"
+            )
             update_data.update(
                 {
                     "prolific_pid": form_data.prolific_pid,

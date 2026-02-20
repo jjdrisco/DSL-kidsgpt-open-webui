@@ -199,8 +199,10 @@ class ModerationSessionTable:
                             db_conn.query(ScenarioAssignment)
                             .filter(
                                 ScenarioAssignment.participant_id == form.user_id,
-                                ScenarioAssignment.assignment_position == form.scenario_index,
-                                ScenarioAssignment.attempt_number == form.attempt_number,
+                                ScenarioAssignment.assignment_position
+                                == form.scenario_index,
+                                ScenarioAssignment.attempt_number
+                                == form.attempt_number,
                             )
                             .first()
                         )
@@ -251,7 +253,9 @@ class ModerationSessionTable:
                     obj.scenario_id = form.scenario_id
                 else:
                     # try to repair placeholder
-                    if obj.scenario_id is None or obj.scenario_id.startswith("scenario_"):
+                    if obj.scenario_id is None or obj.scenario_id.startswith(
+                        "scenario_"
+                    ):
                         try:
                             from open_webui.models.scenarios import ScenarioAssignment
                             from open_webui.internal import db as _db_module
@@ -260,13 +264,18 @@ class ModerationSessionTable:
                                 assign_obj = (
                                     db_conn.query(ScenarioAssignment)
                                     .filter(
-                                        ScenarioAssignment.participant_id == form.user_id,
-                                        ScenarioAssignment.assignment_position == form.scenario_index,
-                                        ScenarioAssignment.attempt_number == form.attempt_number,
+                                        ScenarioAssignment.participant_id
+                                        == form.user_id,
+                                        ScenarioAssignment.assignment_position
+                                        == form.scenario_index,
+                                        ScenarioAssignment.attempt_number
+                                        == form.attempt_number,
                                     )
                                     .first()
                                 )
-                                if assign_obj and getattr(assign_obj, "scenario_id", None):
+                                if assign_obj and getattr(
+                                    assign_obj, "scenario_id", None
+                                ):
                                     obj.scenario_id = assign_obj.scenario_id
                                 else:
                                     # fallback to safe placeholder
@@ -313,7 +322,11 @@ class ModerationSessionTable:
             else:
                 # Create a new row for this version; generate a fresh id to avoid overwriting prior versions
                 # derive a fallback scenario_id if none was submitted
-                effective_scenario_id = form.scenario_id if form.scenario_id is not None else f"scenario_{form.scenario_index}"
+                effective_scenario_id = (
+                    form.scenario_id
+                    if form.scenario_id is not None
+                    else f"scenario_{form.scenario_index}"
+                )
                 obj = ModerationSession(
                     id=str(uuid.uuid4()),
                     user_id=form.user_id,

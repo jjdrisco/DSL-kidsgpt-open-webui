@@ -121,7 +121,7 @@ class TestAuths(AbstractPostgresTest):
             "name": "Prolific User",
             "email": "prolific@example.test",
             "password": "pw",
-            "prolific_pid": "PROL-123"
+            "prolific_pid": "PROL-123",
         }
         response = self.fast_api_client.post(self.create_url("/signup"), json=payload)
         assert response.status_code == 200

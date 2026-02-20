@@ -35,7 +35,9 @@ def upgrade() -> None:
             batch_op.add_column(sa.Column("scenario_id", sa.Text(), nullable=True))
             # optional index; SQLite adds automatically when using batch_op.create_index
             try:
-                batch_op.create_index("idx_moderation_session_scenario_id", ["scenario_id"])
+                batch_op.create_index(
+                    "idx_moderation_session_scenario_id", ["scenario_id"]
+                )
             except Exception:
                 # some dialects may not support creating index inside batch
                 pass

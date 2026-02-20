@@ -33,9 +33,7 @@ def upgrade() -> None:
     with op.batch_alter_table("user") as batch_op:
         # Add prolific fields if they don't exist
         if "prolific_pid" not in existing_columns:
-            batch_op.add_column(
-                sa.Column("prolific_pid", sa.String(), nullable=True)
-            )
+            batch_op.add_column(sa.Column("prolific_pid", sa.String(), nullable=True))
             # create unique index manually for portability
             try:
                 batch_op.create_unique_constraint(
@@ -48,12 +46,17 @@ def upgrade() -> None:
             batch_op.add_column(sa.Column("study_id", sa.String(), nullable=True))
 
         if "current_session_id" not in existing_columns:
-            batch_op.add_column(sa.Column("current_session_id", sa.String(), nullable=True))
+            batch_op.add_column(
+                sa.Column("current_session_id", sa.String(), nullable=True)
+            )
 
         if "session_number" not in existing_columns:
             batch_op.add_column(
                 sa.Column(
-                    "session_number", sa.BigInteger(), nullable=False, server_default="1"
+                    "session_number",
+                    sa.BigInteger(),
+                    nullable=False,
+                    server_default="1",
                 ),
             )
 

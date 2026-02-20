@@ -187,7 +187,7 @@ Assign a scenario using weighted sampling.
 ```json
 {
 	"assignment_id": "uuid",
-	"scenario_id": "scenario_xxxx",  <!-- canonical scenario table key; saved to moderation_session rows so analysts can join back -->
+	"scenario_id": "scenario_xxxx", <!-- canonical scenario table key; saved to moderation_session rows so analysts can join back -->
 	"prompt_text": "...",
 	"response_text": "...",
 	"assignment_position": 0,

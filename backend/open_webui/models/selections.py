@@ -128,7 +128,11 @@ class SelectionTable:
                     effective_scenario_id = assignment.scenario_id
             # final fallback: if chat_id follows legacy "scenario_<index>" pattern,
             # use it directly so highlights created before assignments still link
-            if not effective_scenario_id and form_data.chat_id and form_data.chat_id.startswith("scenario_"):
+            if (
+                not effective_scenario_id
+                and form_data.chat_id
+                and form_data.chat_id.startswith("scenario_")
+            ):
                 effective_scenario_id = form_data.chat_id
 
             selection = SelectionModel(

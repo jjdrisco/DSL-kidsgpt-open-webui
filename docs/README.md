@@ -14,6 +14,7 @@ This directory contains project-specific documentation and guides:
 - **[GPT5_VALIDATION_GUIDE.md](GPT5_VALIDATION_GUIDE.md)** - Guide for ensuring moderation uses GPT‑5
 
 > **Note:** `child_llm_scenarios.json` has been removed from the repository; scenario data is now managed via the admin UI and backend API.
+
 - **[MODERATION_SURVEY_FLOW.md](MODERATION_SURVEY_FLOW.md)** - Moderation and survey flow documentation
 - **[SCENARIO_SYSTEM.md](SCENARIO_SYSTEM.md)** - Scenario system documentation
 - **[SECURITY.md](SECURITY.md)** - Security guidelines and reporting
@@ -34,7 +35,6 @@ These files are no longer part of the active documentation but are kept for hist
 - `docs/ARCHIVE/DEV_MAIN_WORKFLOW_SETUP.md` (branch workflow guide; may be outdated)
 - `docs/ARCHIVE/WORKFLOW_FILE_UPDATE_INSTRUCTIONS.md` (old CI workflow tips)
 - `docs/ARCHIVE/TESTING_SCENARIO_SELECTION.md` (older survey selection notes)
-
 
 ## Project Workflow
 

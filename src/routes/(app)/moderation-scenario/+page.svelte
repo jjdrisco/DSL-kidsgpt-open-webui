@@ -429,7 +429,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId,
 					session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+					scenario_id: getCurrentScenarioId(),
 					active_ms_cumulative: sessionActiveMs
 				});
 				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/moderation/session-activity`, payload);
@@ -444,7 +444,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId,
 				session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+				scenario_id: getCurrentScenarioId(),
 				active_ms_cumulative: sessionActiveMs
 			});
 		} catch (e) {
@@ -2045,12 +2045,12 @@
 		// Check if this highlight already exists (by text)
 		const exists = highlightedTexts1.some((h) => h.text === text);
 		if (!exists) {
-				// Add to local state array (captures text + absolute character offsets)
-				const highlightInfo: HighlightInfo = {
-					text,
-					startOffset: currentSelectionStartOffset,
-					endOffset: currentSelectionEndOffset
-				};
+			// Add to local state array (captures text + absolute character offsets)
+			const highlightInfo: HighlightInfo = {
+				text,
+				startOffset: currentSelectionStartOffset,
+				endOffset: currentSelectionEndOffset
+			};
 			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
 				const currentIdentifier = getScenarioId(selectedScenarioIndex);
@@ -3667,7 +3667,7 @@
 					attempt_number: 1,
 					version_number: versionNumber,
 					session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: confirmedVersionIndex === -1 ? 'accept_original' : 'moderate',
@@ -3831,7 +3831,7 @@
 							attempt_number: 1,
 							version_number: 0,
 							session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+							scenario_id: getCurrentScenarioId(),
 							scenario_prompt: childPrompt1,
 							original_response: originalResponse1,
 							initial_decision: undefined,
@@ -4149,7 +4149,7 @@
 					attempt_number: 1,
 					version_number: 0,
 					session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: 'not_applicable',
@@ -4226,7 +4226,7 @@
 					attempt_number: 1,
 					version_number: 0,
 					session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: undefined, // No decision yet, just saving highlights
@@ -4391,7 +4391,7 @@
 				attempt_number: 1,
 				version_number: 0,
 				session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
@@ -4473,7 +4473,7 @@
 				attempt_number: 1,
 				version_number: versionNumber,
 				session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'moderate',
@@ -4606,7 +4606,7 @@
 				attempt_number: 1,
 				version_number: 0,
 				session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'not_applicable',
@@ -4803,7 +4803,7 @@
 						attempt_number: 1,
 						version_number: currentVersionIndex + 1,
 						session_number: sessionNumber,
-                    scenario_id: getCurrentScenarioId(),
+						scenario_id: getCurrentScenarioId(),
 						scenario_prompt: childPrompt1,
 						original_response: originalResponse1,
 						initial_decision: 'moderate',
@@ -5960,13 +5960,13 @@
 							>
 						{/if}
 						<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
-							<button
-								on:click={() => (showHelpVideo = true)}
-								class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors ml-4"
-								aria-label="Show help video"
-							>
-								Help
-							</button>
+						<button
+							on:click={() => (showHelpVideo = true)}
+							class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors ml-4"
+							aria-label="Show help video"
+						>
+							Help
+						</button>
 					</div>
 
 					<!-- Controls - always visible so Previous/Next Task accessible when scenarios sidebar is closed -->
