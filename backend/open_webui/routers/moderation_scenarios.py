@@ -471,6 +471,7 @@ class HighlightCreateRequest(BaseModel):
     assignment_id: str
     selected_text: str
     source: str  # 'prompt' | 'response'
+    scenario_id: Optional[str] = None
     start_offset: Optional[int] = None
     end_offset: Optional[int] = None
     context: Optional[str] = None
@@ -504,12 +505,14 @@ async def create_highlight(
         # Create selection record with offsets
         from open_webui.models.selections import SelectionForm, Selections
 
+        # include scenario_id on selection if available (helps with joins)
         form = SelectionForm(
             chat_id=f"assignment_{request.assignment_id}",
             message_id=f"{request.assignment_id}:{request.source}",
             role="user" if request.source == "prompt" else "assistant",
             selected_text=request.selected_text,
             assignment_id=request.assignment_id,
+            scenario_id=request.scenario_id or assignment.scenario_id,
             source=request.source,
             start_offset=request.start_offset,
             end_offset=request.end_offset,

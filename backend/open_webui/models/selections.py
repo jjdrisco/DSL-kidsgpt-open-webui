@@ -117,6 +117,20 @@ class SelectionTable:
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
 
+            # determine effective scenario_id: prefer form value, otherwise derive from assignment
+            effective_scenario_id = form_data.scenario_id
+            if not effective_scenario_id and form_data.assignment_id:
+                # lookup assignment to inherit scenario_id
+                from open_webui.models.scenarios import ScenarioAssignments
+
+                assignment = ScenarioAssignments.get_by_id(form_data.assignment_id)
+                if assignment and getattr(assignment, "scenario_id", None):
+                    effective_scenario_id = assignment.scenario_id
+            # final fallback: if chat_id follows legacy "scenario_<index>" pattern,
+            # use it directly so highlights created before assignments still link
+            if not effective_scenario_id and form_data.chat_id and form_data.chat_id.startswith("scenario_"):
+                effective_scenario_id = form_data.chat_id
+
             selection = SelectionModel(
                 **{
                     "id": id,
@@ -126,7 +140,7 @@ class SelectionTable:
                     "role": form_data.role,
                     "selected_text": form_data.selected_text,
                     "child_id": form_data.child_id,
-                    "scenario_id": form_data.scenario_id,
+                    "scenario_id": effective_scenario_id,
                     "source": form_data.source,
                     "context": form_data.context,
                     "meta": form_data.meta,

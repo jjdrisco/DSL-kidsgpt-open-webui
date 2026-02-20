@@ -162,7 +162,7 @@ def main():
             ms.version_number,
             ms.session_number,
             ms.scenario_prompt,
-            ms.scenario_id,
+            COALESCE(NULLIF(ms.scenario_id, ''), sa.scenario_id, 'scenario_' || ms.scenario_index::text) AS scenario_id,
             ms.original_response,
             ms.initial_decision,
             ms.is_final_version,
@@ -195,6 +195,9 @@ def main():
         FROM moderation_session ms
         LEFT JOIN "user" u ON ms.user_id = u.id
         LEFT JOIN child_profile cp ON ms.child_id = cp.id
+        LEFT JOIN scenario_assignments sa ON sa.participant_id = ms.user_id
+          AND sa.assignment_position = ms.scenario_index
+          AND sa.attempt_number = ms.attempt_number
         ORDER BY ms.user_id, ms.child_id, ms.scenario_index, ms.attempt_number, ms.version_number;
     """
 

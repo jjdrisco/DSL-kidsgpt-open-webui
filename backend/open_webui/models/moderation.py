@@ -97,6 +97,7 @@ class ModerationSessionModel(BaseModel):
     attempt_number: int
     version_number: int
     session_number: int
+    scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
@@ -112,7 +113,7 @@ class ModerationSessionModel(BaseModel):
     # Note: would_show_child was removed - column existed in DB but not in model (migration 84b2215f7772)
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
-    highlighted_texts: Optional[List[str]] = None
+    highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
     session_metadata: Optional[dict] = None
     is_attention_check: bool
@@ -185,6 +186,30 @@ class ModerationSessionTable:
             if resolved_session_number is None:
                 resolved_session_number = 1
 
+            # make sure we have a scenario_id; if client didn't supply one, try
+            # looking up the assignment record directly by participant/position/attempt.
+            if not form.scenario_id:
+                try:
+                    # import at module level to avoid local scope conflicts
+                    from open_webui.models.scenarios import ScenarioAssignment
+                    from open_webui.internal import db as _db_module
+
+                    with _db_module.get_db() as db_conn:
+                        assign_obj = (
+                            db_conn.query(ScenarioAssignment)
+                            .filter(
+                                ScenarioAssignment.participant_id == form.user_id,
+                                ScenarioAssignment.assignment_position == form.scenario_index,
+                                ScenarioAssignment.attempt_number == form.attempt_number,
+                            )
+                            .first()
+                        )
+                        if assign_obj and getattr(assign_obj, "scenario_id", None):
+                            form.scenario_id = assign_obj.scenario_id
+                except Exception:
+                    # if any import or query fails, ignore and fall back later
+                    pass
+
             # Try to find an existing row for this specific version within the same session
             obj = (
                 db.query(ModerationSession)
@@ -199,10 +224,56 @@ class ModerationSessionTable:
                 .first()
             )
 
+            # Normalize highlighted_texts: rename start_offset/end_offset -> start/end,
+            # and convert plain strings to {text, start, end} dicts for notebook compatibility.
+            if form.highlighted_texts:
+                normalized: list = []
+                for ht in form.highlighted_texts:
+                    if isinstance(ht, str):
+                        normalized.append({"text": ht, "start": -1, "end": -1})
+                    elif isinstance(ht, dict):
+                        entry = dict(ht)
+                        if "start_offset" in entry and "start" not in entry:
+                            entry["start"] = entry.pop("start_offset")
+                        if "end_offset" in entry and "end" not in entry:
+                            entry["end"] = entry.pop("end_offset")
+                        normalized.append(entry)
+                    else:
+                        normalized.append(ht)
+                form.highlighted_texts = normalized
+
             if obj:
                 # Update this exact version row
+                # If client provided an id, use it. Otherwise, if the existing
+                # value is the placeholder (scenario_<index>) or null, attempt to
+                # look up the real id from the assignment table.
                 if form.scenario_id is not None:
                     obj.scenario_id = form.scenario_id
+                else:
+                    # try to repair placeholder
+                    if obj.scenario_id is None or obj.scenario_id.startswith("scenario_"):
+                        try:
+                            from open_webui.models.scenarios import ScenarioAssignment
+                            from open_webui.internal import db as _db_module
+
+                            with _db_module.get_db() as db_conn:
+                                assign_obj = (
+                                    db_conn.query(ScenarioAssignment)
+                                    .filter(
+                                        ScenarioAssignment.participant_id == form.user_id,
+                                        ScenarioAssignment.assignment_position == form.scenario_index,
+                                        ScenarioAssignment.attempt_number == form.attempt_number,
+                                    )
+                                    .first()
+                                )
+                                if assign_obj and getattr(assign_obj, "scenario_id", None):
+                                    obj.scenario_id = assign_obj.scenario_id
+                                else:
+                                    # fallback to safe placeholder
+                                    obj.scenario_id = f"scenario_{form.scenario_index}"
+                        except Exception:
+                            obj.scenario_id = f"scenario_{form.scenario_index}"
+                    # otherwise keep whatever is already stored
                 obj.scenario_prompt = form.scenario_prompt
                 obj.original_response = form.original_response
 
@@ -241,6 +312,8 @@ class ModerationSessionTable:
                 obj.updated_at = ts
             else:
                 # Create a new row for this version; generate a fresh id to avoid overwriting prior versions
+                # derive a fallback scenario_id if none was submitted
+                effective_scenario_id = form.scenario_id if form.scenario_id is not None else f"scenario_{form.scenario_index}"
                 obj = ModerationSession(
                     id=str(uuid.uuid4()),
                     user_id=form.user_id,
@@ -249,7 +322,7 @@ class ModerationSessionTable:
                     attempt_number=form.attempt_number,
                     version_number=form.version_number,
                     session_number=resolved_session_number,
-                    scenario_id=form.scenario_id,
+                    scenario_id=effective_scenario_id,
                     scenario_prompt=form.scenario_prompt,
                     original_response=form.original_response,
                     initial_decision=form.initial_decision,
