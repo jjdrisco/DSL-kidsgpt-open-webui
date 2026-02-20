@@ -811,7 +811,7 @@
 			<div class="-mt-[0.5px]">
 				<div class="">
 					<Tooltip
-						content={$user?.role === 'parent'
+						content={['parent', 'prolific'].includes($user?.role)
 							? $i18n.t("Test Children's Chat")
 							: $i18n.t('New Chat')}
 						placement="right"
@@ -827,7 +827,7 @@
 								goto('/');
 								newChatHandler();
 							}}
-							aria-label={$user?.role === 'parent'
+							aria-label={['parent', 'prolific'].includes($user?.role)
 								? $i18n.t("Test Children's Chat")
 								: $i18n.t('New Chat')}
 						>
@@ -858,8 +858,8 @@
 					</Tooltip>
 				</div>
 
-				{#if $user?.role === 'parent'}
-					<div class="">
+				{#if ['parent', 'prolific'].includes($user?.role)}
+					<div>
 						<Tooltip content={$i18n.t('View Children')} placement="right">
 							<a
 								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
@@ -1321,7 +1321,7 @@
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
-							aria-label={$user?.role === 'parent'
+							aria-label={['parent', 'prolific'].includes($user?.role)
 								? $i18n.t("Test Children's Chat")
 								: $i18n.t('New Chat')}
 						>
@@ -1331,7 +1331,9 @@
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
 								<div class=" self-center text-sm font-primary">
-									{$user?.role === 'parent' ? $i18n.t("Test Children's Chat") : $i18n.t('New Chat')}
+									{['parent', 'prolific'].includes($user?.role)
+										? $i18n.t("Test Children's Chat")
+										: $i18n.t('New Chat')}
 								</div>
 							</div>
 
@@ -1360,7 +1362,7 @@
 						</button>
 					</div>
 
-					{#if $user?.role === 'parent'}
+					{#if ['parent', 'prolific'].includes($user?.role)}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-view-children-button"

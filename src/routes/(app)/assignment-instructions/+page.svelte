@@ -254,8 +254,8 @@
 					📹 Tutorial Videos Available
 				</h3>
 				<p class="text-blue-700 dark:text-blue-300 mb-3">
-					Each task page includes a help button in the top-right corner that opens a tutorial video
-					specific to that task.
+					Some task pages may include a help button in the top-right corner that opens a tutorial
+					video specific to that task.
 				</p>
 				<div class="flex items-center gap-2">
 					<span class="text-blue-700 dark:text-blue-300 text-sm">Example:</span>

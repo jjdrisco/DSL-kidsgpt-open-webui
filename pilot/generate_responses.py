@@ -25,7 +25,11 @@ Respond to the child's message in a calm, age-appropriate, and helpful way."""
 
 
 def _get_system_prompt(age_band: str) -> str:
-    age_part = f"\n\nThe child is in age band {age_band}. Tailor your response accordingly." if age_band else ""
+    age_part = (
+        f"\n\nThe child is in age band {age_band}. Tailor your response accordingly."
+        if age_band
+        else ""
+    )
     return f"{SYSTEM_PROMPT_BASE}{age_part}"
 
 
@@ -77,9 +81,7 @@ def main() -> None:
 
     api_key = args.api_key or os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        sys.exit(
-            "Error: No API key. Use -k/--api-key or set OPENAI_API_KEY env var."
-        )
+        sys.exit("Error: No API key. Use -k/--api-key or set OPENAI_API_KEY env var.")
 
     with open(args.input, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -90,7 +92,9 @@ def main() -> None:
     client = OpenAI(api_key=api_key)
     model = "gpt-5.2-chat-latest"
 
-    items_to_process = [(i, item) for i, item in enumerate(data) if "model_response" not in item]
+    items_to_process = [
+        (i, item) for i, item in enumerate(data) if "model_response" not in item
+    ]
     total = len(items_to_process)
 
     if total == 0:
@@ -108,11 +112,17 @@ def main() -> None:
 
     for idx, (i, item) in enumerate(iterator):
         if not tqdm:
-            print(f"Processing item {idx + 1}/{total} (persona_id={item.get('persona_id', '?')})...", flush=True)
+            print(
+                f"Processing item {idx + 1}/{total} (persona_id={item.get('persona_id', '?')})...",
+                flush=True,
+            )
         try:
             item["model_response"] = _get_response(client, item, model)
         except Exception as e:
-            print(f"\nError for item {i} ({item.get('persona_id', '?')}): {e}", file=sys.stderr)
+            print(
+                f"\nError for item {i} ({item.get('persona_id', '?')}): {e}",
+                file=sys.stderr,
+            )
 
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)

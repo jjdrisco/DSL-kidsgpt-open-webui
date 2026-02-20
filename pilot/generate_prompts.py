@@ -196,8 +196,7 @@ def generate_prompts(
 ) -> list:
     """Generate prompts in batches, with progress bar."""
     batches = [
-        (i, min(batch_size, num_prompts - i))
-        for i in range(0, num_prompts, batch_size)
+        (i, min(batch_size, num_prompts - i)) for i in range(0, num_prompts, batch_size)
     ]
     all_data = []
     start_id = 1
@@ -259,9 +258,7 @@ def main() -> None:
 
     api_key = args.api_key or os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        sys.exit(
-            "Error: No API key. Use -k/--api-key or set OPENAI_API_KEY env var."
-        )
+        sys.exit("Error: No API key. Use -k/--api-key or set OPENAI_API_KEY env var.")
 
     client_kwargs = {"api_key": api_key}
     if args.base_url:
