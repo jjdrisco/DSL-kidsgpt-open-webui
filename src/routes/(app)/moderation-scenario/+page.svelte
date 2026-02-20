@@ -4326,7 +4326,7 @@
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
-				concern_level: undefined, // No longer collected in Step 2
+				concern_level: concernLevel ?? undefined,
 				concern_reason: concernReason.trim(),
 				decided_at: Date.now(),
 				strategies: [],
