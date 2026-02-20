@@ -1718,12 +1718,20 @@ export async function getUserType(
 	studyIdWhitelist: string[] = [],
 	options: GetUserTypeOptions = {}
 ): Promise<string> {
-	if (!user) return 'user';
+	// If no user object, still check localStorage for Prolific arrival (new sessions)
+	if (!user) {
+		if (typeof window !== 'undefined' && localStorage.getItem('prolificPid')) return 'prolific';
+		return 'user';
+	}
 
 	if (user.role === 'admin') return 'admin';
+	if (user.role === 'prolific') return 'prolific';
 	if (user.role === 'child') return 'child';
 	if (user.role === 'parent') return 'parent';
 	if (user.role === 'interviewee') return 'interviewee';
+
+	// Legacy fallback: prolific_pid set but role not yet migrated
+	if ((user as any).prolific_pid) return 'prolific';
 
 	// For users with role "user", check STUDY_ID against whitelist
 	// Check if user has parent_id (child account)

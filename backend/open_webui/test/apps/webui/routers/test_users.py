@@ -56,6 +56,24 @@ class TestUsers(AbstractPostgresTest):
         _assert_user(data, "1")
         _assert_user(data, "2")
 
+        # Insert a Prolific user and verify `user_type` is present in the admin list
+        self.users.insert_new_user(
+            id="p1",
+            name="prolific user",
+            email="prolific@openwebui.com",
+            profile_image_url="/userp.png",
+            role="parent",
+            prolific_pid="PROL-1",
+            study_id="1",
+            consent_given=True,
+        )
+
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.get(self.create_url(""))
+        assert response.status_code == 200
+        found = next((u for u in response.json() if u["id"] == "p1"), None)
+        assert found is not None
+        assert found.get("user_type") == "prolific"
         # update role
         with mock_webui_user(id="3"):
             response = self.fast_api_client.post(
