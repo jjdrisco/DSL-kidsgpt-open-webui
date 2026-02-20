@@ -191,5 +191,31 @@ describe('Survey Sidebar and Navigation', () => {
 				});
 			});
 		});
+
+		it('should hide Main View button for Prolific users on survey pages', () => {
+			// Register a fresh non-admin user and mark as Prolific via localStorage
+			const email = `prolific-${Date.now()}@example.com`;
+			const password = 'password';
+			cy.register('Prolific Test', email, password);
+
+			// Set Prolific metadata in localStorage BEFORE login so client treats the session as Prolific
+			cy.window().then((win) => win.localStorage.setItem('prolificPid', 'PROL-TEST'));
+
+			// Login as the newly created user
+			cy.login(email, password);
+
+			// Visit a survey page
+			cy.visit('/exit-survey', { failOnStatusCode: false });
+			cy.wait(1000);
+
+			// Open the user menu
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 })
+				.first()
+				.click({ force: true });
+			cy.wait(500);
+
+			// Main View button should NOT be visible for Prolific users on survey pages
+			cy.contains('Main View').should('not.exist');
+		});
 	});
 });

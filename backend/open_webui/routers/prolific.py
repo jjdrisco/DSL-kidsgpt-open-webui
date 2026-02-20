@@ -65,21 +65,36 @@ async def prolific_auth(
     if not form_data.prolific_pid or not form_data.study_id or not form_data.session_id:
         raise HTTPException(400, detail="Missing required Prolific parameters")
 
-    # Check if user with this PROLIFIC_PID already exists (they've consented before)
-    existing_user = Users.get_user_by_prolific_pid(form_data.prolific_pid)
+    # Prolific users always have this canonical email form
+    prolific_email = f"prolific_{form_data.prolific_pid}@prolific.study"
 
-    # Also check by email in case user was created but hasn't consented yet
-    if not existing_user:
-        email = f"prolific_{form_data.prolific_pid}@prolific.study"
-        existing_user = Users.get_user_by_email(email)
+    # Look up by the canonical email first — this is the only account the Prolific
+    # flow is ever allowed to operate on, preventing admin/non-prolific accounts
+    # from accidentally being matched if their prolific_pid field was incorrectly set.
+    existing_user = Users.get_user_by_email(prolific_email)
 
     if existing_user:
+        # If found by email only (prolific_pid not yet stored, e.g. pre-consent repeat visit),
+        # store the Prolific IDs now so get_user_type() returns "prolific" going forward.
+        if not existing_user.prolific_pid:
+            patched = Users.update_user_by_id(
+                existing_user.id,
+                {
+                    "prolific_pid": form_data.prolific_pid,
+                    "study_id": form_data.study_id,
+                    "current_session_id": form_data.session_id,
+                    "session_number": 1,
+                    "updated_at": int(time.time()),
+                },
+            )
+            existing_user = patched or existing_user
+
         # User exists - check if this is a new session
         is_new_session = existing_user.current_session_id != form_data.session_id
 
         if is_new_session:
             # New session - increment session_number
-            new_session_number = existing_user.session_number + 1
+            new_session_number = (existing_user.session_number or 1) + 1
             updated_user = Users.update_user_session(
                 existing_user.id, form_data.session_id, new_session_number
             )
@@ -92,15 +107,15 @@ async def prolific_auth(
         else:
             # Same session - use existing session_number
             user = existing_user
-            new_session_number = user.session_number
+            new_session_number = user.session_number or 1
             new_child_id = None
 
         is_new_user = False
     else:
-        # New user - create account WITHOUT Prolific IDs (stored only after consent)
+        # New user - create account
         # Use the full PROLIFIC_PID as the display name unless a name was provided
         name = form_data.name or form_data.prolific_pid
-        email = f"prolific_{form_data.prolific_pid}@prolific.study"
+        email = prolific_email
 
         # Generate a random password for Prolific users
         password = str(uuid.uuid4())
@@ -108,9 +123,9 @@ async def prolific_auth(
 
         # Determine role based on STUDY_ID whitelist
         # Check STUDY_ID against whitelist to determine if interviewee
-        role = "interviewee" if is_interviewee_user(form_data.study_id) else "parent"
+        role = "interviewee" if is_interviewee_user(form_data.study_id) else "prolific"
 
-        # Create auth record (without Prolific fields)
+        # Create auth record (without Prolific fields - update_user_by_id below adds them)
         auth_user = Auths.insert_new_auth(
             email=email,
             password=hashed_password,
@@ -122,9 +137,20 @@ async def prolific_auth(
         if not auth_user:
             raise HTTPException(500, detail="Failed to create user authentication")
 
-        # DO NOT store Prolific IDs yet - they will be stored after consent
-        # Create user record without prolific fields
-        user = auth_user
+        # Store Prolific IDs immediately so get_user_type() returns "prolific" right away.
+        # consent_given stays False until the consent modal is submitted — that is what
+        # gates study participation, not the presence of the PID in the database.
+        updated_user = Users.update_user_by_id(
+            auth_user.id,
+            {
+                "prolific_pid": form_data.prolific_pid,
+                "study_id": form_data.study_id,
+                "current_session_id": form_data.session_id,
+                "session_number": 1,
+                "updated_at": int(time.time()),
+            },
+        )
+        user = updated_user or auth_user
         new_session_number = 1
         is_new_user = True
         # No child to reuse yet for first-time user
@@ -174,10 +200,11 @@ async def submit_consent(
     request: Request, form_data: ConsentForm, user=Depends(get_verified_user)
 ):
     """
-    Update user's consent status and store Prolific IDs.
-    Only Prolific users can submit consent.
+    Record consent decision and (if given) ensure Prolific IDs are stored.
+    Prolific IDs are now written at auth time, so this endpoint only needs to
+    set consent_given and handle session bookkeeping.
     """
-    # If consenting, require Prolific IDs to be provided
+    # Require IDs when consenting (used for audit record and session update)
     if form_data.consented:
         if (
             not form_data.prolific_pid
@@ -186,34 +213,33 @@ async def submit_consent(
         ):
             raise HTTPException(400, detail="Prolific IDs are required when consenting")
 
-    # For new users (without prolific_pid), store Prolific IDs after consent
     update_data = {"consent_given": form_data.consented, "updated_at": int(time.time())}
 
-    if form_data.consented and not user.prolific_pid:
-        # Determine role based on STUDY_ID whitelist
-        role = "interviewee" if is_interviewee_user(form_data.study_id) else "parent"
-
-        # Store Prolific IDs only after consent is given
-        update_data.update(
-            {
-                "prolific_pid": form_data.prolific_pid,
-                "study_id": form_data.study_id,
-                "current_session_id": form_data.session_id,
-                "session_number": 1,
-                "role": role,  # Set role based on STUDY_ID whitelist
-            }
-        )
-    elif form_data.consented and user.prolific_pid:
-        # Existing user - check if this is a new session
-        if form_data.session_id and form_data.session_id != user.current_session_id:
-            # New session - increment session_number
-            new_session_number = user.session_number + 1
+    if form_data.consented:
+        # Ensure prolific fields are present (defensive — should already be set at auth)
+        if not user.prolific_pid:
+            role = (
+                "interviewee" if is_interviewee_user(form_data.study_id) else "prolific"
+            )
             update_data.update(
                 {
+                    "prolific_pid": form_data.prolific_pid,
+                    "study_id": form_data.study_id,
                     "current_session_id": form_data.session_id,
-                    "session_number": new_session_number,
+                    "session_number": 1,
+                    "role": role,
                 }
             )
+        else:
+            # Prolific IDs already stored — just update session if it changed
+            if form_data.session_id and form_data.session_id != user.current_session_id:
+                new_session_number = (user.session_number or 1) + 1
+                update_data.update(
+                    {
+                        "current_session_id": form_data.session_id,
+                        "session_number": new_session_number,
+                    }
+                )
 
     # Update consent status
     updated_user = Users.update_user_by_id(user.id, update_data)

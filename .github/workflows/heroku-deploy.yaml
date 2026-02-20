@@ -96,6 +96,8 @@ jobs:
           push: true
           tags: registry.heroku.com/dsl-kidsgpt-pilot-alt/web:latest
           platforms: linux/amd64
+          provenance: false
+          sbom: false
 
       - name: Release to Heroku
         env:

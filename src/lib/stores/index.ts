@@ -437,4 +437,12 @@ export type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
+	// Optional fields used by workflow / Prolific handling
+	prolific_pid?: string;
+	study_id?: string;
+	parent_id?: string | null;
+	consent_given?: boolean | null;
+	current_session_id?: string | null;
+	// Server-derived user type ("prolific" | "interviewee" | "parent" | "child" | "admin" | "user")
+	user_type?: string;
 };

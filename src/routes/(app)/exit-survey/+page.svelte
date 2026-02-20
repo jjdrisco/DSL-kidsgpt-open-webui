@@ -7,7 +7,6 @@
 	import { toast } from 'svelte-sonner';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
-	import VideoModal from '$lib/components/common/VideoModal.svelte';
 	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
 	import { personalityTraits } from '$lib/data/personalityTraits';
 
@@ -57,9 +56,6 @@
 
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
-
-	// Video modal state
-	let showHelpVideo: boolean = false;
 
 	// Debounce helper
 	function debounce(fn: (...args: any[]) => void, delay = 400) {
@@ -421,14 +417,6 @@
 
 			<!-- Navigation Buttons -->
 			<div class="flex items-center space-x-2">
-				<!-- Help Button -->
-				<button
-					on:click={() => (showHelpVideo = true)}
-					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-					aria-label="Show help video"
-				>
-					Help
-				</button>
 				<button
 					on:click={goBack}
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
@@ -1660,11 +1648,4 @@
 
 	<!-- Assignment Time Tracker -->
 	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
-
-	<!-- Help Video Modal -->
-	<VideoModal
-		isOpen={showHelpVideo}
-		videoSrc="/video/Exit-Survey-Demo.mp4"
-		title="Exit Survey Tutorial"
-	/>
 </div>
