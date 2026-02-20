@@ -4326,7 +4326,7 @@
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
-				concern_level: concernLevel ?? undefined,
+				concern_level: undefined, // No longer collected in Step 2
 				concern_reason: concernReason.trim(),
 				decided_at: Date.now(),
 				strategies: [],
@@ -5876,26 +5876,12 @@
 							>
 						{/if}
 						<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
-						<button
-							on:click={() => (showHelpVideo = true)}
-							class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors ml-4"
-							aria-label="Show help video"
-						>
-							Help
-						</button>
 					</div>
 
 					<!-- Controls - always visible so Previous/Next Task accessible when scenarios sidebar is closed -->
 					<div class="flex items-center space-x-3">
 						<!-- Help Button - HIDDEN -->
-						<!-- Help button has been hidden for the time being
-								<button
-									on:click={() => (showHelpVideo = true)}
-									class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-									aria-label="Show help video"
-								>
-									Help
-								</button> -->
+						<!-- Help button has been hidden for the time being -->
 						<!--
 				<button
 					on:click={() => showHelpVideo = true}
@@ -7930,7 +7916,7 @@
 <!-- Help Video Modal -->
 <VideoModal
 	isOpen={showHelpVideo}
-	videoSrc="/video/scenario-review.mp4"
+	videoSrc="/video/Moderation-Scenario-Demo.mp4"
 	title="Moderation Scenario Tutorial"
 />
 

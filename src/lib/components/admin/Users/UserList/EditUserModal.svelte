@@ -147,7 +147,6 @@
 												<option value="user">{$i18n.t('User')}</option>
 												<option value="pending">{$i18n.t('Pending')}</option>
 												<option value="parent">{$i18n.t('Parent')}</option>
-												<option value="prolific">{$i18n.t('Prolific')}</option>
 												<option value="child">{$i18n.t('Child')}</option>
 											</select>
 										</div>

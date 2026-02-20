@@ -204,9 +204,8 @@ async def get_workflow_state(
                 user_type = "interviewee"
 
             # Determine next route based on user type
-            # Rely on `user_type == 'prolific'` (server-derived) rather than checking prolific_pid directly
-            is_prolific = user_type == "prolific"
-
+            # Prolific users (with prolific_pid) always go to assignment-instructions, never /parent
+            is_prolific = getattr(user, "prolific_pid", None) is not None
             if user_type == "parent":
                 next_for_parent = (
                     "/assignment-instructions" if is_prolific else "/parent"
