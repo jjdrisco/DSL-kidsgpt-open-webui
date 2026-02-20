@@ -10,7 +10,6 @@
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { assignScenariosForChild } from '$lib/services/scenarioAssignment';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
-	import VideoModal from '$lib/components/common/VideoModal.svelte';
 	import ChildProfileForm from '$lib/components/profile/ChildProfileForm.svelte';
 
 	const i18n = getContext('i18n');
@@ -24,8 +23,7 @@
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
 
-	// Video modal state
-	let showHelpVideo: boolean = false;
+
 
 	// Function to determine session number for new child profile
 	async function determineSessionNumberForUser(userId: string, token: string): Promise<number> {
@@ -228,14 +226,7 @@
 
 			<!-- Navigation Buttons -->
 			<div class="flex items-center space-x-2">
-				<!-- Help Button -->
-				<button
-					on:click={() => (showHelpVideo = true)}
-					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-					aria-label="Show help video"
-				>
-					Help
-				</button>
+
 				<button
 					on:click={() => goto('/assignment-instructions')}
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
@@ -352,10 +343,5 @@
 	<!-- Assignment Time Tracker -->
 	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
 
-	<!-- Help Video Modal -->
-	<VideoModal
-		isOpen={showHelpVideo}
-		videoSrc="/video/Child-Profile-Demo.mp4"
-		title="Child Profile Tutorial"
-	/>
+
 </div>

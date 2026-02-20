@@ -414,8 +414,8 @@ def get_current_user_by_api_key(request, api_key: str):
 
 
 def get_verified_user(user=Depends(get_current_user)):
-    # Accept new roles: interviewee, parent, child (in addition to user, admin)
-    if user.role not in {"user", "admin", "interviewee", "parent", "child"}:
+    # Accept new roles: interviewee, parent, child, prolific (in addition to user, admin)
+    if user.role not in {"user", "admin", "interviewee", "parent", "child", "prolific"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -458,11 +458,20 @@ def is_interviewee_user(study_id: Optional[str]) -> bool:
 
 def get_user_type(user, study_id: Optional[str] = None) -> str:
     """
-    Determine user type based on role and STUDY_ID whitelist.
-    Returns: "interviewee", "parent", "child", "admin", or "user"
+    Determine user type based on role, Prolific identifiers, and STUDY_ID whitelist.
+    Returns: "prolific", "interviewee", "parent", "child", "admin", or "user"
     """
     if user.role == "admin":
         return "admin"
+
+    # Prolific role is now a first-class DB role — check it directly.
+    if user.role == "prolific":
+        return "prolific"
+
+    # Legacy fallback: users created before the role migration may still have
+    # role="parent" but a prolific_pid set. Treat them as prolific.
+    if hasattr(user, "prolific_pid") and getattr(user, "prolific_pid"):
+        return "prolific"
 
     if user.role == "child":
         return "child"
@@ -473,8 +482,7 @@ def get_user_type(user, study_id: Optional[str] = None) -> str:
     if user.role == "interviewee":
         return "interviewee"
 
-    # For users with role "user", check STUDY_ID to determine if they should be interviewee
-    # If they have parent_id, they're a child
+    # For users with role "user", check if they're a child (parent_id present)
     if hasattr(user, "parent_id") and user.parent_id:
         return "child"
 
