@@ -153,7 +153,7 @@
 			await goto('/auth');
 			return;
 		}
-		if (!['user', 'admin', 'parent', 'child'].includes($user?.role)) {
+		if (!['user', 'admin', 'parent', 'child', 'prolific'].includes($user?.role)) {
 			return;
 		}
 
@@ -337,8 +337,8 @@
 				// Continue with navigation logic even if API fails
 			}
 
-			// Check if this is a Prolific user (use server-derived `user_type` — do not rely on prolific_pid/localStorage)
-			const isProlificUser = $user?.user_type === 'prolific';
+// Check if this is a Prolific user (use server-derived `user_type` or DB role — do not rely on prolific_pid/localStorage)
+		const isProlificUser = $user?.user_type === 'prolific' || $user?.role === 'prolific';
 			const prolificSessionId = localStorage.getItem('prolificSessionId');
 			const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
 
@@ -505,7 +505,7 @@
 				? 'justify-start'
 				: 'justify-end'}"
 		>
-			{#if !['user', 'admin', 'parent', 'child'].includes($user?.role)}
+			{#if !['user', 'admin', 'parent', 'child', 'prolific'].includes($user?.role)}
 				<AccountPending />
 			{:else}
 				{#if localDBChats.length > 0}

@@ -32,9 +32,11 @@ BACKEND_DIR = OPEN_WEBUI_DIR.parent
 BASE_DIR = BACKEND_DIR.parent
 
 try:
-    from dotenv import find_dotenv, load_dotenv
+    from dotenv import load_dotenv
 
-    load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
+    _env_path = BASE_DIR / ".env"
+    if _env_path.exists():
+        load_dotenv(_env_path, override=False)  # shell exports take precedence
 except ImportError:
     print("dotenv not installed, skipping...")
 

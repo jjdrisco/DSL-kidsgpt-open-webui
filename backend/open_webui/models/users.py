@@ -304,7 +304,9 @@ class UsersTable:
                 user_data["prolific_pid"] = prolific_pid
 
             user = UserModel(**user_data)
-            result = User(**user.model_dump())
+            # user_type is a derived Pydantic-only field — exclude it when
+            # constructing the SQLAlchemy ORM object (no matching DB column).
+            result = User(**user.model_dump(exclude={"user_type"}))
             db.add(result)
             db.commit()
             db.refresh(result)

@@ -1725,13 +1725,13 @@ export async function getUserType(
 	}
 
 	if (user.role === 'admin') return 'admin';
+	if (user.role === 'prolific') return 'prolific';
 	if (user.role === 'child') return 'child';
 	if (user.role === 'parent') return 'parent';
 	if (user.role === 'interviewee') return 'interviewee';
 
-	// Prolific participants (derived): either present on the user object or in localStorage
+	// Legacy fallback: prolific_pid set but role not yet migrated
 	if ((user as any).prolific_pid) return 'prolific';
-	if (typeof window !== 'undefined' && localStorage.getItem('prolificPid')) return 'prolific';
 
 	// For users with role "user", check STUDY_ID against whitelist
 	// Check if user has parent_id (child account)

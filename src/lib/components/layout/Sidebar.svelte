@@ -811,7 +811,7 @@
 			<div class="-mt-[0.5px]">
 				<div class="">
 					<Tooltip
-						content={$user?.role === 'parent'
+						content={['parent', 'prolific'].includes($user?.role)
 							? $i18n.t("Test Children's Chat")
 							: $i18n.t('New Chat')}
 						placement="right"
@@ -827,7 +827,7 @@
 								goto('/');
 								newChatHandler();
 							}}
-							aria-label={$user?.role === 'parent'
+							aria-label={['parent', 'prolific'].includes($user?.role)
 								? $i18n.t("Test Children's Chat")
 								: $i18n.t('New Chat')}
 						>
@@ -858,29 +858,29 @@
 					</Tooltip>
 				</div>
 
-				{#if $user?.role === 'parent'}
-					<div class="">
-						<Tooltip content={$i18n.t('View Children')} placement="right">
-							<a
-								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
-								href="/parent"
-								on:click={async (e) => {
-									e.stopImmediatePropagation();
-									e.preventDefault();
+				{#if ['parent', 'prolific'].includes($user?.role)}
+				<div>
+					<Tooltip content={$i18n.t('View Children')} placement="right">
+						<a
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							href="/parent"
+							on:click={async (e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
 
-									goto('/parent');
-									itemClickHandler();
-								}}
-								draggable="false"
-								aria-label={$i18n.t('View Children')}
-							>
-								<div class=" self-center flex items-center justify-center size-9">
-									<UserGroup className="size-4.5" />
-								</div>
-							</a>
-						</Tooltip>
-					</div>
-				{/if}
+								goto('/parent');
+								itemClickHandler();
+							}}
+							draggable="false"
+							aria-label={$i18n.t('View Children')}
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<UserGroup className="size-4.5" />
+							</div>
+						</a>
+					</Tooltip>
+				</div>
+			{/if}
 
 				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
@@ -1321,7 +1321,7 @@
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
-							aria-label={$user?.role === 'parent'
+							aria-label={['parent', 'prolific'].includes($user?.role)
 								? $i18n.t("Test Children's Chat")
 								: $i18n.t('New Chat')}
 						>
@@ -1331,7 +1331,7 @@
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
 								<div class=" self-center text-sm font-primary">
-									{$user?.role === 'parent' ? $i18n.t("Test Children's Chat") : $i18n.t('New Chat')}
+									{['parent', 'prolific'].includes($user?.role) ? $i18n.t("Test Children's Chat") : $i18n.t('New Chat')}
 								</div>
 							</div>
 
@@ -1360,10 +1360,10 @@
 						</button>
 					</div>
 
-					{#if $user?.role === 'parent'}
-						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
-							<a
-								id="sidebar-view-children-button"
+				{#if ['parent', 'prolific'].includes($user?.role)}
+					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							id="sidebar-view-children-button"
 								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								href="/parent"
 								on:click={itemClickHandler}

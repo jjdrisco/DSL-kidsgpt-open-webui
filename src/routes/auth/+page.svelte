@@ -77,7 +77,7 @@
 				});
 
 				// Route based on user type
-				if (userType === 'parent') {
+				if (userType === 'parent' || userType === 'prolific') {
 					redirectPath = '/parent';
 				} else if (userType === 'child') {
 					redirectPath = '/';

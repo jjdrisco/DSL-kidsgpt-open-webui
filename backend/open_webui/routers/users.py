@@ -835,7 +835,8 @@ async def create_child_account(
             detail="Failed to link child account to parent",
         )
 
-    # Ensure parent has role "parent" in DB (for Sidebar display)
+    # Ensure user has role "parent" in DB (for Sidebar display).
+    # Note: prolific users keep their "prolific" role — do not upgrade to "parent".
     if user.role == "user":
         Users.update_user_role_by_id(user.id, "parent", db=db)
 

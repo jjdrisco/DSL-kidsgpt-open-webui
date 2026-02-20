@@ -50,10 +50,10 @@
 
 	const dispatch = createEventDispatcher();
 
-	// Derived flag: treat user as Prolific based on server-derived `user_type`.
-	// Do NOT rely on localStorage/prolific_pid for UI gating — use `user_type`.
+	// Derived flag: treat user as Prolific based on server-derived `user_type` or explicit DB role.
+	// Do NOT rely on localStorage/prolific_pid for UI gating — prefer server values.
 	let isProlific = false;
-	$: isProlific = $user?.user_type === 'prolific';
+	$: isProlific = $user?.user_type === 'prolific' || $user?.role === 'prolific';
 
 	let usage = null;
 	const getUsageInfo = async () => {
@@ -259,7 +259,7 @@
 				$page.url.pathname.startsWith('/moderation-scenario') ||
 				$page.url.pathname === '/completion'}
 			{@const isParentOrChild =
-				$user?.role === 'parent' || $user?.role === 'child' || ($user as any)?.parent_id}
+				['parent', 'prolific', 'child'].includes($user?.role) || ($user as any)?.parent_id}
 
 			{#if isSurveyOrWorkflowRoute && !isProlific}
 				<DropdownMenu.Item

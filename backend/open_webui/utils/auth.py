@@ -414,8 +414,8 @@ def get_current_user_by_api_key(request, api_key: str):
 
 
 def get_verified_user(user=Depends(get_current_user)):
-    # Accept new roles: interviewee, parent, child (in addition to user, admin)
-    if user.role not in {"user", "admin", "interviewee", "parent", "child"}:
+    # Accept new roles: interviewee, parent, child, prolific (in addition to user, admin)
+    if user.role not in {"user", "admin", "interviewee", "parent", "child", "prolific"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -464,8 +464,12 @@ def get_user_type(user, study_id: Optional[str] = None) -> str:
     if user.role == "admin":
         return "admin"
 
-    # Prolific participants are identified by the `prolific_pid` column on the user model
-    # Treat Prolific as a distinct derived user type used by the onboarding/workflow guards.
+    # Prolific role is now a first-class DB role — check it directly.
+    if user.role == "prolific":
+        return "prolific"
+
+    # Legacy fallback: users created before the role migration may still have
+    # role="parent" but a prolific_pid set. Treat them as prolific.
     if hasattr(user, "prolific_pid") and getattr(user, "prolific_pid"):
         return "prolific"
 
