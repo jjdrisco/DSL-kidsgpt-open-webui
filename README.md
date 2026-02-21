@@ -203,6 +203,7 @@ python generate_prompts.py \
     -o child_llm_prompts.json \  # output file
     -m gpt-5.2-pro-2025-12-11     # model to call (optional)
 ```
+
 ```bash
 cd scenarios
 python generate_prompts.py -n 50 -o pilot_prompts.json -m gpt-5.2-pro-2025-12-11
@@ -220,7 +221,8 @@ python generate_responses.py \
     -i child_llm_prompts.json \  # input from previous step
     -o responses.json            # output file with `model_response` added
 ```
-```bash
+
+````bash
 
 The script skips entries that already contain a `model_response`, and you can
 specify `--delay` to throttle API calls.
@@ -241,7 +243,7 @@ If you're experiencing connection issues, it’s often due to the WebUI docker c
 
 ```bash
 docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
+````
 
 ### Keeping Your Docker Installation Up-to-Date
 
