@@ -2051,6 +2051,8 @@
 				startOffset: currentSelectionStartOffset,
 				endOffset: currentSelectionEndOffset
 			};
+			// Push into reactive array so the modal and badge list update immediately
+			highlightedTexts1 = [...highlightedTexts1, highlightInfo];
 			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
 				const currentIdentifier = getScenarioId(selectedScenarioIndex);
