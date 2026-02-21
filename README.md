@@ -174,6 +174,63 @@ We offer various installation alternatives, including non-Docker native installa
 
 Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/advanced-topics/development) for instructions on setting up a local development environment.
 
+## Generating Synthetic Prompts & Responses 📝
+
+The repository includes two helper scripts under `scenarios/` that use the OpenAI API to
+create child‑like prompts and then fetch model responses.
+
+### Prerequisites
+
+- Python 3.11 (same environment used for the backend)
+- Install dependencies:
+
+```bash
+pip install openai tqdm
+```
+
+Set your API key in the environment or pass it with `-k`:
+
+```bash
+export OPENAI_API_KEY="your_key_here"
+```
+
+### Create prompt dataset
+
+```bash
+cd scenarios
+python generate_prompts.py \
+    -n 175 \          # number of prompts to generate (default 175)
+    -o child_llm_prompts.json \  # output file
+    -m gpt-5.2-pro-2025-12-11     # model to call (optional)
+```
+
+```bash
+cd scenarios
+python generate_prompts.py -n 50 -o pilot_prompts.json -m gpt-5.2-pro-2025-12-11
+```
+
+Additional flags are available (`--batch-size`, `--base-url`, etc.) – run
+`python generate_prompts.py -h` for help.
+
+### Add model responses
+
+Once you have a prompt file, you can populate it with responses:
+
+```bash
+python generate_responses.py \
+    -i child_llm_prompts.json \  # input from previous step
+    -o responses.json            # output file with `model_response` added
+```
+
+````bash
+
+The script skips entries that already contain a `model_response`, and you can
+specify `--delay` to throttle API calls.
+
+These tools are intended for offline experimentation and dataset creation –
+output files are plain JSON arrays that can be consumed by other analysis
+scripts or test harnesses.
+
 ### Troubleshooting
 
 Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
@@ -186,7 +243,7 @@ If you're experiencing connection issues, it’s often due to the WebUI docker c
 
 ```bash
 docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
+````
 
 ### Keeping Your Docker Installation Up-to-Date
 

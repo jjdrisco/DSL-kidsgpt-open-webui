@@ -32,7 +32,9 @@ except ImportError:  # pragma: no cover - runtime environment may omit peewee
         pass
 
     def connect(*args, **kwargs):
-        raise ImportError("peewee is required to connect to databases; install it if needed")
+        raise ImportError(
+            "peewee is required to connect to databases; install it if needed"
+        )
 
     def parse(*args, **kwargs):
         return {}
