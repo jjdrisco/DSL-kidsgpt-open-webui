@@ -138,6 +138,9 @@ You can trigger deployment manually from GitHub:
 
 The container’s entrypoint is `backend/start.sh`. It runs `alembic upgrade head` in `/app/backend/open_webui` before starting the web server, so every new release’s web dynos run migrations as they boot. A separate “Run migrations” step in the workflow was removed because `heroku run` one-off dynos for container apps do not use the app image’s Python environment (they reported “No module named alembic”), so the reliable place for migrations is web startup.
 
+> **Dependency note:** early 2026 deployments saw 500s and migration failures because the `cryptography` package was missing from the container image. The migration step imports several modules from `cryptography`, so if it isn’t installed the dyno will exit and Heroku will repeatedly restart. To avoid this class of problem the Dockerfile now installs `cryptography` as part of the **critical packages** block (before the `requirements.txt` install) and verifies its presence during build. If you ever see `ModuleNotFoundError` during the migration stage, re‑build the image with the missing package pinned in the Dockerfile and check for corrupted `-wh-*` pip stubs.
+
+
 ### What is “Heroku build”? (GitHub integration vs our workflow)
 
 - **Heroku build (GitHub integration)**  
