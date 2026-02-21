@@ -29,34 +29,43 @@ def upgrade() -> None:
 
     existing_columns = [col["name"] for col in inspector.get_columns("user")]
 
-    # Add prolific fields if they don't exist
-    if "prolific_pid" not in existing_columns:
-        op.add_column(
-            "user", sa.Column("prolific_pid", sa.String(), nullable=True, unique=True)
-        )
+    # Use batch mode for SQLite so constraints (unique) can be applied safely
+    with op.batch_alter_table("user") as batch_op:
+        # Add prolific fields if they don't exist
+        if "prolific_pid" not in existing_columns:
+            batch_op.add_column(sa.Column("prolific_pid", sa.String(), nullable=True))
+            # create unique index manually for portability
+            try:
+                batch_op.create_unique_constraint(
+                    "uq_user_prolific_pid", ["prolific_pid"]
+                )
+            except Exception:
+                pass
 
-    if "study_id" not in existing_columns:
-        op.add_column("user", sa.Column("study_id", sa.String(), nullable=True))
+        if "study_id" not in existing_columns:
+            batch_op.add_column(sa.Column("study_id", sa.String(), nullable=True))
 
-    if "current_session_id" not in existing_columns:
-        op.add_column(
-            "user", sa.Column("current_session_id", sa.String(), nullable=True)
-        )
+        if "current_session_id" not in existing_columns:
+            batch_op.add_column(
+                sa.Column("current_session_id", sa.String(), nullable=True)
+            )
 
-    if "session_number" not in existing_columns:
-        op.add_column(
-            "user",
-            sa.Column(
-                "session_number", sa.BigInteger(), nullable=False, server_default="1"
-            ),
-        )
+        if "session_number" not in existing_columns:
+            batch_op.add_column(
+                sa.Column(
+                    "session_number",
+                    sa.BigInteger(),
+                    nullable=False,
+                    server_default="1",
+                ),
+            )
 
-    if "consent_given" not in existing_columns:
-        op.add_column("user", sa.Column("consent_given", sa.Boolean(), nullable=True))
+        if "consent_given" not in existing_columns:
+            batch_op.add_column(sa.Column("consent_given", sa.Boolean(), nullable=True))
 
-    # Add parent_id column for child accounts
-    if "parent_id" not in existing_columns:
-        op.add_column("user", sa.Column("parent_id", sa.String(), nullable=True))
+        # Add parent_id column for child accounts
+        if "parent_id" not in existing_columns:
+            batch_op.add_column(sa.Column("parent_id", sa.String(), nullable=True))
 
 
 def downgrade() -> None:

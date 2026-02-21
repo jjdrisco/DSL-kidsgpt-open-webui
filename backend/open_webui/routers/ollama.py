@@ -1449,7 +1449,7 @@ async def generate_chat_completion(
                     detail="Model not found",
                 )
     elif not bypass_filter:
-        if user.role not in ("admin", "parent", "child"):
+        if user.role not in ("admin", "parent", "child", "prolific"):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -1559,7 +1559,7 @@ async def generate_openai_completion(
                     detail="Model not found",
                 )
     else:
-        if user.role not in ("admin", "parent", "child"):
+        if user.role not in ("admin", "parent", "child", "prolific"):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -1646,7 +1646,7 @@ async def generate_openai_chat_completion(
                     detail="Model not found",
                 )
     else:
-        if user.role not in ("admin", "parent", "child"):
+        if user.role not in ("admin", "parent", "child", "prolific"):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",

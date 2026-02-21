@@ -137,8 +137,10 @@ RUN apt-get update && \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-# Upgrade pip first
-RUN pip3 install --upgrade pip setuptools wheel
+# Upgrade pip first, then clean up any corrupted partial-install stubs
+# (the -wh-* directories that appear when a pip install is interrupted)
+RUN pip3 install --upgrade pip setuptools wheel && \
+    find /usr/local/lib/python3.11/site-packages -maxdepth 1 -name '-*' -exec rm -rf {} + 2>/dev/null || true
 
 # Install critical packages first (core dependencies needed for app startup and migrations)
 RUN pip3 install --no-cache-dir \
@@ -154,7 +156,8 @@ RUN pip3 install --no-cache-dir \
     "requests==2.32.5" \
     "redis" \
     "starlette-compress==1.6.1" \
-    "starsessions[redis]==2.2.1"
+    "starsessions[redis]==2.2.1" \
+    "cryptography"
 
 # Install torch separately (CPU version for Heroku) - skip if it fails
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
@@ -174,7 +177,7 @@ RUN chmod +x ./check_dependencies.py
 
 # Verify core packages needed to start the app and run migrations.
 # Do NOT fail the image build on optional/large deps (runtime checker will handle them).
-RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, alembic; print('✓ Core packages verified')" || (echo "ERROR: Core packages missing!" && exit 1)
+RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, alembic, cryptography; print('✓ Core packages verified')" || (echo "ERROR: Core packages missing!" && exit 1)
 
 # Create data directory
 RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \

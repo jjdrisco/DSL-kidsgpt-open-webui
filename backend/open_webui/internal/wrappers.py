@@ -2,11 +2,44 @@ import logging
 import os
 from contextvars import ContextVar
 
-from peewee import *
-from peewee import InterfaceError as PeeWeeInterfaceError
-from peewee import PostgresqlDatabase
-from playhouse.db_url import connect, parse
-from playhouse.shortcuts import ReconnectMixin
+# Peewee is only used for the legacy connection helpers.  The project no longer
+# depends on it, so in environments where it isn't installed (e.g. the
+# migration container) we gracefully fall back to dummy definitions.  This
+# prevents Alembic env.py from failing during `alembic upgrade head`.
+try:
+    from peewee import *
+    from peewee import InterfaceError as PeeWeeInterfaceError
+    from peewee import PostgresqlDatabase
+    from playhouse.db_url import connect, parse
+    from playhouse.shortcuts import ReconnectMixin
+except ImportError:  # pragma: no cover - runtime environment may omit peewee
+    logging.getLogger(__name__).warning("peewee not installed, using stubs")
+
+    # define minimal stubs to keep type references alive
+    class OperationalError(Exception):
+        pass
+
+    class InterfaceError(Exception):
+        pass
+
+    class PostgresqlDatabase:
+        pass
+
+    class SqliteDatabase:
+        pass
+
+    class ReconnectMixin:
+        pass
+
+    def connect(*args, **kwargs):
+        raise ImportError(
+            "peewee is required to connect to databases; install it if needed"
+        )
+
+    def parse(*args, **kwargs):
+        return {}
+
+    PeeWeeInterfaceError = InterfaceError
 
 log = logging.getLogger(__name__)
 

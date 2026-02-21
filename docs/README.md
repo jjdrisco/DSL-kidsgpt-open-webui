@@ -9,11 +9,32 @@ This directory contains project-specific documentation and guides:
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - General contribution guidelines
 - **[PULL_REQUEST_WORKFLOW.md](PULL_REQUEST_WORKFLOW.md)** - Detailed PR workflow, GitHub token setup, and troubleshooting
 - **[CYPRESS_TEST_SETUP.md](CYPRESS_TEST_SETUP.md)** - Cypress testing setup and configuration
+- **[README_DUMP_TRANSFORMATION.md](README_DUMP_TRANSFORMATION.md)** - How to convert database dumps into DataFrames for analysis
+- **[CONTEXT_EXPORT.md](CONTEXT_EXPORT.md)** & **[CONTEXT_SUMMARY.txt](CONTEXT_SUMMARY.txt)** - Project context and notes pulled from workspace (useful for newcomers)
+- **[GPT5_VALIDATION_GUIDE.md](GPT5_VALIDATION_GUIDE.md)** - Guide for ensuring moderation uses GPT‑5
+
+> **Note:** `child_llm_scenarios.json` has been removed from the repository; scenario data is now managed via the admin UI and backend API.
+
 - **[MODERATION_SURVEY_FLOW.md](MODERATION_SURVEY_FLOW.md)** - Moderation and survey flow documentation
 - **[SCENARIO_SYSTEM.md](SCENARIO_SYSTEM.md)** - Scenario system documentation
 - **[SECURITY.md](SECURITY.md)** - Security guidelines and reporting
 - **[HEROKU_DEPLOYMENT.md](HEROKU_DEPLOYMENT.md)** - Heroku deployment guide, debugging history, and troubleshooting
-- **[HEROKU_404_FIX.md](HEROKU_404_FIX.md)** - Fix 404 on root and frontend routes
+
+> **Note:** additional Heroku/archived guides (404 fix, backup setup, troubleshooting) have been moved to `docs/ARCHIVE`.
+
+### Archived / Legacy Documents
+
+These files are no longer part of the active documentation but are kept for historical reference:
+
+- `docs/ARCHIVE/apache.md` (legacy self‑hosted Apache/Ollama instructions)
+- `docs/ARCHIVE/HEROKU_404_FIX.md` (old 404 troubleshooting, superseded by HEROKU_DEPLOYMENT)
+- `docs/ARCHIVE/HEROKU_BACKUP_SETUP.md` (outdated backup notes with old app name)
+- `docs/ARCHIVE/HEROKU_TROUBLESHOOTING_GUIDE.md` (merged into HEROKU_DEPLOYMENT)
+- `docs/ARCHIVE/STALE_CODE_ANALYSIS.md` (internal code cleanup notes)
+- `docs/ARCHIVE/SURVEY_IMPLEMENTATION_DIFFERENCES.md` (historical comparison)
+- `docs/ARCHIVE/DEV_MAIN_WORKFLOW_SETUP.md` (branch workflow guide; may be outdated)
+- `docs/ARCHIVE/WORKFLOW_FILE_UPDATE_INSTRUCTIONS.md` (old CI workflow tips)
+- `docs/ARCHIVE/TESTING_SCENARIO_SELECTION.md` (older survey selection notes)
 
 ## Project Workflow
 

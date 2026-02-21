@@ -52,6 +52,13 @@ async def create_selection(
 ):
     """Create a new selection"""
     try:
+        # fill scenario_id based on assignment when missing
+        if not form_data.scenario_id and form_data.assignment_id:
+            from open_webui.models.scenarios import ScenarioAssignments
+
+            ass = ScenarioAssignments.get_by_id(form_data.assignment_id)
+            if ass and getattr(ass, "scenario_id", None):
+                form_data.scenario_id = ass.scenario_id
         selection = Selections.insert_new_selection(form_data, current_user.id)
         if not selection:
             raise HTTPException(status_code=500, detail="Failed to create selection")

@@ -106,6 +106,10 @@ class UserModel(BaseModel):
     profile_image_url: str
     profile_banner_image_url: Optional[str] = None
 
+    # Derived user type (computed server-side via `get_user_type`)
+    # Possible values: "prolific", "interviewee", "parent", "child", "admin", "user"
+    user_type: Optional[str] = None
+
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -279,23 +283,30 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth: Optional[dict] = None,
+        prolific_pid: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
         with get_db_context(db) as db:
-            user = UserModel(
-                **{
-                    "id": id,
-                    "email": email,
-                    "name": name,
-                    "role": role,
-                    "profile_image_url": profile_image_url,
-                    "last_active_at": int(time.time()),
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                    "oauth": oauth,
-                }
-            )
-            result = User(**user.model_dump())
+            user_data = {
+                "id": id,
+                "email": email,
+                "name": name,
+                "role": role,
+                "profile_image_url": profile_image_url,
+                "last_active_at": int(time.time()),
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+                "oauth": oauth,
+            }
+
+            # Include Prolific PID when provided
+            if prolific_pid:
+                user_data["prolific_pid"] = prolific_pid
+
+            user = UserModel(**user_data)
+            # user_type is a derived Pydantic-only field — exclude it when
+            # constructing the SQLAlchemy ORM object (no matching DB column).
+            result = User(**user.model_dump(exclude={"user_type"}))
             db.add(result)
             db.commit()
             db.refresh(result)

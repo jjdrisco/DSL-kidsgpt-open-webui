@@ -170,6 +170,29 @@ Merge to main
    - Review and merge
    - GitHub Actions auto-deploys to Heroku (production)
 
+### Migrations & Dependency Notes
+
+- Database migrations are executed inside the container every time a dyno starts. The
+  `start.sh` script in `backend/` runs:
+
+  ```bash
+  python -m alembic upgrade head
+  ```
+
+  If this step fails the container will exit and Heroku will repeatedly restart the
+  dyno. The most common cause is a missing Python package in the image. In
+  February 2026 we tracked down a migration failure caused by `cryptography` being
+  omitted during the pip install (corrupted `-wh-*` stubs caused the install to
+  silently skip it). The fix is to install critical packages such as
+  `cryptography` explicitly in the Dockerfile _before_ running `pip install
+-r requirements.txt` and to verify their presence during the build. See the
+  `Dockerfile` comments and [`HEROKU_DEPLOYMENT.md`](docs/HEROKU_DEPLOYMENT.md)
+  for details.
+
+- To debug migration failures use `heroku logs --tail -a <app>` and look for
+  `ModuleNotFoundError` or `ImportError` messages; the error output is echoed by
+  `start.sh` before it aborts.
+
 ### For Hotfixes
 
 1. **Create hotfix from main**:

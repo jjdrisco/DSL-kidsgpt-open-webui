@@ -22,6 +22,7 @@
 		abandonScenario,
 		createHighlight,
 		getHighlights,
+		type HighlightCreateRequest,
 		type ScenarioAssignResponse,
 		getAssignmentsForChild,
 		type AssignmentWithScenario
@@ -428,6 +429,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId,
 					session_number: sessionNumber,
+					scenario_id: getCurrentScenarioId(),
 					active_ms_cumulative: sessionActiveMs
 				});
 				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/moderation/session-activity`, payload);
@@ -442,6 +444,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId,
 				session_number: sessionNumber,
+				scenario_id: getCurrentScenarioId(),
 				active_ms_cumulative: sessionActiveMs
 			});
 		} catch (e) {
@@ -1299,7 +1302,8 @@
 	// Highlight information interface
 	interface HighlightInfo {
 		text: string;
-		// Offsets removed - highlights now stored as HTML with <mark> elements
+		startOffset?: number; // absolute character offset within scenario text (-1 = unknown)
+		endOffset?: number; // absolute character offset within scenario text (-1 = unknown)
 	}
 
 	// Version management interfaces
@@ -1477,6 +1481,8 @@
 	let selectionButtonsTop1: number = 0;
 	let selectionButtonsLeft1: number = 0;
 	let currentSelection1: string = '';
+	let currentSelectionStartOffset: number = -1; // absolute char offset of current selection
+	let currentSelectionEndOffset: number = -1; // absolute char offset of current selection
 	let selectionInPrompt: boolean = false;
 
 	// UI state
@@ -1689,6 +1695,10 @@
 			const selection = window.getSelection();
 			const selectedText = selection?.toString().trim() || '';
 
+			// character offsets (will be filled later)
+			let absoluteStartOffset = -1;
+			let absoluteEndOffset = -1;
+
 			if (!selection || selectedText.length === 0 || selection.rangeCount === 0) {
 				selectionButtonsVisible1 = false;
 				currentSelection1 = '';
@@ -1808,6 +1818,25 @@
 			try {
 				// The container to search within (use contentElement if available, else activeContainer)
 				const searchRoot = contentElement || activeContainer;
+
+				// Compute absolute character offsets within the full text of searchRoot.
+				// Produces notebook-compatible {start, end} values for render_highlighted_scenario().
+				{
+					const offsetWalker = document.createTreeWalker(searchRoot, NodeFilter.SHOW_TEXT, null);
+					let charCount = 0;
+					let offsetNode: Text | null;
+					while ((offsetNode = offsetWalker.nextNode() as Text | null)) {
+						const nodeLen = offsetNode.textContent?.length ?? 0;
+						if (offsetNode === range.startContainer) {
+							absoluteStartOffset = charCount + range.startOffset;
+						}
+						if (offsetNode === range.endContainer) {
+							absoluteEndOffset = charCount + range.endOffset;
+						}
+						charCount += nodeLen;
+						if (absoluteStartOffset !== -1 && absoluteEndOffset !== -1) break;
+					}
+				}
 
 				// Collect all text nodes that intersect with the selection range
 				interface TextNodeInfo {
@@ -1977,6 +2006,8 @@
 				}
 
 				currentSelection1 = selectedText;
+				currentSelectionStartOffset = absoluteStartOffset;
+				currentSelectionEndOffset = absoluteEndOffset;
 				selectionInPrompt = activeContainer === promptContainer1;
 
 				// Automatically save the selection (stores HTML and saves to backend)
@@ -2014,10 +2045,14 @@
 		// Check if this highlight already exists (by text)
 		const exists = highlightedTexts1.some((h) => h.text === text);
 		if (!exists) {
-			// Add to local state array (Approach 3: no offsets, just text)
-			const highlightInfo: HighlightInfo = { text };
+			// Add to local state array (captures text + absolute character offsets)
+			const highlightInfo: HighlightInfo = {
+				text,
+				startOffset: currentSelectionStartOffset,
+				endOffset: currentSelectionEndOffset
+			};
+			// Push into reactive array so the modal and badge list update immediately
 			highlightedTexts1 = [...highlightedTexts1, highlightInfo];
-
 			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
 				const currentIdentifier = getScenarioId(selectedScenarioIndex);
@@ -2052,11 +2087,20 @@
 					return;
 				}
 
-				// Save to new highlights API (no offsets in Approach 3)
-				const highlightPayload = {
+				// Save to highlights API with character offsets when available
+				const highlightPayload: HighlightCreateRequest = {
 					assignment_id: assignmentId,
 					selected_text: highlightInfo.text,
-					source: (selectionInPrompt ? 'prompt' : 'response') as 'prompt' | 'response'
+					source: (selectionInPrompt ? 'prompt' : 'response') as 'prompt' | 'response',
+					scenario_id: getCurrentScenarioId(),
+					start_offset:
+						highlightInfo.startOffset !== undefined && highlightInfo.startOffset >= 0
+							? highlightInfo.startOffset
+							: undefined,
+					end_offset:
+						highlightInfo.endOffset !== undefined && highlightInfo.endOffset >= 0
+							? highlightInfo.endOffset
+							: undefined
 				};
 				await createHighlight(localStorage.token, highlightPayload);
 				console.log('✅ Highlight saved to new API:', { assignmentId, highlightInfo });
@@ -2957,11 +3001,11 @@
 						})
 					);
 				} else {
-					// New format - already objects
+					// New format - already objects (stored as {text, start, end} after backend normalisation)
 					highlightedTexts1 = (backendSession.highlighted_texts as any[]).map((h) => ({
 						text: h.text,
-						startOffset: h.start_offset ?? -1,
-						endOffset: h.end_offset ?? -1
+						startOffset: h.start ?? h.start_offset ?? -1,
+						endOffset: h.end ?? h.end_offset ?? -1
 					}));
 				}
 				step1Completed = true;
@@ -3022,11 +3066,11 @@
 									})
 								);
 							} else {
-								// New format - already objects
+								// New format - already objects (stored as {text, start, end} after backend normalisation)
 								highlightedTexts = (session.highlighted_texts as any[]).map((h) => ({
 									text: h.text,
-									startOffset: h.start_offset ?? -1,
-									endOffset: h.end_offset ?? -1
+									startOffset: h.start ?? h.start_offset ?? -1,
+									endOffset: h.end ?? h.end_offset ?? -1
 								}));
 							}
 						}
@@ -3625,6 +3669,7 @@
 					attempt_number: 1,
 					version_number: versionNumber,
 					session_number: sessionNumber,
+					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: confirmedVersionIndex === -1 ? 'accept_original' : 'moderate',
@@ -3637,7 +3682,11 @@
 						confirmedVersionIndex >= 0 && versions[confirmedVersionIndex]
 							? versions[confirmedVersionIndex].customInstructions.map((c) => c.text)
 							: [],
-					highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })),
+					highlighted_texts: highlightedTexts1.map((h) => ({
+						text: h.text,
+						start_offset: h.startOffset,
+						end_offset: h.endOffset
+					})),
 					refactored_response:
 						confirmedVersionIndex >= 0 && versions[confirmedVersionIndex]
 							? versions[confirmedVersionIndex].response
@@ -3784,12 +3833,17 @@
 							attempt_number: 1,
 							version_number: 0,
 							session_number: sessionNumber,
+							scenario_id: getCurrentScenarioId(),
 							scenario_prompt: childPrompt1,
 							original_response: originalResponse1,
 							initial_decision: undefined,
 							strategies: [],
 							custom_instructions: [],
-							highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })),
+							highlighted_texts: highlightedTexts1.map((h) => ({
+								text: h.text,
+								start_offset: h.startOffset,
+								end_offset: h.endOffset
+							})),
 							refactored_response: undefined,
 							is_final_version: false,
 							is_attention_check: true,
@@ -4011,6 +4065,16 @@
 		};
 	}
 
+	// helper to grab the canonical scenario_id associated with the currently selected
+	// assignment. this value is included in each moderation-session payload so the
+	// database row can be joined back to the scenarios table during analysis.
+	// If the state hasn’t been populated yet for some reason we fall back to the
+	// identifier (typically "scenario_<index>") so that the value is never undefined
+	function getCurrentScenarioId(): string {
+		const identifier = getScenarioId(selectedScenarioIndex);
+		return scenarioStates.get(identifier)?.scenario_id || identifier;
+	}
+
 	/**
 	 * Step 1: Complete highlighting or skip scenario.
 	 *
@@ -4087,6 +4151,7 @@
 					attempt_number: 1,
 					version_number: 0,
 					session_number: sessionNumber,
+					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: 'not_applicable',
@@ -4163,12 +4228,17 @@
 					attempt_number: 1,
 					version_number: 0,
 					session_number: sessionNumber,
+					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: undefined, // No decision yet, just saving highlights
 					strategies: [],
 					custom_instructions: [],
-					highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })), // Save all highlights as JSON array to `moderation_session` table
+					highlighted_texts: highlightedTexts1.map((h) => ({
+						text: h.text,
+						start_offset: h.startOffset,
+						end_offset: h.endOffset
+					})), // Save all highlights as JSON array to `moderation_session` table
 					refactored_response: undefined,
 					is_final_version: false,
 					highlights_saved_at: Date.now(),
@@ -4323,15 +4393,20 @@
 				attempt_number: 1,
 				version_number: 0,
 				session_number: sessionNumber,
+				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
-				concern_level: undefined, // No longer collected in Step 2
+				concern_level: concernLevel ?? undefined,
 				concern_reason: concernReason.trim(),
 				decided_at: Date.now(),
 				strategies: [],
 				custom_instructions: [],
-				highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })),
+				highlighted_texts: highlightedTexts1.map((h) => ({
+					text: h.text,
+					start_offset: h.startOffset,
+					end_offset: h.endOffset
+				})),
 				refactored_response: undefined,
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
@@ -4400,6 +4475,7 @@
 				attempt_number: 1,
 				version_number: versionNumber,
 				session_number: sessionNumber,
+				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'moderate',
@@ -4417,7 +4493,11 @@
 					currentVersionIndex >= 0 && versions[currentVersionIndex]
 						? versions[currentVersionIndex].customInstructions.map((c) => c.text)
 						: [],
-				highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })),
+				highlighted_texts: highlightedTexts1.map((h) => ({
+					text: h.text,
+					start_offset: h.startOffset,
+					end_offset: h.endOffset
+				})),
 				refactored_response:
 					currentVersionIndex >= 0 && versions[currentVersionIndex]
 						? versions[currentVersionIndex].response
@@ -4528,6 +4608,7 @@
 				attempt_number: 1,
 				version_number: 0,
 				session_number: sessionNumber,
+				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'not_applicable',
@@ -4724,13 +4805,18 @@
 						attempt_number: 1,
 						version_number: currentVersionIndex + 1,
 						session_number: sessionNumber,
+						scenario_id: getCurrentScenarioId(),
 						scenario_prompt: childPrompt1,
 						original_response: originalResponse1,
 						initial_decision: 'moderate',
 						concern_level: stepData.concern_level,
 						strategies: [...standardStrategies],
 						custom_instructions: usedCustomInstructions.map((c) => c.text), // Convert to string array
-						highlighted_texts: highlightedTexts1.map((h) => ({ text: h.text })),
+						highlighted_texts: highlightedTexts1.map((h) => ({
+							text: h.text,
+							start_offset: h.startOffset,
+							end_offset: h.endOffset
+						})),
 						refactored_response: result.refactored_response,
 						is_final_version: false,
 						decided_at: Date.now(),
@@ -5876,12 +5962,26 @@
 							>
 						{/if}
 						<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
+						<button
+							on:click={() => (showHelpVideo = true)}
+							class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors ml-4"
+							aria-label="Show help video"
+						>
+							Help
+						</button>
 					</div>
 
 					<!-- Controls - always visible so Previous/Next Task accessible when scenarios sidebar is closed -->
 					<div class="flex items-center space-x-3">
 						<!-- Help Button - HIDDEN -->
-						<!-- Help button has been hidden for the time being -->
+						<!-- Help button has been hidden for the time being
+								<button
+									on:click={() => (showHelpVideo = true)}
+									class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+									aria-label="Show help video"
+								>
+									Help
+								</button> -->
 						<!--
 				<button
 					on:click={() => showHelpVideo = true}
@@ -7916,7 +8016,7 @@
 <!-- Help Video Modal -->
 <VideoModal
 	isOpen={showHelpVideo}
-	videoSrc="/video/Moderation-Scenario-Demo.mp4"
+	videoSrc="/video/scenario-review.mp4"
 	title="Moderation Scenario Tutorial"
 />
 
