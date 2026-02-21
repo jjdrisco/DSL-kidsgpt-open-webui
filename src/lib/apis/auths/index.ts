@@ -290,9 +290,19 @@ export const userSignUp = async (
 	name: string,
 	email: string,
 	password: string,
-	profile_image_url: string
+	profile_image_url: string,
+	prolificPid?: string | null
 ) => {
 	let error = null;
+
+	const body: Record<string, any> = {
+		name: name,
+		email: email,
+		password: password,
+		profile_image_url: profile_image_url
+	};
+
+	if (prolificPid) body.prolific_pid = prolificPid;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup`, {
 		method: 'POST',
@@ -300,12 +310,7 @@ export const userSignUp = async (
 			'Content-Type': 'application/json'
 		},
 		credentials: 'include',
-		body: JSON.stringify({
-			name: name,
-			email: email,
-			password: password,
-			profile_image_url: profile_image_url
-		})
+		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

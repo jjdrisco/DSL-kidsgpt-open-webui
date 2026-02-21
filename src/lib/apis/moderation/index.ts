@@ -41,11 +41,7 @@ export interface ModerationSessionPayload {
 	user_id: string;
 	child_id: string;
 	scenario_index: number;
-	attempt_number: number;
-	version_number: number;
-	session_number?: number;
-	scenario_prompt: string;
-	original_response: string;
+	scenario_id?: string;
 	initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
 	concern_level?: number;
 	concern_reason?: string;
@@ -74,11 +70,7 @@ export interface ModerationSessionResponse {
 	user_id: string;
 	child_id: string;
 	scenario_index: number;
-	attempt_number: number;
-	version_number: number;
-	session_number?: number;
-	scenario_prompt: string;
-	original_response: string;
+	scenario_id?: string;
 	initial_decision?: string;
 	is_final_version: boolean;
 	concern_level?: number;
@@ -141,6 +133,8 @@ export const saveModerationSession = async (
 	token: string,
 	payload: ModerationSessionPayload
 ): Promise<ModerationSessionResponse> => {
+	// debug logging for scenario_id to catch missing values
+	console.debug('saveModerationSession payload scenario_id', payload.scenario_id);
 	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions`, {
 		method: 'POST',
 		headers: {
@@ -157,7 +151,22 @@ export const getModerationSessions = async (
 	token: string,
 	child_id?: string
 ): Promise<ModerationSessionResponse[]> => {
-	const url = new URL(`${WEBUI_API_BASE_URL}/moderation/sessions`);
+	// WEBUI_API_BASE_URL may be absolute, relative (starting with '/') or empty during local dev.
+	// We need a full URL for `new URL()`; build it using window.location.origin when necessary.
+	let base = WEBUI_API_BASE_URL || '';
+	let url: URL;
+	try {
+		if (base.startsWith('http://') || base.startsWith('https://')) {
+			url = new URL(`${base.replace(/\/+$/, '')}/moderation/sessions`);
+		} else {
+			// treat as relative path
+			const prefix = window.location.origin;
+			url = new URL(`${prefix}${base.replace(/\/+$/, '')}/moderation/sessions`);
+		}
+	} catch (e) {
+		console.error('getModerationSessions invalid base URL', WEBUI_API_BASE_URL, e);
+		url = new URL('/moderation/sessions', window.location.origin);
+	}
 	if (child_id) url.searchParams.set('child_id', child_id);
 
 	const res = await fetch(url.toString(), {
@@ -320,6 +329,7 @@ export interface HighlightCreateRequest {
 	assignment_id: string;
 	selected_text: string;
 	source: 'prompt' | 'response';
+	scenario_id?: string;
 	start_offset?: number;
 	end_offset?: number;
 	context?: string;

@@ -32,14 +32,15 @@ def upgrade() -> None:
     columns = [col["name"] for col in inspector.get_columns("scenario_assignments")]
     if "attempt_number" not in columns:
         # Add column with default value of 1 for existing rows
-        op.add_column(
-            "scenario_assignments",
-            sa.Column(
-                "attempt_number", sa.Integer(), nullable=False, server_default="1"
-            ),
-        )
-        # Remove server_default after adding the column so new rows don't get default
-        op.alter_column("scenario_assignments", "attempt_number", server_default=None)
+        # Use batch mode to support SQLite alterations (dropping default)
+        with op.batch_alter_table("scenario_assignments") as batch_op:
+            batch_op.add_column(
+                sa.Column(
+                    "attempt_number", sa.Integer(), nullable=False, server_default="1"
+                ),
+            )
+            # Remove server_default after adding the column so new rows don't get default
+            batch_op.alter_column("attempt_number", server_default=None)
 
     # Add indexes for efficient filtering
     existing_indexes = [

@@ -8,6 +8,7 @@ export interface Selection {
 	role: 'user' | 'assistant';
 	selected_text: string;
 	child_id?: string;
+	scenario_id?: string;
 	context?: string;
 	meta?: Record<string, any>;
 	created_at: number;
@@ -20,6 +21,7 @@ export interface SelectionForm {
 	role: 'user' | 'assistant';
 	selected_text: string;
 	child_id?: string;
+	scenario_id?: string;
 	context?: string;
 	meta?: Record<string, any>;
 }

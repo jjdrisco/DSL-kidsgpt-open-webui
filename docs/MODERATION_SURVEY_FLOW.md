@@ -399,6 +399,10 @@ A scenario is **completed** when any of the following conditions are met:
 1. **Create/Update Session**: `POST /moderation/sessions`
    - Creates or updates a moderation session version row
    - Version identified by: `(user_id, child_id, scenario_index, attempt_number, version_number, session_number)`
+   - `scenario_id` is now included with every payload; the client backs it with the canonical
+     scenario identifier returned from `/moderation/scenarios/assign` or a fallback
+     `"scenario_<index>"` when unavailable. The backend also backfills missing values when
+     rows are created.
    - Used for all step saves and version creation
    - Location: `backend/open_webui/routers/moderation_scenarios.py` (line 50)
 
