@@ -5,7 +5,6 @@
 > payloads, front‑end capture logic, migration notes, troubleshooting, etc.) –
 > keep that document handy when working on anything involving user highlights.
 
-
 ## Overview
 
 This document provides a comprehensive guide to the moderation tool workflow, including all functions, state management, UI interactions, and data persistence. The moderation tool allows parents to review AI responses to child prompts and apply moderation strategies to refactor responses according to their preferences.

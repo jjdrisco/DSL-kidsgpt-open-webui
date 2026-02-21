@@ -140,7 +140,6 @@ The container’s entrypoint is `backend/start.sh`. It runs `alembic upgrade hea
 
 > **Dependency note:** early 2026 deployments saw 500s and migration failures because the `cryptography` package was missing from the container image. The migration step imports several modules from `cryptography`, so if it isn’t installed the dyno will exit and Heroku will repeatedly restart. To avoid this class of problem the Dockerfile now installs `cryptography` as part of the **critical packages** block (before the `requirements.txt` install) and verifies its presence during build. If you ever see `ModuleNotFoundError` during the migration stage, re‑build the image with the missing package pinned in the Dockerfile and check for corrupted `-wh-*` pip stubs.
 
-
 ### What is “Heroku build”? (GitHub integration vs our workflow)
 
 - **Heroku build (GitHub integration)**  

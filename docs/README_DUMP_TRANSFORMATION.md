@@ -121,11 +121,11 @@ The script performs several cleaning and transformation operations:
 
 Additional fields added during recent updates:
 
-  * `scenario_id` is populated from the assignment and can be backfilled for
-    older rows by the `zz_add_scenario_id_to_moderation` migration.
-  * `start_offset` and `end_offset` store character indexes for the highlighted
-    span; they are NULL for legacy rows and may be reconstructed from
-    `moderation_session.highlighted_texts` if required.
+- `scenario_id` is populated from the assignment and can be backfilled for
+  older rows by the `zz_add_scenario_id_to_moderation` migration.
+- `start_offset` and `end_offset` store character indexes for the highlighted
+  span; they are NULL for legacy rows and may be reconstructed from
+  `moderation_session.highlighted_texts` if required.
 
 #### Moderation Session Table
 
