@@ -991,7 +991,8 @@
 		// Get completion code from config store or fall back to window global
 		const completionCode =
 			$config?.study?.prolific_completion_code ||
-			(typeof window !== 'undefined' && window.PROLIFIC_COMPLETION_CODE) || 'RETURN_CODE';
+			(typeof window !== 'undefined' && window.PROLIFIC_COMPLETION_CODE) ||
+			'RETURN_CODE';
 		window.location.href = `https://app.prolific.co/submissions/complete?cc=${completionCode}`;
 	};
 

@@ -412,11 +412,18 @@
 >
 	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<!-- Study Configuration -->
-		<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-			<h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">Study Configuration</h3>
+		<div
+			class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+		>
+			<h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">
+				Study Configuration
+			</h3>
 			<div class="space-y-3">
 				<div class="flex flex-col gap-1">
-					<label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="scenariosPerSession">
+					<label
+						class="text-xs font-medium text-gray-700 dark:text-gray-300"
+						for="scenariosPerSession"
+					>
 						Scenarios per session
 					</label>
 					<input
@@ -427,7 +434,9 @@
 						bind:value={studyScenariosPerSession}
 						class="w-24 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm"
 					/>
-					<span class="text-xs text-gray-500 dark:text-gray-400">Number of scenarios shown to each participant per session (default: 6)</span>
+					<span class="text-xs text-gray-500 dark:text-gray-400"
+						>Number of scenarios shown to each participant per session (default: 6)</span
+					>
 				</div>
 				<div class="flex flex-col gap-1">
 					<label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="completionCode">
@@ -440,7 +449,9 @@
 						bind:value={studyCompletionCode}
 						class="w-48 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm font-mono"
 					/>
-					<span class="text-xs text-gray-500 dark:text-gray-400">Prolific completion code shown to participants when they finish the study</span>
+					<span class="text-xs text-gray-500 dark:text-gray-400"
+						>Prolific completion code shown to participants when they finish the study</span
+					>
 				</div>
 				<button
 					type="button"

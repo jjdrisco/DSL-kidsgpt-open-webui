@@ -136,7 +136,9 @@ def clear_database(db_path: str, skip_confirmation: bool = False) -> bool:
         cfg = alembic_config.Config()
         # point to the migrations folder (no .ini file required)
         # use absolute path so it works regardless of working directory
-        migrations_path = os.path.join(os.path.dirname(__file__), "open_webui", "migrations")
+        migrations_path = os.path.join(
+            os.path.dirname(__file__), "open_webui", "migrations"
+        )
         cfg.set_main_option("script_location", migrations_path)
         # set the sqlalchemy.url if not picked up by env.py
         if "sqlalchemy.url" not in cfg.get_section(cfg.config_ini_section):

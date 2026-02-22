@@ -153,8 +153,6 @@
 				childSelectedForQuestions = index;
 			}
 		}
-
-
 	});
 </script>
 
