@@ -45,13 +45,16 @@ def extract_sqlite_path(database_url: str) -> str:
     else:
         raise ValueError(f"Invalid SQLite URL format: {database_url}")
 
-    # Remove leading slashes for absolute paths
+    # Normalize leading slashes: preserve a single leading slash for absolute
+    # paths, but collapse multiple slashes (sqlite:///foo.db -> /foo.db).
+    # The previous version stripped the leading slash entirely which turned
+    # absolute paths into relative ones and caused the DATA_DIR join later.
     if path.startswith("///"):
-        path = path[3:]
-    elif path.startswith("//"):
+        # leave one leading slash
         path = path[2:]
-    elif path.startswith("/"):
+    elif path.startswith("//"):
         path = path[1:]
+    # do NOT strip a single leading slash; we want os.path.isabs(path) to be true
 
     # Handle relative paths
     if not os.path.isabs(path):
@@ -105,54 +108,45 @@ def clear_database(db_path: str, skip_confirmation: bool = False) -> bool:
             print("Operation cancelled.")
             return False
 
+    # Instead of attempting to wipe every table row-by-row (which leaves
+    # table definitions in place and can confuse later migrations), simply
+    # delete the database file entirely.  The subsequent alembic upgrade will
+    # recreate the file with a fresh schema.  This matches the typical
+    # "reset" workflow used during testing.
+    if os.path.exists(db_path):
+        try:
+            os.remove(db_path)
+            print(f"Deleted database file: {db_path}")
+        except Exception as e:
+            print(f"Failed to delete database file {db_path}: {e}")
+            return False
+    else:
+        print(f"Database file not found, nothing to delete: {db_path}")
+
+    # Skip the row-deletion logic entirely
+    print("Database has been dropped; recreating via migrations...")
+
+    # After clearing the database we may want to ensure the schema is
+    # present. Run Alembic migrations to `head` so that a fresh DB file is
+    # fully initialized. This is a no-op if the schema already matches.
     try:
-        # Connect to database
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        print("Running alembic upgrade head to ensure schema...")
+        from alembic import command, config as alembic_config
 
-        # Get all tables
-        tables = get_all_tables(conn)
-
-        if not tables:
-            print("No tables found in the database.")
-            conn.close()
-            return True
-
-        print(f"\nFound {len(tables)} table(s) to clear:")
-        for table in tables:
-            print(f"  - {table}")
-
-        # Disable foreign key constraints
-        cursor.execute("PRAGMA foreign_keys = OFF")
-
-        # Clear each table
-        cleared_count = 0
-        for table in tables:
-            try:
-                cursor.execute(f"DELETE FROM {table}")
-                row_count = cursor.rowcount
-                cleared_count += 1
-                print(f"Cleared table '{table}' ({row_count} row(s) deleted)")
-            except sqlite3.Error as e:
-                print(f"Error clearing table '{table}': {e}")
-                # Continue with other tables
-
-        # Re-enable foreign key constraints
-        cursor.execute("PRAGMA foreign_keys = ON")
-
-        # Commit changes
-        conn.commit()
-        conn.close()
-
-        print(f"\nSuccessfully cleared {cleared_count} table(s).")
-        return True
-
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return False
+        cfg = alembic_config.Config()
+        # point to the migrations folder (no .ini file required)
+        # use absolute path so it works regardless of working directory
+        migrations_path = os.path.join(os.path.dirname(__file__), "open_webui", "migrations")
+        cfg.set_main_option("script_location", migrations_path)
+        # set the sqlalchemy.url if not picked up by env.py
+        if "sqlalchemy.url" not in cfg.get_section(cfg.config_ini_section):
+            cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+        command.upgrade(cfg, "head")
+        print("Alembic migrations complete.")
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return False
+        print(f"Warning: failed to run migrations: {e}")
+
+    return True
 
 
 def main():
