@@ -16,8 +16,6 @@
 
 	let showConfirmationModal: boolean = false;
 	let childSelectedForQuestions: number = -1;
-	let showScrollIndicator: boolean = false;
-	let hasScrolled: boolean = false;
 	let mainPageContainer: HTMLElement;
 
 	// Assignment time tracking
@@ -156,35 +154,7 @@
 			}
 		}
 
-		// Set up scroll indicator
-		const timer = setTimeout(() => {
-			if (!hasScrolled) {
-				showScrollIndicator = true;
-			}
-		}, 8000);
 
-		const handleScroll = () => {
-			hasScrolled = true;
-			showScrollIndicator = false;
-		};
-
-		// Wait for component to mount and find the scroll container
-		setTimeout(() => {
-			const scrollContainer = document.querySelector('.overflow-y-auto');
-			if (scrollContainer) {
-				scrollContainer.addEventListener('scroll', handleScroll);
-			}
-			window.addEventListener('scroll', handleScroll);
-		}, 100);
-
-		return () => {
-			clearTimeout(timer);
-			const scrollContainer = document.querySelector('.overflow-y-auto');
-			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', handleScroll);
-			}
-			window.removeEventListener('scroll', handleScroll);
-		};
 	});
 </script>
 
@@ -312,28 +282,6 @@
 					</button>
 				</div>
 			</div>
-		</div>
-	{/if}
-
-	<!-- Scroll Indicator -->
-	{#if showScrollIndicator}
-		<div
-			class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce"
-		>
-			<span class="text-sm text-gray-400 dark:text-gray-500 mb-1">Scroll down</span>
-			<svg
-				class="w-6 h-6 text-gray-400 dark:text-gray-500"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M19 14l-7 7m0 0l-7-7m7 7V3"
-				></path>
-			</svg>
 		</div>
 	{/if}
 

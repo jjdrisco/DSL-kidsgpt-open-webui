@@ -2,7 +2,7 @@
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { showSidebar, user } from '$lib/stores';
+	import { showSidebar, user, config } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
@@ -64,10 +64,11 @@
 	//
 	// SCENARIOS_PER_SESSION: Number of scenarios to randomly sample per session
 	// This is a clear lever for adjusting the number of scenarios shown to users.
-	// Change this value to modify how many scenarios are presented in each moderation session.
+	// Value is read from admin config (Admin → Scenarios → Study Configuration).
+	// Falls back to 6 if not set.
 	//
 	// =================================================================================================
-	const SCENARIOS_PER_SESSION: number = 6;
+	$: SCENARIOS_PER_SESSION = $config?.study?.scenarios_per_session ?? 6;
 
 	// Moderation options - grouped by category
 	const moderationOptions = {
@@ -2757,6 +2758,12 @@
 	async function loadScenario(index: number, forceReload: boolean = false) {
 		// Skip if same scenario and not forcing reload
 		if (index === selectedScenarioIndex && !forceReload) return;
+
+		// Scroll to top of main content pane when navigating to a new scenario
+		await tick();
+		if (mainContentContainer) {
+			mainContentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+		}
 
 		// Save current state before switching (unless forcing reload for new child)
 		if (!forceReload) {
@@ -6540,7 +6547,7 @@
 											</div>
 										{/if}
 
-										{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
+										{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable && initialDecisionStep > 1}
 											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
 												<div class="flex items-center justify-between mb-1">
 													<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">

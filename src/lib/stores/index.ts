@@ -423,6 +423,10 @@ type Config = {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
 	};
+	study?: {
+		scenarios_per_session?: number;
+		prolific_completion_code?: string;
+	};
 };
 
 type PromptSuggestion = {

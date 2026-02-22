@@ -1,13 +1,20 @@
+import logging
 import time
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
 from pydantic import BaseModel
+from sqlalchemy import func
 
-from open_webui.models.users import Users, UserModel
+from open_webui.models.users import Users, UserModel, User
 from open_webui.models.auths import Auths
 from open_webui.models.consent_audit import ConsentAudits, ConsentAuditForm
+from open_webui.models.moderation import ModerationSession
+from open_webui.models.child_profiles import ChildProfiles, ChildProfile
+from open_webui.models.exit_quiz import ExitQuizzes, ExitQuizResponse
+from open_webui.models.workflow_draft import WorkflowDraft
+from open_webui.internal.db import get_db
 from open_webui.utils.auth import (
     create_token,
     get_password_hash,
@@ -22,8 +29,8 @@ from open_webui.env import (
     VERSION,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.child_profiles import ChildProfiles
-from open_webui.models.exit_quiz import ExitQuizzes
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -49,6 +56,51 @@ class ConsentForm(BaseModel):
     prolific_pid: Optional[str] = None
     study_id: Optional[str] = None
     session_id: Optional[str] = None
+
+
+def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
+    """
+    Reset a user's workflow when they return with a new Prolific study ID.
+    Mirrors the logic in POST /workflow/reset but resets session_number to 1
+    and updates study_id to the new value.
+    """
+    with get_db() as db:
+        max_mod = (
+            db.query(func.max(ModerationSession.attempt_number))
+            .filter(ModerationSession.user_id == user_id)
+            .scalar()
+            or 0
+        )
+        max_child = (
+            db.query(func.max(ChildProfile.attempt_number))
+            .filter(ChildProfile.user_id == user_id)
+            .scalar()
+            or 0
+        )
+        max_exit = (
+            db.query(func.max(ExitQuizResponse.attempt_number))
+            .filter(ExitQuizResponse.user_id == user_id)
+            .scalar()
+            or 0
+        )
+        new_attempt = max(max_mod, max_child, max_exit) + 1
+        reset_ts = int(time.time() * 1000)
+
+        db.query(User).filter(User.id == user_id).update(
+            {
+                "study_id": new_study_id,
+                "workflow_reset_at": reset_ts,
+                "instructions_completed_at": None,
+                "current_attempt_number": new_attempt,
+                "session_number": 1,
+            }
+        )
+        db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user_id).delete()
+        db.commit()
+        log.info(
+            f"Auto-reset workflow for user {user_id} on new study_id '{new_study_id}' "
+            f"(attempt {new_attempt})"
+        )
 
 
 @router.post("/auth", response_model=ProlificAuthResponse)
@@ -91,6 +143,24 @@ async def prolific_auth(
 
         # User exists - check if this is a new session
         is_new_session = existing_user.current_session_id != form_data.session_id
+
+        # Check if the user is returning with a different Prolific study ID.
+        # If so, auto-reset their workflow so they start fresh for the new study.
+        study_changed = (
+            form_data.study_id
+            and existing_user.study_id
+            and existing_user.study_id != form_data.study_id
+        )
+        if study_changed:
+            log.info(
+                f"User {existing_user.id} returned with new study_id "
+                f"'{form_data.study_id}' (was '{existing_user.study_id}') — "
+                "resetting workflow."
+            )
+            reset_workflow_for_new_study(existing_user.id, form_data.study_id)
+            # Re-fetch user so we have the updated state (session_number=1, etc.)
+            existing_user = Users.get_user_by_email(prolific_email) or existing_user
+            is_new_session = True  # Treat as new session after reset
 
         if is_new_session:
             # New session - increment session_number

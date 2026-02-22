@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar, user } from '$lib/stores';
+	import { showSidebar, user, config } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
@@ -21,7 +21,8 @@
 
 		// Redirect to Prolific completion page
 		// Open in new tab so user can see completion message and close this tab
-		window.open('https://app.prolific.com/submissions/complete?cc=C4CEBIWM', '_blank');
+		const code = $config?.study?.prolific_completion_code || 'C4CEBIWM';
+		window.open(`https://app.prolific.com/submissions/complete?cc=${code}`, '_blank');
 	});
 </script>
 
@@ -95,7 +96,7 @@
 			<!-- Manual Prolific Redirect Button -->
 			<div class="mt-6">
 				<a
-					href="https://app.prolific.com/submissions/complete?cc=C4CEBIWM"
+					href={`https://app.prolific.com/submissions/complete?cc=${$config?.study?.prolific_completion_code || 'C4CEBIWM'}`}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md"

@@ -386,6 +386,8 @@ from open_webui.config import (
     DEFAULT_GROUP_ID,
     PENDING_USER_OVERLAY_CONTENT,
     PENDING_USER_OVERLAY_TITLE,
+    SCENARIOS_PER_SESSION,
+    PROLIFIC_COMPLETION_CODE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     DEFAULT_PINNED_MODELS,
@@ -818,6 +820,9 @@ app.state.config.DEFAULT_GROUP_ID = DEFAULT_GROUP_ID
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
+
+app.state.config.SCENARIOS_PER_SESSION = SCENARIOS_PER_SESSION
+app.state.config.PROLIFIC_COMPLETION_CODE = PROLIFIC_COMPLETION_CODE
 
 app.state.config.RESPONSE_WATERMARK = RESPONSE_WATERMARK
 
@@ -2060,6 +2065,10 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
+                },
+                "study": {
+                    "scenarios_per_session": app.state.config.SCENARIOS_PER_SESSION,
+                    "prolific_completion_code": app.state.config.PROLIFIC_COMPLETION_CODE,
                 },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(

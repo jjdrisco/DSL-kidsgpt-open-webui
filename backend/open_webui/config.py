@@ -4036,3 +4036,19 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+####################################
+# Study / Prolific configuration
+####################################
+
+SCENARIOS_PER_SESSION = PersistentConfig(
+    "SCENARIOS_PER_SESSION",
+    "study.scenarios_per_session",
+    int(os.environ.get("SCENARIOS_PER_SESSION", "6")),
+)
+
+PROLIFIC_COMPLETION_CODE = PersistentConfig(
+    "PROLIFIC_COMPLETION_CODE",
+    "study.prolific_completion_code",
+    os.environ.get("PROLIFIC_COMPLETION_CODE", ""),
+)

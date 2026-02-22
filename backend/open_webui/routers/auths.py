@@ -1066,6 +1066,8 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "SCENARIOS_PER_SESSION": request.app.state.config.SCENARIOS_PER_SESSION,
+        "PROLIFIC_COMPLETION_CODE": request.app.state.config.PROLIFIC_COMPLETION_CODE,
     }
 
 
@@ -1092,6 +1094,8 @@ class AdminConfig(BaseModel):
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
+    SCENARIOS_PER_SESSION: int = 6
+    PROLIFIC_COMPLETION_CODE: Optional[str] = None
 
 
 @router.post("/admin/config")
@@ -1146,6 +1150,8 @@ async def update_admin_config(
     )
 
     request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
+    request.app.state.config.SCENARIOS_PER_SESSION = form_data.SCENARIOS_PER_SESSION
+    request.app.state.config.PROLIFIC_COMPLETION_CODE = form_data.PROLIFIC_COMPLETION_CODE
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
@@ -1170,6 +1176,8 @@ async def update_admin_config(
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "SCENARIOS_PER_SESSION": request.app.state.config.SCENARIOS_PER_SESSION,
+        "PROLIFIC_COMPLETION_CODE": request.app.state.config.PROLIFIC_COMPLETION_CODE,
     }
 
 

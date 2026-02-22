@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
+	import { getAdminConfig, updateAdminConfig } from '$lib/apis/auths';
 	import {
 		uploadScenariosAdmin,
 		listScenariosAdmin,
@@ -22,6 +23,47 @@
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
+
+	// Study configuration (backed by admin config)
+	let studyScenariosPerSession: number = 6;
+	let studyCompletionCode: string = '';
+	let studyConfigLoaded = false;
+	let savingStudyConfig = false;
+
+	async function loadStudyConfig() {
+		try {
+			const cfg = await getAdminConfig(localStorage.token);
+			if (cfg) {
+				studyScenariosPerSession = cfg.SCENARIOS_PER_SESSION ?? 6;
+				studyCompletionCode = cfg.PROLIFIC_COMPLETION_CODE ?? '';
+			}
+			studyConfigLoaded = true;
+		} catch (e: any) {
+			console.error('Failed to load study config', e);
+		}
+	}
+
+	async function saveStudyConfig() {
+		savingStudyConfig = true;
+		try {
+			const current = await getAdminConfig(localStorage.token);
+			if (!current) throw new Error('Could not load current admin config');
+			const updated = await updateAdminConfig(localStorage.token, {
+				...current,
+				SCENARIOS_PER_SESSION: studyScenariosPerSession,
+				PROLIFIC_COMPLETION_CODE: studyCompletionCode
+			});
+			if (updated) {
+				toast.success('Study configuration saved!');
+			} else {
+				toast.error('Failed to save study configuration');
+			}
+		} catch (e: any) {
+			toast.error(`Failed to save study configuration: ${e.message || e}`);
+		} finally {
+			savingStudyConfig = false;
+		}
+	}
 
 	// State
 	let scenarios: ScenarioModel[] = [];
@@ -74,6 +116,7 @@
 	let settingActiveSet = false;
 
 	onMount(async () => {
+		await loadStudyConfig();
 		await loadStats();
 		await loadSetNames();
 		await loadScenarios();
@@ -360,6 +403,48 @@
 	}}
 >
 	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+		<!-- Study Configuration -->
+		<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+			<h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">Study Configuration</h3>
+			<div class="space-y-3">
+				<div class="flex flex-col gap-1">
+					<label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="scenariosPerSession">
+						Scenarios per session
+					</label>
+					<input
+						id="scenariosPerSession"
+						type="number"
+						min="1"
+						max="50"
+						bind:value={studyScenariosPerSession}
+						class="w-24 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm"
+					/>
+					<span class="text-xs text-gray-500 dark:text-gray-400">Number of scenarios shown to each participant per session (default: 6)</span>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="completionCode">
+						Prolific completion code
+					</label>
+					<input
+						id="completionCode"
+						type="text"
+						placeholder="e.g. C4CEBIWM"
+						bind:value={studyCompletionCode}
+						class="w-48 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm font-mono"
+					/>
+					<span class="text-xs text-gray-500 dark:text-gray-400">Prolific completion code shown to participants when they finish the study</span>
+				</div>
+				<button
+					type="button"
+					on:click={saveStudyConfig}
+					disabled={savingStudyConfig || !studyConfigLoaded}
+					class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors"
+				>
+					{savingStudyConfig ? 'Saving...' : 'Save study configuration'}
+				</button>
+			</div>
+		</div>
+
 		<!-- Tabs -->
 		<div class="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
 			<button
