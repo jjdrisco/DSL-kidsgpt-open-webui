@@ -3674,6 +3674,7 @@
 					original_response: originalResponse1,
 					initial_decision: confirmedVersionIndex === -1 ? 'accept_original' : 'moderate',
 					concern_level: stepData.concern_level,
+					concern_reason: stepData.concern_reason,
 					strategies:
 						confirmedVersionIndex >= 0 && versions[confirmedVersionIndex]
 							? versions[confirmedVersionIndex].strategies
@@ -3836,7 +3837,15 @@
 							scenario_id: getCurrentScenarioId(),
 							scenario_prompt: childPrompt1,
 							original_response: originalResponse1,
-							initial_decision: undefined,
+							// Use 'accept_original' to match the simplified-flow convention for
+							// a completed identification scenario (fixes: initial_decision=null
+							// causing NaN in analysis for attention-check rows).
+							initial_decision: 'accept_original',
+							// Include concern fields collected in steps 1-2 so they are
+							// persisted on the finalized row (fixes: concern_level/concern_reason
+							// always null for attention-check rows).
+							concern_level: concernLevel ?? undefined,
+							concern_reason: concernReason.trim() || undefined,
 							strategies: [],
 							custom_instructions: [],
 							highlighted_texts: highlightedTexts1.map((h) => ({
@@ -3845,7 +3854,10 @@
 								end_offset: h.endOffset
 							})),
 							refactored_response: undefined,
-							is_final_version: false,
+							// Mark as final so the row is counted as a completed scenario
+							// (fixes: attention-check rows always having is_final_version=false).
+							is_final_version: true,
+							decided_at: Date.now(),
 							is_attention_check: true,
 							attention_check_selected: true,
 							attention_check_passed: true
