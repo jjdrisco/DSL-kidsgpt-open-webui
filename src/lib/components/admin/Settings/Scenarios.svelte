@@ -3,6 +3,8 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 	import { getAdminConfig, updateAdminConfig } from '$lib/apis/auths';
+	import { getBackendConfig } from '$lib/apis';
+	import { config } from '$lib/stores';
 	import {
 		uploadScenariosAdmin,
 		listScenariosAdmin,
@@ -54,6 +56,12 @@
 				PROLIFIC_COMPLETION_CODE: studyCompletionCode
 			});
 			if (updated) {
+				// Refresh the global $config store so SCENARIOS_PER_SESSION is immediately
+				// picked up by any page that reads $config.study.scenarios_per_session
+				const freshConfig = await getBackendConfig();
+				if (freshConfig) {
+					config.set(freshConfig);
+				}
 				toast.success('Study configuration saved!');
 			} else {
 				toast.error('Failed to save study configuration');
