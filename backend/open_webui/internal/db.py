@@ -38,6 +38,11 @@ class JSONField(types.TypeDecorator):
 
     def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
         if value is not None:
+            # PostgreSQL JSON/JSONB columns are auto-decoded by psycopg2 into Python
+            # objects before this method is called.  Guard against calling json.loads
+            # on an already-decoded list or dict (would raise TypeError).
+            if isinstance(value, (list, dict)):
+                return value
             return json.loads(value)
 
     def copy(self, **kw: Any) -> Self:
@@ -48,6 +53,8 @@ class JSONField(types.TypeDecorator):
 
     def python_value(self, value):
         if value is not None:
+            if isinstance(value, (list, dict)):
+                return value
             return json.loads(value)
 
 

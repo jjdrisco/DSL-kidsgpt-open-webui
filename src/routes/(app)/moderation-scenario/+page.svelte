@@ -568,10 +568,10 @@
 			return { list, identifiers };
 		}
 
-		// Valid positions: 1 through list.length (not 0, not last)
-		// After insertion, last position will be reserved for custom scenario
+		// Valid positions: 1 through list.length - 1 (not index 0, not last index)
+		// The custom scenario was removed, so list.length IS the last position — exclude it.
 		const validPositions = [];
-		for (let i = 1; i <= list.length; i++) {
+		for (let i = 1; i < list.length; i++) {
 			validPositions.push(i);
 		}
 
@@ -1410,9 +1410,17 @@
 		const isAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
 			ATTENTION_CHECK_MARKER
 		);
-		const completed = isAttentionCheck
-			? attentionCheckSelected && attentionCheckPassed
-			: markedNotApplicable || confirmedVersionIndex !== null;
+		// Completion check: use confirmedVersionIndex as the primary signal for all
+		// scenarios (completeStep2 always sets it to 0 on submit).  For attention checks
+		// that haven't yet been submitted we also accept attentionCheckSelected+pass/fail
+		// so the sidebar count is consistent with isScenarioCompleted.
+		const completed =
+			markedNotApplicable ||
+			confirmedVersionIndex !== null ||
+			(isAttentionCheck &&
+				attentionCheckSelected &&
+				attentionCheckPassed !== null &&
+				attentionCheckPassed !== undefined);
 		console.log('Reactive: currentScenarioCompleted =', completed, {
 			isAttentionCheck,
 			attentionCheckSelected,
@@ -3041,9 +3049,18 @@
 				step1Completed = true;
 				step2Completed = true;
 				step3Completed = true;
-				// Removed accept_original handling - users can no longer accept original
 				confirmedVersionIndex = null; // Not applicable means no version confirmed
 				showOriginal1 = true;
+			} else if (
+				backendSession.initial_decision === 'accept_original' &&
+				backendSession.is_final_version
+			) {
+				// Identification-only flow saves accept_original + is_final_version=true.
+				// Restore confirmedVersionIndex so currentScenarioCompleted evaluates to true.
+				step1Completed = true;
+				step2Completed = true;
+				step3Completed = true;
+				confirmedVersionIndex = 0;
 			}
 
 			// Reconstruct versions from backend version sessions (single pass with reduce)
