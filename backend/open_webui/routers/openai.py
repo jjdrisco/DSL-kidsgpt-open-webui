@@ -1103,7 +1103,9 @@ async def generate_chat_completion(
                                 f"Blocking non-compliant response for user {user.id}: "
                                 f"violations={validation_result['violations']}"
                             )
-                            print("[DEBUG] MODIFIED RESPONSE: [BLOCKED by whitelist validation]")
+                            print(
+                                "[DEBUG] MODIFIED RESPONSE: [BLOCKED by whitelist validation]"
+                            )
                             return JSONResponse(
                                 status_code=200,
                                 content={
@@ -1133,10 +1135,7 @@ async def generate_chat_completion(
                 except Exception:
                     pass
                 if _final_content:
-                    print(
-                        f"[DEBUG] MODIFIED RESPONSE: "
-                        f"{_final_content}"
-                    )
+                    print(f"[DEBUG] MODIFIED RESPONSE: " f"{_final_content}")
 
             return response
     except Exception as e:

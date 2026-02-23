@@ -245,7 +245,9 @@ async def send_post_request(
                                 f"Blocking non-compliant response for user {user.id}: "
                                 f"violations={validation_result['violations']}"
                             )
-                            print("[DEBUG] MODIFIED RESPONSE: [BLOCKED by whitelist validation]")
+                            print(
+                                "[DEBUG] MODIFIED RESPONSE: [BLOCKED by whitelist validation]"
+                            )
                             return {
                                 "message": {
                                     "role": "assistant",
