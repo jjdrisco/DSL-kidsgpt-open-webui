@@ -196,6 +196,9 @@ async def send_post_request(
                     if "message" in res and "content" in res["message"]:
                         response_text = res["message"]["content"]
 
+                    if response_text:
+                        print(f"[DEBUG] RESPONSE: {response_text}")
+
                     # Get system prompt from metadata if available
                     system_prompt = metadata.get("system_prompt") if metadata else None
                     child_prompt = metadata.get("child_prompt") if metadata else None
@@ -242,6 +245,7 @@ async def send_post_request(
                                 f"Blocking non-compliant response for user {user.id}: "
                                 f"violations={validation_result['violations']}"
                             )
+                            print("[DEBUG] MODIFIED RESPONSE: [BLOCKED by whitelist validation]")
                             return {
                                 "message": {
                                     "role": "assistant",
@@ -254,6 +258,15 @@ async def send_post_request(
                 except Exception as e:
                     # Don't block the response if validation fails
                     log.error(f"Error in Ollama response validation check: {e}")
+
+            if user and user.role == "child" and isinstance(res, dict):
+                _final_content = None
+                try:
+                    _final_content = res.get("message", {}).get("content")
+                except Exception:
+                    pass
+                if _final_content:
+                    print(f"[DEBUG] MODIFIED RESPONSE: {_final_content}")
 
             return res
 
@@ -1388,6 +1401,9 @@ async def generate_chat_completion(
                     )
 
                     if child_prompt:
+                        print(f"[DEBUG] ORIGINAL PROMPT: {child_prompt}")
+                        print(f"[DEBUG] PROMPT TO PROVIDER: {child_prompt}")
+
                         try:
                             # Perform async prompt comparison
                             comparison_result = await compare_child_prompt_to_system(

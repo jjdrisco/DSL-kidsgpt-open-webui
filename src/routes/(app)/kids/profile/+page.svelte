@@ -226,6 +226,7 @@
 
 	<!-- Child Profile Form Component (MVP fields only - no research fields, no personality traits) -->
 	<ChildProfileForm
+		isStudyMode={true}
 		showResearchFields={false}
 		requireResearchFields={false}
 		showPersonalityTraits={false}

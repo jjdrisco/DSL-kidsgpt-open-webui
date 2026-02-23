@@ -16,6 +16,7 @@
 	const i18n = getContext('i18n');
 
 	// Props
+	export let isStudyMode: boolean = false;
 	export let showResearchFields: boolean = false;
 	export let requireResearchFields: boolean = false;
 	export let showPersonalityTraits: boolean = true;
@@ -287,7 +288,7 @@
 		if (showPersonalityTraits && selectedSubCharacteristics.length === 0) {
 			return 'Please select at least one personality trait';
 		}
-		if (!childInternetUseFrequency) {
+		if (isStudyMode && !childInternetUseFrequency) {
 			return 'Please indicate how often this child uses the Internet';
 		}
 		if (showResearchFields && requireResearchFields) {
@@ -636,14 +637,17 @@
 	bind:this={mainPageContainer}
 >
 	<div class="max-w-4xl mx-auto px-4 py-8">
-		<!-- Instructional Message -->
-		<div
-			class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-		>
-			<p class="text-sm text-blue-900 dark:text-blue-200">
-				<strong>Note:</strong> Please provide information about one child you have in mind for this survey.
-			</p>
-		</div>
+		<!-- Instructional Message (study mode only) -->
+		{#if isStudyMode}
+			<div
+				class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+			>
+				<p class="text-sm text-blue-900 dark:text-blue-200">
+					<strong>Note:</strong> Please provide information about one child you have in mind for this
+					survey.
+				</p>
+			</div>
+		{/if}
 
 		<!-- Child Selection -->
 		{#if childProfiles && childProfiles.length > 0}
@@ -861,77 +865,79 @@
 							/>
 						{/if}
 
-						<div class="mb-4">
-							<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								How often does this child use the Internet? <span class="text-red-500">*</span>
+						{#if isStudyMode}
+							<div class="mb-4">
+								<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									How often does this child use the Internet? <span class="text-red-500">*</span>
+								</div>
+								<div class="space-y-2">
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="8"
+											class="mr-3"
+										/>8. Several times per day</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="7"
+											class="mr-3"
+										/>7. About once per day</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="6"
+											class="mr-3"
+										/>6. Several times per week</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="5"
+											class="mr-3"
+										/>5. About once per week</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="4"
+											class="mr-3"
+										/>4. Several times per month</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="3"
+											class="mr-3"
+										/>3. About once per month</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="2"
+											class="mr-3"
+										/>2. Less than once per month</label
+									>
+									<label class="flex items-center"
+										><input
+											type="radio"
+											bind:group={childInternetUseFrequency}
+											value="1"
+											class="mr-3"
+										/>1. Never</label
+									>
+								</div>
 							</div>
-							<div class="space-y-2">
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="8"
-										class="mr-3"
-									/>8. Several times per day</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="7"
-										class="mr-3"
-									/>7. About once per day</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="6"
-										class="mr-3"
-									/>6. Several times per week</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="5"
-										class="mr-3"
-									/>5. About once per week</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="4"
-										class="mr-3"
-									/>4. Several times per month</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="3"
-										class="mr-3"
-									/>3. About once per month</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="2"
-										class="mr-3"
-									/>2. Less than once per month</label
-								>
-								<label class="flex items-center"
-									><input
-										type="radio"
-										bind:group={childInternetUseFrequency}
-										value="1"
-										class="mr-3"
-									/>1. Never</label
-								>
-							</div>
-						</div>
+						{/if}
 
 						<!-- Research Fields (Conditional) -->
 						{#if showResearchFields}
