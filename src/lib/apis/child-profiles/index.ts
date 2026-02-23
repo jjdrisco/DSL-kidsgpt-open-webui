@@ -23,6 +23,8 @@ export interface ChildProfile {
 	child_gender_other?: string;
 	child_ai_use_contexts_other?: string;
 	parent_llm_monitoring_other?: string;
+	// Cross-reference attention check field: child internet use frequency (1–8 scale)
+	child_internet_use_frequency?: string;
 	// Current attempt flag - only children with is_current: true are selectable
 	is_current?: boolean;
 	session_number?: number;
@@ -52,6 +54,8 @@ export interface ChildProfileForm {
 	child_gender_other?: string;
 	child_ai_use_contexts_other?: string;
 	parent_llm_monitoring_other?: string;
+	// Cross-reference attention check field: child internet use frequency (1–8 scale)
+	child_internet_use_frequency?: string;
 	session_number?: number; // Optional, backend will determine if not provided
 	child_email?: string;
 }
