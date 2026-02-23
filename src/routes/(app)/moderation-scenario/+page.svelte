@@ -5231,7 +5231,12 @@
 
 						// Check if draft is from current attempt
 						const draftAttemptNumber = data?.attempt_number || 1;
-						if (draftAttemptNumber !== currentAttemptNumber) {
+						const draftIsFinalized = !!data?.moderation_finalized;
+						if (draftAttemptNumber !== currentAttemptNumber && !draftIsFinalized) {
+							// Only discard stale drafts that were NOT finalized.  A finalized draft
+							// means the user already completed the survey on that attempt and is
+							// navigating back to review — preserve the scenario list so they see
+							// the same questions rather than a freshly-generated smaller set.
 							console.log(
 								`🔄 Ignoring draft from attempt ${draftAttemptNumber}, current attempt is ${currentAttemptNumber}`
 							);
@@ -5239,9 +5244,11 @@
 							await deleteWorkflowDraft(token, selectedChildId, 'moderation');
 						} else {
 							// Restore moderation_finalized flag from draft
-							if (data?.moderation_finalized) {
+							if (draftIsFinalized) {
 								moderationFinalized = true;
-								console.log('✅ Restored moderationFinalized = true from draft');
+								console.log(
+									`✅ Restored moderationFinalized = true from draft (attempt ${draftAttemptNumber}${draftAttemptNumber !== currentAttemptNumber ? `, reviewing vs current attempt ${currentAttemptNumber}` : ''})`
+								);
 								// Notify sidebar to update the checkmark
 								window.dispatchEvent(new Event('workflow-updated'));
 							}
