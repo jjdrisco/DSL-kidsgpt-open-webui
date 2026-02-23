@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-02-22
+
+### Added (Research)
+
+- 📊 **Cross-reference attention check**: The child profile form now includes a required "How often does this child use the Internet?" question (8-point scale, displayed in reversed order 8→1). The same question appears in the exit survey in forward order (1→8), enabling post-hoc comparison of responses to detect inattentive participants. Stored as `child_internet_use_frequency` (string '1'–'8') on the `child_profile` table (migration `t1u2v3w4x5y6`).
+
 ## [0.7.2] - 2026-01-10
 
 ### Fixed

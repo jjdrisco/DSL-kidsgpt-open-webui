@@ -36,6 +36,9 @@ class ChildProfileResponse(BaseModel):
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None
     parent_llm_monitoring_level: Optional[str] = None
+    child_internet_use_frequency: Optional[str] = (
+        None  # '1'–'8' matching exit survey scale
+    )
     # "Other" text fields
     child_gender_other: Optional[str] = None
     child_ai_use_contexts_other: Optional[str] = None

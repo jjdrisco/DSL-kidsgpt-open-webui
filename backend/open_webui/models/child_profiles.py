@@ -45,6 +45,9 @@ class ChildProfile(Base):
     child_has_ai_use = Column(String, nullable=True)  # 'yes' | 'no' | 'unsure'
     child_ai_use_contexts = Column(JSONField, nullable=True)  # list[str]
     parent_llm_monitoring_level = Column(String, nullable=True)  # enum-like string
+    # Internet use frequency: '1' (never) – '8' (several times/day), same scale as exit survey
+    # Presented in reversed order (8→1) on the child profile form for cross-reference attention check.
+    child_internet_use_frequency = Column(String, nullable=True)
 
     # "Other" text fields for additional information
     child_gender_other = Column(Text, nullable=True)  # Text when gender is "Other"
@@ -95,6 +98,9 @@ class ChildProfileModel(BaseModel):
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None
     parent_llm_monitoring_level: Optional[str] = None
+    child_internet_use_frequency: Optional[str] = (
+        None  # '1'–'8' matching exit survey scale
+    )
     child_gender_other: Optional[str] = None
     child_ai_use_contexts_other: Optional[str] = None
     parent_llm_monitoring_other: Optional[str] = None
@@ -116,6 +122,9 @@ class ChildProfileForm(BaseModel):
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None
     parent_llm_monitoring_level: Optional[str] = None
+    child_internet_use_frequency: Optional[str] = (
+        None  # '1'–'8' matching exit survey scale
+    )
     # "Other" text fields for additional information
     child_gender_other: Optional[str] = None
     child_ai_use_contexts_other: Optional[str] = None
@@ -153,6 +162,9 @@ class ChildProfileTable:
                     "child_ai_use_contexts_other": form_data.child_ai_use_contexts_other,
                     "parent_llm_monitoring_other": form_data.parent_llm_monitoring_other,
                     "child_email": getattr(form_data, "child_email", None),
+                    "child_internet_use_frequency": getattr(
+                        form_data, "child_internet_use_frequency", None
+                    ),
                     "attempt_number": attempt_number,
                     "is_current": True,
                     "session_number": session_number,
@@ -253,6 +265,9 @@ class ChildProfileTable:
                     updated.parent_llm_monitoring_other
                 )
                 profile.child_email = getattr(updated, "child_email", None)
+                profile.child_internet_use_frequency = getattr(
+                    updated, "child_internet_use_frequency", None
+                )
                 profile.updated_at = ts
 
                 db.commit()
