@@ -47,6 +47,7 @@
 	let childHasAIUse: string = '';
 	let childAIUseContexts: string[] = [];
 	let parentLLMMonitoringLevel: string = '';
+	let childInternetUseFrequency: string = '';
 
 	// "Other" text fields for additional information
 	let childGenderOther: string = '';
@@ -151,6 +152,7 @@
 			}
 			const monitoringValue = (sel as any)?.parent_llm_monitoring_level;
 			parentLLMMonitoringLevel = monitoringValue || '';
+			childInternetUseFrequency = (sel as any)?.child_internet_use_frequency || '';
 			childAIUseContextsOther = (sel as any)?.child_ai_use_contexts_other || '';
 			parentLLMMonitoringOther = (sel as any)?.parent_llm_monitoring_other || '';
 		}
@@ -230,6 +232,7 @@
 			(sel as any).child_gender_other = childGenderOther || null;
 			(sel as any).child_ai_use_contexts_other = childAIUseContextsOther || null;
 			(sel as any).parent_llm_monitoring_other = parentLLMMonitoringOther || null;
+			(sel as any).child_internet_use_frequency = childInternetUseFrequency || null;
 		}
 		(sel as any).child_email = childEmail;
 	}
@@ -288,6 +291,9 @@
 			if (!isOnlyChild) {
 				return 'Please indicate if this child is an only child';
 			}
+			if (!childInternetUseFrequency) {
+				return 'Please indicate how often this child uses the Internet';
+			}
 			if (!childHasAIUse) {
 				return 'Please answer whether this child has used ChatGPT or similar AI tools';
 			}
@@ -340,6 +346,7 @@
 				profileData.child_has_ai_use = childHasAIUse;
 				profileData.child_ai_use_contexts = childAIUseContexts;
 				profileData.parent_llm_monitoring_level = parentLLMMonitoringLevel;
+				profileData.child_internet_use_frequency = childInternetUseFrequency || null;
 				if (childGenderOther) profileData.child_gender_other = childGenderOther;
 				if (childAIUseContextsOther)
 					profileData.child_ai_use_contexts_other = childAIUseContextsOther;
@@ -475,6 +482,7 @@
 					profileData.child_has_ai_use = childHasAIUse;
 					profileData.child_ai_use_contexts = childAIUseContexts;
 					profileData.parent_llm_monitoring_level = parentLLMMonitoringLevel;
+					profileData.child_internet_use_frequency = childInternetUseFrequency || null;
 					if (childGenderOther) profileData.child_gender_other = childGenderOther;
 					if (childAIUseContextsOther)
 						profileData.child_ai_use_contexts_other = childAIUseContextsOther;
@@ -522,6 +530,7 @@
 						updateData.child_has_ai_use = childHasAIUse;
 						updateData.child_ai_use_contexts = childAIUseContexts;
 						updateData.parent_llm_monitoring_level = parentLLMMonitoringLevel;
+						updateData.child_internet_use_frequency = childInternetUseFrequency || null;
 						if (childGenderOther) updateData.child_gender_other = childGenderOther;
 						if (childAIUseContextsOther)
 							updateData.child_ai_use_contexts_other = childAIUseContextsOther;
@@ -883,6 +892,78 @@
 												value="prefer_not_to_say"
 												class="mr-3"
 											/>Prefer not to say</label
+										>
+									</div>
+								</div>
+
+								<div class="mb-4">
+									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										How often does this child use the Internet? <span class="text-red-500">*</span>
+									</div>
+									<div class="space-y-2">
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="8"
+												class="mr-3"
+											/>8. Several times per day</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="7"
+												class="mr-3"
+											/>7. About once per day</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="6"
+												class="mr-3"
+											/>6. Several times per week</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="5"
+												class="mr-3"
+											/>5. About once per week</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="4"
+												class="mr-3"
+											/>4. Several times per month</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="3"
+												class="mr-3"
+											/>3. About once per month</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="2"
+												class="mr-3"
+											/>2. Less than once per month</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childInternetUseFrequency}
+												value="1"
+												class="mr-3"
+											/>1. Never</label
 										>
 									</div>
 								</div>

@@ -136,6 +136,7 @@ def main():
             cp.child_has_ai_use,
             cp.child_ai_use_contexts::text,
             cp.parent_llm_monitoring_level,
+            cp.child_internet_use_frequency,
             cp.attempt_number,
             cp.is_current,
             cp.session_number,
@@ -219,7 +220,8 @@ def main():
             u.prolific_pid,
             cp.name AS child_name,
             cp.child_age,
-            cp.child_gender
+            cp.child_gender,
+            cp.child_internet_use_frequency AS child_profile_internet_freq
         FROM exit_quiz_response eq
         LEFT JOIN "user" u ON eq.user_id = u.id
         LEFT JOIN child_profile cp ON eq.child_id = cp.id
