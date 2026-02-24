@@ -82,8 +82,8 @@
 				Select Features for {ageGroupLabel}
 			</h3>
 			<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-				Choose which features your child can use. Pre-selected features for this age are marked
-				with a star.
+				Choose which features your child can use. Pre-selected features for this age are marked with
+				a star.
 			</p>
 		</div>
 

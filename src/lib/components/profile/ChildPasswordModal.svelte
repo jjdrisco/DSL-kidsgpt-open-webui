@@ -76,11 +76,11 @@
 							</svg>
 							<div>
 								<p class="font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
-								Important: Save This Passphrase Now
-							</p>
+									Important: Save This Passphrase Now
+								</p>
 								<p class="text-sm text-yellow-700 dark:text-yellow-400">
-									This passphrase will <strong>not be visible again</strong>. Write it down or save it
-									securely before closing this window.
+									This passphrase will <strong>not be visible again</strong>. Write it down or save
+									it securely before closing this window.
 								</p>
 							</div>
 						</div>
@@ -99,7 +99,7 @@
 
 					<div class="space-y-2">
 						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-						Generated Passphrase
+							Generated Passphrase
 						</label>
 						<div
 							class="px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-lg font-mono text-sm text-gray-900 dark:text-white break-all flex items-center justify-between"
@@ -133,9 +133,9 @@
 					class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6"
 				>
 					<p class="text-sm text-blue-900 dark:text-blue-200">
-						<strong>For the study:</strong> Please use your own parent account to monitor your
-						child's interactions and complete any study tasks. Log in with the child's credentials
-						above only when prompted to do so during the study session.
+						<strong>For the study:</strong> Please use your own parent account to monitor your child's
+						interactions and complete any study tasks. Log in with the child's credentials above only
+						when prompted to do so during the study session.
 					</p>
 					<p class="text-sm text-blue-900 dark:text-blue-200 mt-2">
 						If you need to reset the passphrase later, please contact the study administrator.

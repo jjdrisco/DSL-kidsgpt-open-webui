@@ -5,7 +5,11 @@
  */
 
 import { childProfileSync } from '$lib/services/childProfileSync';
-import { INTERFACE_MODES, getPiagetStageForAge, getAutoSelectedModesForAge } from '$lib/data/interfaceModes';
+import {
+	INTERFACE_MODES,
+	getPiagetStageForAge,
+	getAutoSelectedModesForAge
+} from '$lib/data/interfaceModes';
 import type { ChildProfile } from '$lib/apis/child-profiles';
 
 /**

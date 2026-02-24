@@ -109,9 +109,7 @@ export function getAvailableFeatures(age: number): ChildFeature[] {
 		return [];
 	}
 
-	return CHILD_FEATURES.filter((feature) =>
-		feature.ageGroups.some((ag) => ag.id === ageGroup.id)
-	);
+	return CHILD_FEATURES.filter((feature) => feature.ageGroups.some((ag) => ag.id === ageGroup.id));
 }
 
 /**

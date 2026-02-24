@@ -3099,7 +3099,6 @@
 				console.log('✅ Restored Step 2 data from backend');
 			}
 
-
 			// Restore concern mappings from session_metadata if available
 			if (backendSession.session_metadata?.concern_mappings) {
 				concernMappings = backendSession.session_metadata.concern_mappings;
@@ -3424,7 +3423,7 @@
 			step2Completed = false;
 			step3Completed = false;
 			concernLevel = null;
-		concernMappings = [];
+			concernMappings = [];
 			versions = [];
 			currentVersionIndex = -1;
 			confirmedVersionIndex = null;
@@ -6978,7 +6977,8 @@
 																class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
 															>
 																<p class="text-xs text-yellow-800 dark:text-yellow-200">
-																	⚠️ Click "Add Concern" to describe at least one specific concern about this interaction.
+																	⚠️ Click "Add Concern" to describe at least one specific concern
+																	about this interaction.
 																</p>
 															</div>
 														{:else}
@@ -7030,7 +7030,9 @@
 																						>
 																							<input
 																								type="checkbox"
-																								checked={concern.linkedHighlights.includes(highlight.text)}
+																								checked={concern.linkedHighlights.includes(
+																									highlight.text
+																								)}
 																								on:change={(e) =>
 																									toggleHighlightLink(
 																										concern.id,

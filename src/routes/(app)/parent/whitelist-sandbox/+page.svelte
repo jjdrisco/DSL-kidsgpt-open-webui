@@ -160,8 +160,7 @@
 		// Re-apply the currently indicated chip, falling back to the first preset
 		// if the active chip is Custom/DIY or unrecognised.
 		const preset =
-			SUGGESTIONS.find((s) => s.label === activeChip && s.features.length > 0) ??
-			SUGGESTIONS[0];
+			SUGGESTIONS.find((s) => s.label === activeChip && s.features.length > 0) ?? SUGGESTIONS[0];
 		features = [...preset.features];
 		activeChip = preset.label;
 		scheduleSave();
@@ -262,7 +261,7 @@
 				console.log('[DEBUG] PROMPT BLOCKED — not sending to provider');
 				const blockedMsg =
 					"I'm only able to help with the topics on your child's approved whitelist. " +
-					"This question falls outside of the topics I can help with — please speak with a trusted adult or parent for help with this one!";
+					'This question falls outside of the topics I can help with — please speak with a trusted adult or parent for help with this one!';
 				messages = [...messages, { role: 'assistant', content: blockedMsg }];
 				return;
 			}
@@ -307,10 +306,7 @@
 		} catch (err) {
 			console.error('[DEBUG] Fetch error:', err);
 			toast.error('Failed to reach the API. Is the backend running?');
-			messages = [
-				...messages,
-				{ role: 'assistant', content: '[Network error — check backend]' }
-			];
+			messages = [...messages, { role: 'assistant', content: '[Network error — check backend]' }];
 		} finally {
 			isLoading = false;
 			setTimeout(scrollToBottom, 50);
@@ -326,12 +322,14 @@
 </script>
 
 <div class="flex w-full h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-
 	<!-- ── Left: Whitelist Builder ──────────────────────────────────────────── -->
-	<div class="w-1/2 flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
-
+	<div
+		class="w-1/2 flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto"
+	>
 		<!-- Header -->
-		<div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
+		<div
+			class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4"
+		>
 			<div>
 				<h1 class="text-xl font-bold text-gray-900 dark:text-white">{childName}'s Whitelist</h1>
 				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -352,7 +350,9 @@
 
 		<!-- Suggestion chips -->
 		<div class="px-6 pt-5">
-			<p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+			<p
+				class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
+			>
 				Quick suggestions
 			</p>
 			<div class="flex flex-wrap gap-2">
@@ -364,12 +364,12 @@
 						disabled={isCustomized}
 						class="px-3 py-1.5 rounded-full text-sm font-medium border transition
 							{isActive && !isCustomized
-								? 'bg-blue-600 text-white border-blue-600'
-								: isActive && isCustomized
-									? 'bg-transparent text-blue-500 border-blue-400 opacity-60 cursor-not-allowed'
-									: locked
-										? 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 opacity-40 cursor-not-allowed'
-										: 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'}"
+							? 'bg-blue-600 text-white border-blue-600'
+							: isActive && isCustomized
+								? 'bg-transparent text-blue-500 border-blue-400 opacity-60 cursor-not-allowed'
+								: locked
+									? 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 opacity-40 cursor-not-allowed'
+									: 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'}"
 						on:click={() => !isCustomized && applyChip(suggestion)}
 					>
 						{suggestion.label}
@@ -389,7 +389,9 @@
 
 		<!-- Feature bullet list -->
 		<div class="px-6 pt-5 flex flex-col flex-1">
-			<p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+			<p
+				class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
+			>
 				Approved Features
 			</p>
 
@@ -436,14 +438,14 @@
 				</button>
 			</div>
 		</div>
-
 	</div>
 
 	<!-- ── Right: Chat Tester ───────────────────────────────────────────────── -->
 	<div class="w-1/2 flex flex-col bg-white dark:bg-gray-850">
-
 		<!-- Header -->
-		<div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+		<div
+			class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
+		>
 			<div>
 				<h2 class="text-xl font-bold text-gray-900 dark:text-white">Chat Preview</h2>
 				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -462,7 +464,9 @@
 		<!-- Message history -->
 		<div bind:this={chatContainer} class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 			{#if messages.length === 0}
-				<div class="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm italic">
+				<div
+					class="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm italic"
+				>
 					No messages yet. Type something below to test the whitelist.
 				</div>
 			{/if}
@@ -484,9 +488,18 @@
 				<div class="flex justify-start">
 					<div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-bl-sm px-4 py-3">
 						<span class="flex gap-1">
-							<span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms" />
-							<span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms" />
-							<span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms" />
+							<span
+								class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+								style="animation-delay: 0ms"
+							/>
+							<span
+								class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+								style="animation-delay: 150ms"
+							/>
+							<span
+								class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+								style="animation-delay: 300ms"
+							/>
 						</span>
 					</div>
 				</div>

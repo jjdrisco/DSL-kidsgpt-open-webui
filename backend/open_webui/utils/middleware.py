@@ -1488,7 +1488,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
                 last_user_msg = get_last_user_message(form_data.get("messages", []))
                 if last_user_msg:
-                    print(f"[Child whitelist] Step-1 original prompt: {last_user_msg!r}")
+                    print(
+                        f"[Child whitelist] Step-1 original prompt: {last_user_msg!r}"
+                    )
                     try:
                         rewrite_payload = {
                             "model": "gpt-5.2-chat-latest",
@@ -1515,7 +1517,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             .strip()
                         )
                         if rewritten.upper() == "[BLOCKED]":
-                            print("[Child whitelist] Step-1 result: BLOCKED — short-circuiting")
+                            print(
+                                "[Child whitelist] Step-1 result: BLOCKED — short-circuiting"
+                            )
                             metadata["child_blocked"] = True
                             metadata["child_blocked_message"] = (
                                 "I'm only able to help with the topics on your approved list. "
@@ -1523,7 +1527,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 "a trusted adult or parent for help with this one!"
                             )
                         else:
-                            print(f"[Child whitelist] Step-1 rewritten prompt: {rewritten!r}")
+                            print(
+                                f"[Child whitelist] Step-1 rewritten prompt: {rewritten!r}"
+                            )
                             # Replace the last user message with the rewritten prompt
                             msgs = form_data.get("messages", [])
                             for i in range(len(msgs) - 1, -1, -1):

@@ -107,16 +107,15 @@
 									{mode.name}
 								</h4>
 								{#if isRec}
-									<span
-										class="text-yellow-500 text-sm"
-										title="Recommended for this age group"
-									>★</span>
+									<span class="text-yellow-500 text-sm" title="Recommended for this age group"
+										>★</span
+									>
 								{/if}
 								{#if isAuto}
 									<span
 										class="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
-										title="Auto-selected for this age"
-									>Auto</span>
+										title="Auto-selected for this age">Auto</span
+									>
 								{/if}
 							</div>
 							<p class="text-sm text-gray-600 dark:text-gray-400">

@@ -189,7 +189,14 @@ async def send_post_request(
 
             # WHITELIST ENFORCEMENT: Validate response against whitelist for child users
             # Note: This only handles non-streaming responses. Streaming validation needs different approach.
-            if user and (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and isinstance(res, dict):
+            if (
+                user
+                and (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                )
+                and isinstance(res, dict)
+            ):
                 try:
                     # Extract response text from Ollama format
                     response_text = None
@@ -261,7 +268,14 @@ async def send_post_request(
                     # Don't block the response if validation fails
                     log.error(f"Error in Ollama response validation check: {e}")
 
-            if user and (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and isinstance(res, dict):
+            if (
+                user
+                and (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                )
+                and isinstance(res, dict)
+            ):
                 _final_content = None
                 try:
                     _final_content = res.get("message", {}).get("content")
@@ -1390,7 +1404,10 @@ async def generate_chat_completion(
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
                 # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
-                if (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and system:
+                if (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                ) and system:
                     # Extract the last user message (child's prompt)
                     messages = payload.get("messages", [])
                     child_prompt = next(

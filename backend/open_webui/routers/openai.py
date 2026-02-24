@@ -851,7 +851,10 @@ async def generate_chat_completion(
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
                 # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
-                if (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and system:
+                if (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                ) and system:
                     # Extract the last user message (child's prompt)
                     messages = payload.get("messages", [])
                     child_prompt = next(
@@ -1043,7 +1046,14 @@ async def generate_chat_completion(
 
             # WHITELIST ENFORCEMENT: Validate response against whitelist for child users
             # Skip validation for internal bypass calls (e.g. Step-1 rewrite from middleware)
-            if (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and isinstance(response, dict) and not bypass_system_prompt:
+            if (
+                (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                )
+                and isinstance(response, dict)
+                and not bypass_system_prompt
+            ):
                 try:
                     # Extract the response text
                     response_text = None

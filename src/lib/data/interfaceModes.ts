@@ -34,7 +34,8 @@ export const PIAGET_STAGES: PiagetStage[] = [
 		cognitiveLevel: 'preoperational',
 		minAge: 6,
 		maxAge: 8,
-		description: 'Preoperational stage: Magical thinking, egocentric, literal, limited writing skills'
+		description:
+			'Preoperational stage: Magical thinking, egocentric, literal, limited writing skills'
 	},
 	{
 		id: '9-12',

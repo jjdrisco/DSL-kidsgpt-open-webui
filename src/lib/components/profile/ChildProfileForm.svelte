@@ -402,7 +402,9 @@
 					}
 				} catch (accountError) {
 					console.error('Failed to create child account:', accountError);
-					toast.warning('Child profile created, but account creation failed. Please create the account manually.');
+					toast.warning(
+						'Child profile created, but account creation failed. Please create the account manually.'
+					);
 				}
 			}
 
@@ -564,7 +566,9 @@
 						}
 					} catch (accountError) {
 						console.error('Failed to create child account:', accountError);
-						toast.warning('Child profile created, but account creation failed. Please create the account manually.');
+						toast.warning(
+							'Child profile created, but account creation failed. Please create the account manually.'
+						);
 					}
 				}
 
@@ -903,8 +907,8 @@
 							</select>
 						</div>
 
-<!-- MOVED TO /parent/whitelist-sandbox: Feature/mode selection is now configured in the Whitelist Sandbox page -->
-							<!-- <div class="pt-2">
+						<!-- MOVED TO /parent/whitelist-sandbox: Feature/mode selection is now configured in the Whitelist Sandbox page -->
+						<!-- <div class="pt-2">
 								<InterfaceModeSelection
 									childAge={childAge}
 									bind:selectedModes={selectedInterfaceModes}

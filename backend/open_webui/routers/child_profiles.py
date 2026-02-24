@@ -120,9 +120,7 @@ async def get_my_whitelist(
             current_user.parent_id, current_user.email
         )
         if not profile:
-            profile = ChildProfiles.get_current_child_profile(
-                current_user.parent_id
-            )
+            profile = ChildProfiles.get_current_child_profile(current_user.parent_id)
         items = []
         if profile and profile.selected_features:
             items = profile.selected_features

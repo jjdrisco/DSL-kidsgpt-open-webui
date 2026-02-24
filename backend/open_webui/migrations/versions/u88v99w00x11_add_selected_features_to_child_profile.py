@@ -20,9 +20,7 @@ depends_on = None
 def upgrade() -> None:
     # Add selected_features: JSON list of enabled feature IDs (e.g. ["school_assignment"])
     with op.batch_alter_table("child_profile", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("selected_features", sa.Text(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("selected_features", sa.Text(), nullable=True))
         batch_op.add_column(
             sa.Column("selected_interface_modes", sa.Text(), nullable=True)
         )
