@@ -499,3 +499,18 @@ The following functionality existed in `ba6fbc56d` but was **completely removed*
 ## Conclusion
 
 The current implementation represents a **major architectural shift** from a blocking, one-size-fits-all approach to a **user-type-aware, flexible system** that allows different user roles to have different experiences while maintaining workflow enforcement for research participants (interviewees).
+
+---
+
+## Update (2026-02): Partial Restoration of Lost Functionality
+
+After this analysis, several items from the "Lost Functionality" list were subsequently **restored**:
+
+- **Sidebar workflow navigation** – `SurveySidebar.svelte` restored with clickable step navigation and visual progress indicators (see `REIMPLEMENTATION_PLAN.md`, Phases 1–4 and 7 ✅)
+- **Workflow event listeners** – `SurveySidebar` and main `Sidebar` now listen for `workflow-updated` and `storage` events to refetch workflow state
+- **Navigation-based step updates** – Workflow state refreshes on navigation events
+
+The following items remain absent from the current implementation compared to `ba6fbc56d`:
+
+- Sidebar Personal Store (not restored)
+- Full blocking enforcement for all non-admin users (by design — replaced with user-type differentiation)

@@ -1,6 +1,6 @@
 # DSL-kidsgpt-open-webui – Project Context
 
-Context export for continuing work on this project. Updated Feb 2025.
+Context export for continuing work on this project. Updated Feb 2026.
 
 ---
 
@@ -55,10 +55,19 @@ Context export for continuing work on this project. Updated Feb 2025.
 
 ### Child Profile
 
-| File                                                 | Purpose                                                                   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------- |
-| `src/lib/components/profile/ChildProfileForm.svelte` | Child profile form; survey disclaimer; no "Add Profile" button            |
-| `src/routes/(app)/kids/profile/+page.svelte`         | Wraps ChildProfileForm; `proceedToNextStep()` goes to moderation-scenario |
+| File                                                 | Purpose                                                                                             |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `src/lib/components/profile/ChildProfileForm.svelte` | Child profile form; `isStudyMode` prop gates study-specific fields; survey disclaimer               |
+| `src/routes/(app)/kids/profile/+page.svelte`         | Wraps ChildProfileForm with `isStudyMode={true}`; `proceedToNextStep()` goes to moderation-scenario |
+
+#### `isStudyMode` Prop
+
+The `ChildProfileForm` component accepts `isStudyMode` (boolean, default `false`):
+
+- **`true`** (from `/kids/profile`): Shows instructional banner + "How often does this child use the Internet?" question (reversed 8→1 scale, cross-reference attention check)
+- **`false`** (from `/parent`, `/parent/child-profile`): Hides study-specific elements
+
+The `child_internet_use_frequency` field (VARCHAR, nullable) is stored on the `child_profile` table (migration `t1u2v3w4x5y6`).
 
 ### Admin
 
@@ -94,14 +103,17 @@ isSurveyOrWorkflowRoute =
 
 ---
 
-## Recent Changes (Latest Session)
+## Recent Changes (Latest Sessions)
 
-1. **Restored Scenarios admin tab** – Lost in refactor; added back to `Settings.svelte` (`allSettings`, icon, content block).
-2. **Child profile → moderation** – "Proceed to next step" always goes to `/moderation-scenario` (removed `getUserType` branching).
-3. **Child profile text** – Disclaimer: "This survey asks you to describe your child. This information will not be used to customize the scenarios you will be shown and will only be used in the context of academic research."
-4. **Removed Add Profile button** – Removed from child profile page; removed `addNewProfile` function.
-5. **Sidebar workflow refresh** – SurveySidebar and Sidebar listen for `workflow-updated` and `storage` to refetch workflow state.
-6. **Exit Survey access** – `canAccessStep(3)` only allows access when `moderation_total > 0` and `moderation_completed_count >= moderation_total` (or exit survey already completed).
+1. **Cross-reference attention check** – `child_internet_use_frequency` field added (migration `t1u2v3w4x5y6`); reversed 8→1 scale in child profile, forward 1→8 in exit survey.
+2. **`isStudyMode` prop** – Gates study-specific UI (instructional banner, internet use question) behind `isStudyMode` prop on `ChildProfileForm`; only `/kids/profile` passes `true`.
+3. **Moderation flow simplified** – Now 2-step (Highlight → Assess); steps 3-4 and moderation panel disabled. `childAccomplish`, `assistantDoing`, `wouldShowChild` removed; `would_show_child` column dropped (migration `84b2215f7772`).
+4. **Restored Scenarios admin tab** – Lost in refactor; added back to `Settings.svelte`.
+5. **Child profile → moderation** – "Proceed to next step" always goes to `/moderation-scenario` (removed `getUserType` branching).
+6. **Child profile text** – Disclaimer: "This survey asks you to describe your child. This information will not be used to customize the scenarios you will be shown and will only be used in the context of academic research."
+7. **Removed Add Profile button** – Removed from child profile page; removed `addNewProfile` function.
+8. **Sidebar workflow refresh** – SurveySidebar and Sidebar listen for `workflow-updated` and `storage` to refetch workflow state.
+9. **Exit Survey access** – `canAccessStep(3)` only allows access when `moderation_total > 0` and `moderation_completed_count >= moderation_total` (or exit survey already completed).
 
 ---
 
@@ -145,9 +157,9 @@ npm run dev
 
 ## Git & Branch
 
-- **Current branch**: `feat/restore-workflow-navigation`
-- **Latest commit**: `e92f2626df` – Restore Scenarios admin tab, fix workflow navigation and sidebar updates
-- **Remote**: Pushed to `origin/feat/restore-workflow-navigation`
+- **Main development branch**: `dev`
+- **Current feature branch**: `feature/whitelist-enforcement`
+- **Remote**: https://github.com/jjdrisco/DSL-kidsgpt-open-webui
 
 ---
 

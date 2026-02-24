@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 📊 **Cross-reference attention check**: The child profile form now includes a required "How often does this child use the Internet?" question (8-point scale, displayed in reversed order 8→1). The same question appears in the exit survey in forward order (1→8), enabling post-hoc comparison of responses to detect inattentive participants. Stored as `child_internet_use_frequency` (string '1'–'8') on the `child_profile` table (migration `t1u2v3w4x5y6`).
 
+### Fixed
+
+- 🔒 **Study-specific UI gated behind `isStudyMode` prop**: The "Note: Please provide information about one child…" instructional banner and the internet use frequency question now only appear on `/kids/profile` (study workflow). They no longer bleed into `/parent` or `/parent/child-profile`. The `ChildProfileForm` component accepts `isStudyMode` (default `false`); only `kids/profile/+page.svelte` passes `isStudyMode={true}`.
+
 ## [0.7.2] - 2026-01-10
 
 ### Fixed

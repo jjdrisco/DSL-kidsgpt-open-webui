@@ -289,6 +289,16 @@ class ChildProfileSyncService {
 	}
 
 	/**
+	 * Get the whitelist (selected_features) for the currently selected child.
+	 * Returns an empty array if no child is selected or no whitelist is set.
+	 */
+	getCurrentChildWhitelist(): string[] {
+		const child = this.getCurrentChild();
+		if (!child) return [];
+		return Array.isArray(child.selected_features) ? child.selected_features : [];
+	}
+
+	/**
 	 * Get the currently selected child ID from settings store
 	 *
 	 * IMPORTANT: Reads from `settings` store, NOT `user.settings`.

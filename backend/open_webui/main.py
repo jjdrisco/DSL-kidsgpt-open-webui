@@ -1770,6 +1770,41 @@ async def chat_completion(
                 request, form_data, user, metadata, model
             )
 
+            # ── Child whitelist block: short-circuit before the main model ────
+            if metadata.get("child_blocked"):
+                blocked_response = {
+                    "id": f"chatcmpl-{uuid4().hex}",
+                    "object": "chat.completion",
+                    "created": int(time.time()),
+                    "model": form_data.get("model", ""),
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": metadata["child_blocked_message"],
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                    },
+                }
+                return await process_chat_response(
+                    request,
+                    blocked_response,
+                    form_data,
+                    user,
+                    metadata,
+                    model,
+                    events,
+                    tasks,
+                )
+            # ─────────────────────────────────────────────────────────────────
+
             response = await chat_completion_handler(request, form_data, user)
             if metadata.get("chat_id") and metadata.get("message_id"):
                 try:

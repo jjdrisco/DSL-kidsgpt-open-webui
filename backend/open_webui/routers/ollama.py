@@ -189,12 +189,22 @@ async def send_post_request(
 
             # WHITELIST ENFORCEMENT: Validate response against whitelist for child users
             # Note: This only handles non-streaming responses. Streaming validation needs different approach.
-            if user and user.role == "child" and isinstance(res, dict):
+            if (
+                user
+                and (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                )
+                and isinstance(res, dict)
+            ):
                 try:
                     # Extract response text from Ollama format
                     response_text = None
                     if "message" in res and "content" in res["message"]:
                         response_text = res["message"]["content"]
+
+                    if response_text:
+                        print(f"[DEBUG] PROVIDER RESPONSE: {response_text}")
 
                     # Get system prompt from metadata if available
                     system_prompt = metadata.get("system_prompt") if metadata else None
@@ -242,6 +252,9 @@ async def send_post_request(
                                 f"Blocking non-compliant response for user {user.id}: "
                                 f"violations={validation_result['violations']}"
                             )
+                            print(
+                                "[DEBUG] FINAL RESPONSE: [BLOCKED by whitelist validation]"
+                            )
                             return {
                                 "message": {
                                     "role": "assistant",
@@ -254,6 +267,22 @@ async def send_post_request(
                 except Exception as e:
                     # Don't block the response if validation fails
                     log.error(f"Error in Ollama response validation check: {e}")
+
+            if (
+                user
+                and (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                )
+                and isinstance(res, dict)
+            ):
+                _final_content = None
+                try:
+                    _final_content = res.get("message", {}).get("content")
+                except Exception:
+                    pass
+                if _final_content:
+                    print(f"[DEBUG] FINAL RESPONSE: {_final_content}")
 
             return res
 
@@ -1375,7 +1404,10 @@ async def generate_chat_completion(
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
                 # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
-                if user.role == "child" and system:
+                if (
+                    user.role == "child"
+                    or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))
+                ) and system:
                     # Extract the last user message (child's prompt)
                     messages = payload.get("messages", [])
                     child_prompt = next(
@@ -1388,6 +1420,10 @@ async def generate_chat_completion(
                     )
 
                     if child_prompt:
+                        print(f"[DEBUG] SYSTEM PROMPT: {system}")
+                        print(f"[DEBUG] ORIGINAL PROMPT: {child_prompt}")
+                        print(f"[DEBUG] PROMPT TO PROVIDER: {child_prompt}")
+
                         try:
                             # Perform async prompt comparison
                             comparison_result = await compare_child_prompt_to_system(

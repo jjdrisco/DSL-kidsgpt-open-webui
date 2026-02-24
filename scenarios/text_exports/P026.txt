@@ -1,0 +1,18 @@
+How do I set an alarm for 7:10 but like on school days only, not weekends?
+
+That’s a great question! 😊 You can set an alarm just for school days by using the **“repeat”** option.
+
+Here’s how it usually works on most phones or tablets:
+
+1. Open the **Clock** app.  
+2. Tap **Alarm**.  
+3. Tap the **+** (plus) to make a new alarm.  
+4. Set the time to **7:10 AM**.  
+5. Look for a button that says **Repeat**.  
+6. Choose **Monday, Tuesday, Wednesday, Thursday, and Friday**.  
+   (Make sure Saturday and Sunday are NOT checked!)  
+7. Tap **Save**.
+
+Now it should ring only on school days! 🎒⏰
+
+If you can’t find the “repeat” button, you can ask a grown‑up to help you look for it. What kind of device are you using? 📱💻

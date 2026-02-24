@@ -24,7 +24,8 @@
 			try {
 				const profiles = await getChildProfiles(localStorage.token);
 				if (profiles && profiles.length > 0) {
-					showChat = true;
+					// Parent has a child profile — go to whitelist sandbox instead of chat
+					goto('/parent/whitelist-sandbox');
 					return;
 				}
 			} catch (e) {

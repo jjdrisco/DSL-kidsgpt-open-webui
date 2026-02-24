@@ -144,7 +144,7 @@
 	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"). \n3) Step 3: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n' +
+		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"). \n3) Step 3: Click "+ Add Concern", type "attention check" in the concern text field, and click "Submit".\n' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
@@ -785,6 +785,7 @@
 		step2Completed = false;
 		step3Completed = false;
 		concernLevel = null;
+		concernMappings = [];
 		// showInitialDecisionPane is now derived
 		// Reset custom scenario state
 		customScenarioPrompt = '';
@@ -990,6 +991,7 @@
 							step3Completed: false,
 							concernLevel: null,
 							concernReason: '',
+							concernMappings: [],
 							satisfactionLevel: null,
 							satisfactionReason: '',
 							nextAction: null
@@ -1098,6 +1100,7 @@
 							step3Completed: false,
 							concernLevel: null,
 							concernReason: '',
+							concernMappings: [],
 							satisfactionLevel: null,
 							satisfactionReason: '',
 							nextAction: null
@@ -1212,6 +1215,7 @@
 				step3Completed = false;
 				step3Completed = false;
 				concernLevel = null;
+				concernMappings = [];
 				// showOriginal1 and showInitialDecisionPane are now derived
 
 				// Wait for DOM to update, then scroll to top after custom scenario loads
@@ -1307,6 +1311,13 @@
 		endOffset?: number; // absolute character offset within scenario text (-1 = unknown)
 	}
 
+	// Concern item interface for Step 2 concern enumeration + highlight matching
+	interface ConcernItem {
+		id: string;
+		text: string; // Parent's description of this specific concern
+		linkedHighlights: string[]; // Highlight texts from Step 1 that this concern relates to
+	}
+
 	// Version management interfaces
 	interface ModerationVersion {
 		response: string;
@@ -1344,7 +1355,8 @@
 		// Removed step4Completed - now 3-step flow
 		// Removed childAccomplish and assistantDoing - no longer collected in Step 2
 		concernLevel: number | null; // Step 2 (Assess): Concern assessment (1-5)
-		concernReason: string; // Step 2 (Assess): "Why?" explanation
+		concernReason: string; // Step 2 (Assess): "Why?" explanation (derived from mappings)
+		concernMappings: ConcernItem[]; // Step 2 (Assess): Array of concerns with linked highlights
 		satisfactionLevel: number | null; // Step 3 (Update): Satisfaction level (1-5 Likert scale)
 		satisfactionReason: string; // Step 3 (Update): "Why?" for satisfaction
 		nextAction: 'try_again' | 'move_on' | null; // Step 3 (Update): Next action after satisfaction check
@@ -1538,7 +1550,8 @@
 
 	// Step 2 (Assess): Concern assessment fields
 	let concernLevel: number | null = null; // 1-5 (mapped from: 1=Not concerned at all, 2=Somewhat unconcerned, 3=Neutral, 4=Somewhat concerned, 5=Concerned)
-	let concernReason: string = ''; // "Why?" field - required text explanation
+	let concernReason: string = ''; // "Why?" field - derived from concernMappings for backward compat
+	let concernMappings: ConcernItem[] = []; // Array of specific concerns with linked highlights
 
 	// Step 3 (Update): Satisfaction check fields (after version created)
 	let satisfactionLevel: number | null = null; // 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
@@ -2236,6 +2249,56 @@
 	}
 
 	/**
+	 * Add a new blank concern item to the concern mappings list.
+	 * Called when user clicks "+ Add Concern" in Step 2.
+	 */
+	function addConcernItem() {
+		concernMappings = [
+			...concernMappings,
+			{ id: crypto.randomUUID(), text: '', linkedHighlights: [] }
+		];
+	}
+
+	/**
+	 * Remove a concern item by id from the concern mappings list.
+	 */
+	function removeConcernItem(id: string) {
+		concernMappings = concernMappings.filter((c) => c.id !== id);
+	}
+
+	/**
+	 * Toggle a highlight link on a concern item.
+	 * @param concernId - The id of the concern item
+	 * @param highlightText - The highlight text to link/unlink
+	 * @param checked - Whether to add (true) or remove (false) the link
+	 */
+	function toggleHighlightLink(concernId: string, highlightText: string, checked: boolean) {
+		concernMappings = concernMappings.map((c) => {
+			if (c.id !== concernId) return c;
+			if (checked) {
+				return { ...c, linkedHighlights: [...c.linkedHighlights, highlightText] };
+			} else {
+				return { ...c, linkedHighlights: c.linkedHighlights.filter((h) => h !== highlightText) };
+			}
+		});
+	}
+
+	/**
+	 * Derive a plain-text concern reason string from the concern mappings.
+	 * Used to populate the backward-compatible concernReason field.
+	 */
+	function deriveConcernReason(mappings: ConcernItem[]): string {
+		return mappings
+			.filter((c) => c.text.trim())
+			.map((c) =>
+				c.linkedHighlights.length > 0
+					? `${c.text.trim()} (relates to: ${c.linkedHighlights.map((h) => `"${h}"`).join(', ')})`
+					: c.text.trim()
+			)
+			.join('; ');
+	}
+
+	/**
 	 * Extract text from outermost <mark> elements in HTML (for backend data storage only)
 	 * This function extracts text content from outermost marks, ignoring nested marks
 	 */
@@ -2699,6 +2762,7 @@
 			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			concernLevel,
 			concernReason,
+			concernMappings: [...concernMappings],
 			satisfactionLevel,
 			satisfactionReason,
 			nextAction,
@@ -2809,6 +2873,7 @@
 		responseHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		promptHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		concernLevel = null;
+		concernMappings = [];
 		concernReason = '';
 		satisfactionLevel = null;
 		satisfactionReason = '';
@@ -3034,6 +3099,12 @@
 				console.log('✅ Restored Step 2 data from backend');
 			}
 
+			// Restore concern mappings from session_metadata if available
+			if (backendSession.session_metadata?.concern_mappings) {
+				concernMappings = backendSession.session_metadata.concern_mappings;
+				backendProvided.add('concernMappings');
+				console.log('✅ Restored concern mappings from backend:', concernMappings.length);
+			}
 			// Step 3: Restore pre-moderation judgment from backend (direct columns only)
 			if (backendSession.concern_level !== null && backendSession.concern_level !== undefined) {
 				concernLevel = backendSession.concern_level;
@@ -3299,6 +3370,9 @@
 			if (!backendProvided.has('concernReason')) {
 				concernReason = savedState.concernReason || '';
 			}
+			if (!backendProvided.has('concernMappings')) {
+				concernMappings = savedState.concernMappings || [];
+			}
 
 			// Restore Step 3 satisfaction data only if backend didn't provide it
 			if (!backendProvided.has('satisfactionLevel')) {
@@ -3349,6 +3423,7 @@
 			step2Completed = false;
 			step3Completed = false;
 			concernLevel = null;
+			concernMappings = [];
 			versions = [];
 			currentVersionIndex = -1;
 			confirmedVersionIndex = null;
@@ -3601,6 +3676,7 @@
 		step3Completed = false;
 		// Removed step4Completed - now 3-step flow
 		concernLevel = null;
+		concernMappings = [];
 		// showInitialDecisionPane is now derived
 
 		// Reset ALL scenario states
@@ -3821,6 +3897,7 @@
 					step3Completed: false,
 					concernLevel: null,
 					concernReason: '',
+					concernMappings: [],
 					satisfactionLevel: null,
 					satisfactionReason: '',
 					nextAction: null
@@ -4232,6 +4309,7 @@
 					step3Completed: false,
 					concernLevel: null,
 					concernReason: '',
+					concernMappings: [],
 					satisfactionLevel: null,
 					satisfactionReason: '',
 					nextAction: null
@@ -4338,28 +4416,38 @@
 				step3Completed: false,
 				concernLevel: null,
 				concernReason: '',
+				concernMappings: [],
 				satisfactionLevel: null,
 				satisfactionReason: '',
 				nextAction: null
 			};
-			// Track if user entered "attention check" in concern reason (case-insensitive)
-			state.attentionCheckStep2Passed = concernReason.toLowerCase().includes('attention check');
+			// Track if user entered "attention check" in any concern text (case-insensitive)
+			state.attentionCheckStep2Passed = concernMappings.some((c) =>
+				c.text.toLowerCase().includes('attention check')
+			);
 			scenarioStates.set(currentIdentifier, state);
 		}
 
-		// Validate explanation field is filled (for regular scenarios only)
+		// Validate at least one concern with text is provided (for regular scenarios only)
 		// Attention checks can proceed without validation (non-blocking)
-		if (!isAttentionCheckScenario && !concernReason.trim()) {
-			toast.error('Please explain why this content concerns you');
+		const validConcerns = concernMappings.filter((c) => c.text.trim());
+		if (!isAttentionCheckScenario && validConcerns.length === 0) {
+			toast.error('Please add at least one specific concern');
 			return;
 		}
 
-		// Validate minimum length requirement (for regular scenarios only)
-		// Attention checks can proceed without validation (non-blocking)
-		if (!isAttentionCheckScenario && concernReason.trim().length < 10) {
-			toast.error('Please provide at least 10 characters in your explanation');
+		// Validate each concern with text has at least one linked highlight (when highlights exist)
+		if (
+			!isAttentionCheckScenario &&
+			highlightedTexts1.length > 0 &&
+			validConcerns.some((c) => c.linkedHighlights.length === 0)
+		) {
+			toast.error('Please link each concern to at least one highlight');
 			return;
 		}
+
+		// Derive concernReason from mappings for backward compatibility
+		concernReason = deriveConcernReason(concernMappings);
 
 		// For attention checks: Calculate overall pass/fail after step 2
 		if (isAttentionCheckScenario) {
@@ -4444,6 +4532,7 @@
 					end_offset: h.endOffset
 				})),
 				refactored_response: undefined,
+				session_metadata: { concern_mappings: concernMappings },
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -5327,6 +5416,7 @@
 										step3Completed: false,
 										concernLevel: null,
 										concernReason: '',
+										concernMappings: [],
 										satisfactionLevel: null,
 										satisfactionReason: '',
 										nextAction: null
@@ -6808,7 +6898,7 @@
 												<div>
 													<div class="flex items-center justify-between mb-2">
 														<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-															Step 2: Explain why this content concerns you
+															Step 2: Rate Your Concern & List Specific Issues
 														</h3>
 														<button
 															on:click={() => navigateToStep(1)}
@@ -6832,7 +6922,7 @@
 													</div>
 												</div>
 
-												<!-- Concern Rating Likert Scale (before explain why) -->
+												<!-- Concern Rating Likert Scale -->
 												<div class="space-y-4">
 													<div>
 														<label
@@ -6865,22 +6955,106 @@
 														</div>
 													</div>
 
-													<!-- Explanation field -->
+													<!-- Concern Enumeration + Highlight Matching -->
 													<div>
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															Explain why this content concerns you <span class="text-red-500"
-																>*</span
+														<div class="flex items-center justify-between mb-2">
+															<label
+																class="block text-sm font-medium text-gray-700 dark:text-gray-300"
 															>
-														</label>
-														<textarea
-															bind:value={concernReason}
-															placeholder="Explain why this content concerns you... (minimum 10 characters)"
-															rows="5"
-															minlength="10"
-															class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
-														></textarea>
+																What are your specific concerns? <span class="text-red-500">*</span>
+															</label>
+															<button
+																type="button"
+																on:click={addConcernItem}
+																class="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center space-x-1"
+															>
+																<span>+ Add Concern</span>
+															</button>
+														</div>
+
+														{#if concernMappings.length === 0}
+															<div
+																class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+															>
+																<p class="text-xs text-yellow-800 dark:text-yellow-200">
+																	⚠️ Click "Add Concern" to describe at least one specific concern
+																	about this interaction.
+																</p>
+															</div>
+														{:else}
+															<div class="space-y-3">
+																{#each concernMappings as concern (concern.id)}
+																	<div
+																		class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+																	>
+																		<div class="flex items-start space-x-2 mb-2">
+																			<input
+																				type="text"
+																				bind:value={concern.text}
+																				placeholder="Describe this concern..."
+																				class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+																			/>
+																			<button
+																				type="button"
+																				on:click={() => removeConcernItem(concern.id)}
+																				class="mt-0.5 p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
+																				title="Remove this concern"
+																			>
+																				<svg
+																					class="w-4 h-4"
+																					fill="none"
+																					stroke="currentColor"
+																					viewBox="0 0 24 24"
+																				>
+																					<path
+																						stroke-linecap="round"
+																						stroke-linejoin="round"
+																						stroke-width="2"
+																						d="M6 18L18 6M6 6l12 12"
+																					></path>
+																				</svg>
+																			</button>
+																		</div>
+
+																		{#if highlightedTexts1.length > 0}
+																			<div>
+																				<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+																					Which highlight(s) does this concern relate to? <span
+																						class="text-red-500">*</span
+																					>
+																				</p>
+																				<div class="space-y-1">
+																					{#each highlightedTexts1 as highlight (highlight.text)}
+																						<label
+																							class="flex items-start space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+																						>
+																							<input
+																								type="checkbox"
+																								checked={concern.linkedHighlights.includes(
+																									highlight.text
+																								)}
+																								on:change={(e) =>
+																									toggleHighlightLink(
+																										concern.id,
+																										highlight.text,
+																										e.currentTarget.checked
+																									)}
+																								class="mt-0.5 w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
+																							/>
+																							<span
+																								class="text-xs text-gray-700 dark:text-gray-300 font-mono bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded break-all"
+																							>
+																								"{highlight.text}"
+																							</span>
+																						</label>
+																					{/each}
+																				</div>
+																			</div>
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
 													</div>
 												</div>
 
@@ -6888,8 +7062,12 @@
 													<button
 														on:click={completeStep2}
 														disabled={concernLevel === null ||
-															!concernReason.trim() ||
-															concernReason.trim().length < 10}
+															concernMappings.length === 0 ||
+															concernMappings.every((c) => !c.text.trim()) ||
+															(highlightedTexts1.length > 0 &&
+																concernMappings.some(
+																	(c) => c.text.trim() && c.linkedHighlights.length === 0
+																))}
 														class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 													>
 														Submit

@@ -351,8 +351,6 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log(event);
-
 		if (event.chat_id === $chatId) {
 			await tick();
 			let message = history.messages[event.message_id];
@@ -1450,7 +1448,6 @@
 			);
 		}
 
-		console.log(data);
 		await tick();
 
 		if (autoScroll) {
