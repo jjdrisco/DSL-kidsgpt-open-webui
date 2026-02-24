@@ -147,7 +147,7 @@
 	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"). \n3) Step 3: Click "+ Add Concern", type "attention check" in the concern text field, then click "Continue to Matching".\n4) Step 4: Match the highlight to the "attention check" concern, then click "Submit".\n' +
+		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: For the highlighted text, type "attention check" in the concern text field and click "+ Add", then rate your concern level.\n3) Click "Submit".\n' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
