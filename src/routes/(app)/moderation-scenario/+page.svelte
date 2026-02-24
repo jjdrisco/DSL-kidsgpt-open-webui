@@ -789,7 +789,8 @@
 		step3Completed = false;
 		concernLevel = null;
 		concernMappings = [];
-		step2SubStep = 'rate';
+		highlightConcerns = {};
+		newConcernInputs = {};
 		// showInitialDecisionPane is now derived
 		// Reset custom scenario state
 		customScenarioPrompt = '';
@@ -996,6 +997,7 @@
 							concernLevel: null,
 							concernReason: '',
 							concernMappings: [],
+							highlightConcerns: {},
 							satisfactionLevel: null,
 							satisfactionReason: '',
 							nextAction: null
@@ -1105,6 +1107,7 @@
 							concernLevel: null,
 							concernReason: '',
 							concernMappings: [],
+							highlightConcerns: {},
 							satisfactionLevel: null,
 							satisfactionReason: '',
 							nextAction: null
@@ -1220,6 +1223,8 @@
 				step3Completed = false;
 				concernLevel = null;
 				concernMappings = [];
+				highlightConcerns = {};
+				newConcernInputs = {};
 				// showOriginal1 and showInitialDecisionPane are now derived
 
 				// Wait for DOM to update, then scroll to top after custom scenario loads
@@ -1320,7 +1325,6 @@
 		id: string;
 		text: string; // Parent's description of this specific concern
 		concernLevel: number | null; // Per-concern Likert rating (1-5)
-		linkedHighlights: string[]; // Highlight texts from Step 1 that this concern relates to
 	}
 
 	// Version management interfaces
@@ -1362,6 +1366,7 @@
 		concernLevel: number | null; // Step 2 (Assess): Concern assessment (1-5)
 		concernReason: string; // Step 2 (Assess): "Why?" explanation (derived from mappings)
 		concernMappings: ConcernItem[]; // Step 2 (Assess): Array of concerns with linked highlights
+		highlightConcerns: Record<string, string[]>; // Step 2 (Assess): highlight text → [concern IDs]
 		satisfactionLevel: number | null; // Step 3 (Update): Satisfaction level (1-5 Likert scale)
 		satisfactionReason: string; // Step 3 (Update): "Why?" for satisfaction
 		nextAction: 'try_again' | 'move_on' | null; // Step 3 (Update): Next action after satisfaction check
@@ -1557,7 +1562,8 @@
 	let concernLevel: number | null = null; // 1-5 (mapped from: 1=Not concerned at all, 2=Somewhat unconcerned, 3=Neutral, 4=Somewhat concerned, 5=Concerned)
 	let concernReason: string = ''; // "Why?" field - derived from concernMappings for backward compat
 	let concernMappings: ConcernItem[] = []; // Array of specific concerns with linked highlights
-	let step2SubStep: 'rate' | 'match' = 'rate'; // Sub-step within Step 2: 'rate' = create concerns, 'match' = match highlights
+	let highlightConcerns: Record<string, string[]> = {}; // highlight text → [concern IDs]
+	let newConcernInputs: Record<string, string> = {}; // per-highlight new concern input values
 
 	// Step 3 (Update): Satisfaction check fields (after version created)
 	let satisfactionLevel: number | null = null; // 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
@@ -2255,81 +2261,106 @@
 	}
 
 	/**
-	 * Add a new blank concern item to the concern mappings list.
-	 * Called when user clicks "+ Add Concern" in Step 2.
+	 * Add a new concern to the shared pool and immediately link it to the given highlight.
+	 * The new concern text is taken from newConcernInputs[highlightText].
+	 */
+	function addConcernForHighlight(highlightText: string) {
+		const text = (newConcernInputs[highlightText] ?? '').trim();
+		if (!text) return;
+		const id = crypto.randomUUID();
+		concernMappings = [...concernMappings, { id, text, concernLevel: null }];
+		highlightConcerns = {
+			...highlightConcerns,
+			[highlightText]: [...(highlightConcerns[highlightText] ?? []), id]
+		};
+		newConcernInputs = { ...newConcernInputs, [highlightText]: '' };
+	}
+
+	/**
+	 * Add a standalone concern to the shared pool (not linked to any highlight yet).
+	 * Used for backward compat / attention check flow.
 	 */
 	function addConcernItem() {
 		concernMappings = [
 			...concernMappings,
-			{ id: crypto.randomUUID(), text: '', concernLevel: null, linkedHighlights: [] }
+			{ id: crypto.randomUUID(), text: '', concernLevel: null }
 		];
 	}
 
 	/**
-	 * Remove a concern item by id from the concern mappings list.
+	 * Remove a concern item by id from the concern pool and all highlight links.
 	 */
 	function removeConcernItem(id: string) {
 		concernMappings = concernMappings.filter((c) => c.id !== id);
+		// Remove from all highlight links
+		const updated: Record<string, string[]> = {};
+		for (const [hText, ids] of Object.entries(highlightConcerns)) {
+			const filtered = ids.filter((cId) => cId !== id);
+			if (filtered.length > 0) updated[hText] = filtered;
+		}
+		highlightConcerns = updated;
 	}
 
 	/**
-	 * Toggle a highlight link on a concern item.
-	 * @param concernId - The id of the concern item
-	 * @param highlightText - The highlight text to link/unlink
-	 * @param checked - Whether to add (true) or remove (false) the link
+	 * Toggle whether a concern from the pool is linked to a specific highlight.
 	 */
-	function toggleHighlightLink(concernId: string, highlightText: string, checked: boolean) {
-		concernMappings = concernMappings.map((c) => {
-			if (c.id !== concernId) return c;
-			if (checked) {
-				return { ...c, linkedHighlights: [...c.linkedHighlights, highlightText] };
-			} else {
-				return { ...c, linkedHighlights: c.linkedHighlights.filter((h) => h !== highlightText) };
-			}
-		});
+	function toggleConcernLink(highlightText: string, concernId: string, checked: boolean) {
+		const current = highlightConcerns[highlightText] ?? [];
+		if (checked) {
+			highlightConcerns = {
+				...highlightConcerns,
+				[highlightText]: [...current.filter((id) => id !== concernId), concernId]
+			};
+		} else {
+			const updated = current.filter((id) => id !== concernId);
+			highlightConcerns = { ...highlightConcerns, [highlightText]: updated };
+		}
 	}
 
 	/**
-	 * Derive a plain-text concern reason string from the concern mappings.
+	 * Derive a plain-text concern reason string from the concern mappings and highlight links.
 	 * Used to populate the backward-compatible concernReason field.
 	 */
 	function deriveConcernReason(mappings: ConcernItem[]): string {
 		return mappings
 			.filter((c) => c.text.trim())
-			.map((c) =>
-				c.linkedHighlights.length > 0
-					? `${c.text.trim()} (relates to: ${c.linkedHighlights.map((h) => `"${h}"`).join(', ')})`
-					: c.text.trim()
-			)
+			.map((c) => {
+				const linkedHighlightTexts = Object.entries(highlightConcerns)
+					.filter(([, ids]) => ids.includes(c.id))
+					.map(([hText]) => hText);
+				return linkedHighlightTexts.length > 0
+					? `${c.text.trim()} (relates to: ${linkedHighlightTexts.map((h) => `"${h}"`).join(', ')})`
+					: c.text.trim();
+			})
 			.join('; ');
 	}
 
 	/**
-	 * Get highlights that haven't been matched to any concern yet.
+	 * Get highlights that haven't been linked to any concern yet.
 	 */
 	function getUnmatchedHighlights(): HighlightInfo[] {
 		return highlightedTexts1.filter(
-			(h) => !concernMappings.some((c) => c.linkedHighlights.includes(h.text))
+			(h) => !(highlightConcerns[h.text] ?? []).length
 		);
 	}
 
 	/**
-	 * Check if all highlights have been matched to at least one concern.
+	 * Check if all highlights have been linked to at least one concern.
 	 */
 	function allHighlightsMatched(): boolean {
 		if (highlightedTexts1.length === 0) return true;
-		return highlightedTexts1.every((h) =>
-			concernMappings.some((c) => c.linkedHighlights.includes(h.text))
-		);
+		return highlightedTexts1.every((h) => (highlightConcerns[h.text] ?? []).length > 0);
 	}
 
 	/**
-	 * Check if all non-empty concerns have at least one linked highlight.
+	 * Check if all non-empty concerns in the pool have at least one linked highlight.
 	 */
 	function allConcernsHaveHighlights(): boolean {
 		if (highlightedTexts1.length === 0) return true;
 		const validConcerns = concernMappings.filter((c) => c.text.trim());
-		return validConcerns.every((c) => c.linkedHighlights.length > 0);
+		return validConcerns.every((c) =>
+			Object.values(highlightConcerns).some((ids) => ids.includes(c.id))
+		);
 	}
 
 	/**
@@ -2797,6 +2828,7 @@
 			concernLevel,
 			concernReason,
 			concernMappings: [...concernMappings],
+		highlightConcerns: { ...highlightConcerns },
 			satisfactionLevel,
 			satisfactionReason,
 			nextAction,
@@ -2908,7 +2940,8 @@
 		promptHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		concernLevel = null;
 		concernMappings = [];
-		step2SubStep = 'rate';
+		highlightConcerns = {};
+		newConcernInputs = {};
 		concernReason = '';
 		satisfactionLevel = null;
 		satisfactionReason = '';
@@ -3136,9 +3169,10 @@
 
 			// Restore concern mappings — prefer new concern_item table, fall back to session_metadata
 			let restoredFromTable = false;
+			let dbItems: any[] = [];
 			if (selectedChildId && $user?.id) {
 				try {
-					const dbItems = await getConcernItems(localStorage.token, {
+					dbItems = await getConcernItems(localStorage.token, {
 						user_id: $user.id,
 						child_id: selectedChildId,
 						scenario_index: index,
@@ -3150,8 +3184,7 @@
 						concernMappings = dbItems.map((item: ConcernItemResponse) => ({
 							id: item.id,
 							text: item.text,
-							concernLevel: item.concern_level,
-							linkedHighlights: item.linked_highlights ?? []
+							concernLevel: item.concern_level
 						}));
 						backendProvided.add('concernMappings');
 						restoredFromTable = true;
@@ -3167,8 +3200,7 @@
 					(c: any) => ({
 						id: c.id ?? crypto.randomUUID(),
 						text: c.text ?? '',
-						concernLevel: c.concernLevel ?? null,
-						linkedHighlights: c.linkedHighlights ?? []
+						concernLevel: c.concernLevel ?? null
 					})
 				);
 				backendProvided.add('concernMappings');
@@ -3177,8 +3209,28 @@
 					concernMappings.length
 				);
 			}
-			if (concernMappings.some((c: ConcernItem) => c.text.trim())) {
-				step2SubStep = 'match';
+
+			// Restore highlight-concern mapping
+			if (backendSession.session_metadata?.highlight_concerns) {
+				highlightConcerns = backendSession.session_metadata.highlight_concerns as Record<string, string[]>;
+			} else if (dbItems && dbItems.length > 0) {
+				// Derive from legacy linked_highlights on ConcernItemRows
+				const derived: Record<string, string[]> = {};
+				for (const item of dbItems) {
+					for (const hText of (item.linked_highlights ?? [])) {
+						derived[hText] = [...(derived[hText] ?? []), item.id];
+					}
+				}
+				highlightConcerns = derived;
+			} else if (backendSession.session_metadata?.concern_mappings) {
+				// Derive from legacy session_metadata.concern_mappings
+				const derived: Record<string, string[]> = {};
+				for (const c of backendSession.session_metadata.concern_mappings as any[]) {
+					for (const hText of (c.linkedHighlights ?? [])) {
+						derived[hText] = [...(derived[hText] ?? []), c.id ?? ''];
+					}
+				}
+				highlightConcerns = derived;
 			}
 
 			// Step 3 completion is now determined by satisfaction check (satisfaction_level, satisfaction_reason, next_action)
@@ -3448,6 +3500,7 @@
 			}
 			if (!backendProvided.has('concernMappings')) {
 				concernMappings = savedState.concernMappings || [];
+				highlightConcerns = (savedState as any).highlightConcerns || {};
 			}
 
 			// Restore Step 3 satisfaction data only if backend didn't provide it
@@ -3500,6 +3553,8 @@
 			step3Completed = false;
 			concernLevel = null;
 			concernMappings = [];
+			highlightConcerns = {};
+			newConcernInputs = {};
 			versions = [];
 			currentVersionIndex = -1;
 			confirmedVersionIndex = null;
@@ -3753,6 +3808,8 @@
 		// Removed step4Completed - now 3-step flow
 		concernLevel = null;
 		concernMappings = [];
+		highlightConcerns = {};
+		newConcernInputs = {};
 		// showInitialDecisionPane is now derived
 
 		// Reset ALL scenario states
@@ -3974,6 +4031,7 @@
 					concernLevel: null,
 					concernReason: '',
 					concernMappings: [],
+					highlightConcerns: {},
 					satisfactionLevel: null,
 					satisfactionReason: '',
 					nextAction: null
@@ -4386,6 +4444,7 @@
 					concernLevel: null,
 					concernReason: '',
 					concernMappings: [],
+					highlightConcerns: {},
 					satisfactionLevel: null,
 					satisfactionReason: '',
 					nextAction: null
@@ -4495,6 +4554,7 @@
 				concernLevel: null,
 				concernReason: '',
 				concernMappings: [],
+				highlightConcerns: {},
 				satisfactionLevel: null,
 				satisfactionReason: '',
 				nextAction: null
@@ -4518,7 +4578,7 @@
 		if (
 			!isAttentionCheckScenario &&
 			highlightedTexts1.length > 0 &&
-			validConcerns.some((c) => c.linkedHighlights.length === 0)
+			!allConcernsHaveHighlights()
 		) {
 			toast.error('Please link each concern to at least one highlight');
 			return;
@@ -4528,7 +4588,7 @@
 		if (!isAttentionCheckScenario && highlightedTexts1.length > 0 && !allHighlightsMatched()) {
 			const unmatched = getUnmatchedHighlights();
 			toast.error(
-				`Please match all highlights to concerns (${unmatched.length} unmatched highlight${unmatched.length > 1 ? 's' : ''} remaining)`
+				`Please add a concern for each highlight (${unmatched.length} highlight${unmatched.length > 1 ? 's' : ''} remaining)`
 			);
 			return;
 		}
@@ -4621,7 +4681,9 @@
 						position: idx,
 						text: c.text,
 						concern_level: c.concernLevel,
-						linked_highlights: c.linkedHighlights
+						linked_highlights: Object.entries(highlightConcerns)
+							.filter(([, ids]) => ids.includes(c.id))
+							.map(([hText]) => hText)
 					}))
 				});
 				console.log('✅ Concern items saved to DB:', concernMappings.length);
@@ -4657,7 +4719,10 @@
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: isAttentionCheckScenario
 					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
-					: false
+					: false,
+				session_metadata: {
+					highlight_concerns: highlightConcerns
+				}
 			});
 			console.log('✅ Identification complete - scenario marked as final');
 			window.dispatchEvent(new Event('workflow-updated'));
@@ -5536,6 +5601,7 @@
 										concernLevel: null,
 										concernReason: '',
 										concernMappings: [],
+										highlightConcerns: {},
 										satisfactionLevel: null,
 										satisfactionReason: '',
 										nextAction: null
@@ -7014,410 +7080,165 @@
 										<!-- Step 2: Assess -->
 										{#if initialDecisionStep === 2}
 											<div class="space-y-4">
-												<!-- Sub-step 2a: Rate & Create Concerns -->
-												{#if step2SubStep === 'rate'}
-													<div>
-														<div class="flex items-center justify-between mb-2">
-															<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-																Step 2a: Rate Your Concern & Create Issues
-															</h3>
-															<button
-																on:click={() => navigateToStep(1)}
-																class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
-															>
-																<svg
-																	class="w-3 h-3 flex-shrink-0"
-																	fill="none"
-																	stroke="currentColor"
-																	viewBox="0 0 24 24"
-																>
-																	<path
-																		stroke-linecap="round"
-																		stroke-linejoin="round"
-																		stroke-width="2"
-																		d="M10 19l-7-7m0 0l7-7m-7 7h18"
-																	></path>
-																</svg>
-																<span>Back</span>
-															</button>
+												<div class="flex items-center justify-between mb-2">
+													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+														Step 2: Add Concerns for Each Highlight
+													</h3>
+													<button
+														on:click={() => navigateToStep(1)}
+														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+													>
+														<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+														</svg>
+														<span>Back</span>
+													</button>
+												</div>
+
+												<p class="text-sm text-gray-600 dark:text-gray-400">
+													For each highlighted passage, describe what concerns you about it. You can reuse a concern across multiple highlights.
+												</p>
+
+												{#if highlightedTexts1.length === 0}
+													<div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+														<p class="text-xs text-yellow-800 dark:text-yellow-200">
+															⚠️ No highlights found from Step 1. Go back and highlight text that concerns you.
+														</p>
+													</div>
+												{:else}
+													<!-- Progress bar -->
+													{@const matchedCount = highlightedTexts1.filter((h) => (highlightConcerns[h.text] ?? []).length > 0).length}
+													<div class="mb-2">
+														<div class="flex items-center justify-between mb-1">
+															<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+																{matchedCount} of {highlightedTexts1.length} highlight{highlightedTexts1.length !== 1 ? 's' : ''} addressed
+															</span>
+															{#if matchedCount === highlightedTexts1.length}
+																<span class="text-xs font-medium text-green-600 dark:text-green-400">All addressed!</span>
+															{:else}
+																<span class="text-xs font-medium text-amber-600 dark:text-amber-400">{highlightedTexts1.length - matchedCount} remaining</span>
+															{/if}
+														</div>
+														<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+															<div
+																class="h-2 rounded-full transition-all duration-300 {matchedCount === highlightedTexts1.length ? 'bg-green-500' : 'bg-blue-500'}"
+																style="width: {highlightedTexts1.length > 0 ? (matchedCount / highlightedTexts1.length) * 100 : 0}%"
+															></div>
 														</div>
 													</div>
 
-													<!-- Concern Enumeration with per-concern Likert ratings -->
+													<!-- Per-highlight concern assignment -->
 													<div class="space-y-4">
-														<div>
-															<label
-																class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-															>
-																What are your specific concerns? <span class="text-red-500">*</span>
-															</label>
-															<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-																For each concern, describe it and rate how concerned you are.
-															</p>
-
-															{#if concernMappings.length === 0}
-																<div
-																	class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-																>
-																	<p class="text-xs text-yellow-800 dark:text-yellow-200">
-																		⚠️ Click "Add Concern" to describe at least one specific
-																		concern about this interaction.
-																	</p>
+														{#each highlightedTexts1 as highlight, hIdx (highlight.text)}
+															{@const linkedIds = highlightConcerns[highlight.text] ?? []}
+															{@const isAddressed = linkedIds.length > 0}
+															<div class="p-3 border rounded-lg transition-colors {isAddressed ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}">
+																<!-- Highlight label -->
+																<div class="flex items-start space-x-2 mb-2">
+																	<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold flex-shrink-0 mt-0.5 {isAddressed ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}">
+																		{hIdx + 1}
+																	</span>
+																	<span class="text-sm text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed">
+																		"{highlight.text}"
+																	</span>
 																</div>
-															{:else}
-																<div class="space-y-4 mb-3">
-																	{#each concernMappings as concern (concern.id)}
-																		<div
-																			class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50"
-																		>
-																			<!-- Concern text + remove button -->
-																			<div class="flex items-start space-x-2 mb-3">
-																				<input
-																					type="text"
-																					value={concern.text}
-																					on:input={(e) => {
-																						concernMappings = concernMappings.map((c) =>
-																							c.id === concern.id
-																								? { ...c, text: e.currentTarget.value }
-																								: c
-																						);
-																					}}
-																					placeholder="Describe this concern..."
-																					class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-																				/>
-																				<button
-																					type="button"
-																					on:click={() => removeConcernItem(concern.id)}
-																					class="mt-0.5 p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
-																					title="Remove this concern"
-																				>
-																					<svg
-																						class="w-4 h-4"
-																						fill="none"
-																						stroke="currentColor"
-																						viewBox="0 0 24 24"
-																					>
-																						<path
-																							stroke-linecap="round"
-																							stroke-linejoin="round"
-																							stroke-width="2"
-																							d="M6 18L18 6M6 6l12 12"
-																						></path>
-																					</svg>
-																				</button>
-																			</div>
 
-																			<!-- Per-concern Likert rating -->
-																			<div>
-																				<p
-																					class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
-																				>
-																					How concerned are you about this?
-																					<span class="text-red-500">*</span>
-																				</p>
-																				<div class="flex gap-1 flex-wrap">
-																					{#each [{ value: 1, label: 'Not at all' }, { value: 2, label: 'Slightly' }, { value: 3, label: 'Neutral' }, { value: 4, label: 'Somewhat' }, { value: 5, label: 'Very' }] as opt}
-																						<button
-																							type="button"
-																							on:click={() => {
-																								concernMappings = concernMappings.map((c) =>
-																									c.id === concern.id
-																										? { ...c, concernLevel: opt.value }
-																										: c
-																								);
-																							}}
-																							class="flex-1 min-w-[60px] px-2 py-1.5 text-xs rounded border transition-colors {concern.concernLevel ===
-																							opt.value
-																								? 'bg-blue-500 border-blue-500 text-white font-semibold'
-																								: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400'}"
-																						>
-																							{opt.value}. {opt.label}
-																						</button>
-																					{/each}
-																				</div>
+																<div class="ml-7 space-y-2">
+																	<!-- Existing concerns as checkboxes -->
+																	{#if concernMappings.filter((c) => c.text.trim()).length > 0}
+																		<div>
+																			<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Select existing concern(s):</p>
+																			<div class="space-y-1">
+																				{#each concernMappings.filter((c) => c.text.trim()) as concern (concern.id)}
+																					<label class="flex items-start space-x-2 cursor-pointer p-1.5 rounded hover:bg-white/50 dark:hover:bg-gray-600/50 transition-colors">
+																						<input
+																							type="checkbox"
+																							checked={linkedIds.includes(concern.id)}
+																							on:change={(e) => toggleConcernLink(highlight.text, concern.id, e.currentTarget.checked)}
+																							class="mt-0.5 w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
+																						/>
+																						<span class="text-xs text-gray-700 dark:text-gray-300">{concern.text}</span>
+																					</label>
+																				{/each}
+																			</div>
+																		</div>
+																	{/if}
+
+																	<!-- Add new concern inline -->
+																	<div>
+																		<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+																			{concernMappings.filter((c) => c.text.trim()).length > 0 ? 'Or add a new concern:' : 'Add a concern: '}
+																			<span class="text-red-500">*</span>
+																		</p>
+																		<div class="flex items-center space-x-2">
+																			<input
+																				type="text"
+																				value={newConcernInputs[highlight.text] ?? ''}
+																				on:input={(e) => { newConcernInputs = { ...newConcernInputs, [highlight.text]: e.currentTarget.value }; }}
+																				on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addConcernForHighlight(highlight.text); } }}
+																				placeholder="Describe a concern about this highlight…"
+																				class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+																			/>
+																			<button
+																				type="button"
+																				on:click={() => addConcernForHighlight(highlight.text)}
+																				disabled={!(newConcernInputs[highlight.text] ?? '').trim()}
+																				class="px-3 py-1.5 text-sm font-medium bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex-shrink-0"
+																			>
+																				+ Add
+																			</button>
+																		</div>
+																	</div>
+
+																	<!-- Per-linked-concern Likert rating -->
+																	{#each concernMappings.filter((c) => linkedIds.includes(c.id)) as concern (concern.id)}
+																		<div class="p-2 bg-white dark:bg-gray-700/50 rounded border border-gray-200 dark:border-gray-600">
+																			<p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
+																				How concerned are you about "<span class="italic">{concern.text}</span>"?
+																				<span class="text-red-500">*</span>
+																			</p>
+																			<div class="flex gap-1 flex-wrap">
+																				{#each [{ value: 1, label: 'Not at all' }, { value: 2, label: 'Slightly' }, { value: 3, label: 'Neutral' }, { value: 4, label: 'Somewhat' }, { value: 5, label: 'Very' }] as opt}
+																					<button
+																						type="button"
+																						on:click={() => {
+																							concernMappings = concernMappings.map((c) =>
+																								c.id === concern.id ? { ...c, concernLevel: opt.value } : c
+																							);
+																						}}
+																						class="flex-1 min-w-[60px] px-2 py-1 text-xs rounded border transition-colors {concern.concernLevel === opt.value ? 'bg-blue-500 border-blue-500 text-white font-semibold' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400'}"
+																					>
+																						{opt.value}. {opt.label}
+																					</button>
+																				{/each}
 																			</div>
 																		</div>
 																	{/each}
 																</div>
-															{/if}
-
-															<button
-																type="button"
-																on:click={addConcernItem}
-																class="w-full px-4 py-3 mt-2 text-sm font-semibold bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-start space-x-2 shadow-sm"
-															>
-																<svg
-																	class="w-5 h-5 flex-shrink-0"
-																	fill="none"
-																	stroke="currentColor"
-																	viewBox="0 0 24 24"
-																>
-																	<path
-																		stroke-linecap="round"
-																		stroke-linejoin="round"
-																		stroke-width="2"
-																		d="M12 4v16m8-8H4"
-																	></path>
-																</svg>
-																<span>Add Concern</span>
-															</button>
-														</div>
-													</div>
-
-													<!-- Continue to Matching button -->
-													<div>
-														<button
-															on:click={async () => {
-																// Persist concern items (text + per-concern Likert) before matching step
-																try {
-																	await saveConcernItemsBatch(localStorage.token, {
-																		session_id: `scenario_${selectedScenarioIndex}`,
-																		user_id: $user?.id || 'unknown',
-																		child_id: selectedChildId || 'unknown',
-																		scenario_index: selectedScenarioIndex,
-																		attempt_number: 1,
-																		version_number: 0,
-																		session_number: sessionNumber,
-																		scenario_id: getCurrentScenarioId() ?? undefined,
-																		items: concernMappings.map((c, idx) => ({
-																			id: c.id,
-																			position: idx,
-																			text: c.text,
-																			concern_level: c.concernLevel,
-																			linked_highlights: c.linkedHighlights
-																		}))
-																	});
-																} catch (e) {
-																	console.error('Failed to save concern items (non-blocking):', e);
-																}
-																step2SubStep = 'match';
-															}}
-															disabled={concernMappings.length === 0 ||
-																concernMappings.every((c) => !c.text.trim()) ||
-																concernMappings.some(
-																	(c) => c.text.trim() && c.concernLevel === null
-																)}
-															class="w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center space-x-2"
-														>
-															<span>Continue to Matching</span>
-															<svg
-																class="w-4 h-4"
-																fill="none"
-																stroke="currentColor"
-																viewBox="0 0 24 24"
-															>
-																<path
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																	stroke-width="2"
-																	d="M14 5l7 7m0 0l-7 7m7-7H3"
-																></path>
-															</svg>
-														</button>
-														{#if concernMappings.some((c) => c.text.trim() && c.concernLevel !== null)}
-															<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
-																Next: match each highlight to your concerns
-															</p>
-														{/if}
-													</div>
-												{/if}
-
-												<!-- Sub-step 2b: Match Highlights to Concerns -->
-												{#if step2SubStep === 'match'}
-													<div>
-														<div class="flex items-center justify-between mb-2">
-															<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-																Step 2b: Match Highlights to Concerns
-															</h3>
-															<button
-																on:click={() => {
-																	step2SubStep = 'rate';
-																}}
-																class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
-															>
-																<svg
-																	class="w-3 h-3 flex-shrink-0"
-																	fill="none"
-																	stroke="currentColor"
-																	viewBox="0 0 24 24"
-																>
-																	<path
-																		stroke-linecap="round"
-																		stroke-linejoin="round"
-																		stroke-width="2"
-																		d="M10 19l-7-7m0 0l7-7m-7 7h18"
-																	></path>
-																</svg>
-																<span>Back to Concerns</span>
-															</button>
-														</div>
-														<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-															Match <strong>every</strong> highlight from Step 1 to at least one of
-															your concerns. Each highlight must be accounted for.
-														</p>
-													</div>
-
-													<!-- Progress indicator -->
-													{#if highlightedTexts1.length > 0}
-														{@const matched = highlightedTexts1.filter((h) =>
-															concernMappings.some((c) =>
-																c.linkedHighlights.includes(h.text)
-															)
-														).length}
-														<div class="mb-3">
-															<div class="flex items-center justify-between mb-1">
-																<span
-																	class="text-xs font-medium text-gray-700 dark:text-gray-300"
-																>
-																	{matched} of {highlightedTexts1.length} highlight{highlightedTexts1.length !==
-																	1
-																		? 's'
-																		: ''} matched
-																</span>
-																{#if matched === highlightedTexts1.length}
-																	<span
-																		class="text-xs font-medium text-green-600 dark:text-green-400"
-																	>
-																		All matched!
-																	</span>
-																{:else}
-																	<span
-																		class="text-xs font-medium text-amber-600 dark:text-amber-400"
-																	>
-																		{highlightedTexts1.length - matched} remaining
-																	</span>
-																{/if}
-															</div>
-															<div
-																class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2"
-															>
-																<div
-																	class="h-2 rounded-full transition-all duration-300 {matched ===
-																	highlightedTexts1.length
-																		? 'bg-green-500'
-																		: 'bg-blue-500'}"
-																	style="width: {(matched / highlightedTexts1.length) * 100}%"
-																></div>
-															</div>
-														</div>
-													{/if}
-
-													<!-- Highlight-centric matching: for each highlight, show concern checkboxes -->
-													<div class="space-y-3">
-														{#each highlightedTexts1 as highlight, hIdx (highlight.text)}
-															{@const isMatched = concernMappings.some((c) =>
-																c.linkedHighlights.includes(highlight.text)
-															)}
-															<div
-																class="p-3 border rounded-lg transition-colors {isMatched
-																	? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10'
-																	: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}"
-															>
-																<div class="flex items-start space-x-2 mb-2">
-																	<span
-																		class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold flex-shrink-0 mt-0.5 {isMatched
-																			? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
-																			: 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}"
-																	>
-																		{hIdx + 1}
-																	</span>
-																	<span
-																		class="text-sm text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed"
-																	>
-																		"{highlight.text}"
-																	</span>
-																</div>
-																<div class="ml-7">
-																	<p
-																		class="text-xs text-gray-500 dark:text-gray-400 mb-1.5"
-																	>
-																		Which concern(s) does this highlight relate to?
-																		<span class="text-red-500">*</span>
-																	</p>
-																	<div class="space-y-1">
-																		{#each concernMappings.filter((c) => c.text.trim()) as concern (concern.id)}
-																			<label
-																				class="flex items-start space-x-2 cursor-pointer p-1.5 rounded hover:bg-white/50 dark:hover:bg-gray-600/50 transition-colors"
-																			>
-																				<input
-																					type="checkbox"
-																					checked={concern.linkedHighlights.includes(
-																						highlight.text
-																					)}
-																					on:change={(e) =>
-																						toggleHighlightLink(
-																							concern.id,
-																							highlight.text,
-																							e.currentTarget.checked
-																						)}
-																					class="mt-0.5 w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
-																				/>
-																				<span
-																					class="text-xs text-gray-700 dark:text-gray-300"
-																				>
-																					{concern.text}
-																				</span>
-																			</label>
-																		{/each}
-																	</div>
-																</div>
 															</div>
 														{/each}
 													</div>
-
-													<!-- Concern summary (which concerns have highlights) -->
-													{@const validConcernsForSummary = concernMappings.filter(
-														(c) => c.text.trim()
-													)}
-													{#if validConcernsForSummary.some((c) => c.linkedHighlights.length === 0)}
-														<div
-															class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800"
-														>
-															<p class="text-xs text-amber-800 dark:text-amber-200 font-medium mb-1">
-																Some concerns have no highlights linked:
-															</p>
-															<ul class="list-disc list-inside text-xs text-amber-700 dark:text-amber-300">
-																{#each validConcernsForSummary.filter((c) => c.linkedHighlights.length === 0) as orphan}
-																	<li>"{orphan.text}"</li>
-																{/each}
-															</ul>
-															<p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
-																Each concern should relate to at least one highlight.
-															</p>
-														</div>
-													{/if}
-
-													<!-- Submit button -->
-													{@const everyHighlightMatched =
-														highlightedTexts1.length === 0 ||
-														highlightedTexts1.every((h) =>
-															concernMappings.some((c) =>
-																c.linkedHighlights.includes(h.text)
-															)
-														)}
-													{@const everyConcernHasHighlight =
-														highlightedTexts1.length === 0 ||
-														concernMappings
-															.filter((c) => c.text.trim())
-															.every((c) => c.linkedHighlights.length > 0)}
-													<div>
-														<button
-															on:click={completeStep2}
-															disabled={!everyHighlightMatched ||
-																!everyConcernHasHighlight}
-															class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-														>
-															Submit
-														</button>
-														{#if !everyHighlightMatched}
-															<p
-																class="text-xs text-amber-600 dark:text-amber-400 mt-1 text-center"
-															>
-																Match all highlights to at least one concern before submitting
-															</p>
-														{/if}
-													</div>
 												{/if}
+
+												<!-- Submit button -->
+												{@const canSubmit =
+													highlightedTexts1.length > 0 &&
+													highlightedTexts1.every((h) => (highlightConcerns[h.text] ?? []).length > 0) &&
+													concernMappings.filter((c) => c.text.trim()).every((c) => c.concernLevel !== null || isAttentionCheckScenario)}
+												<div>
+													<button
+														on:click={completeStep2}
+														disabled={!canSubmit && !isAttentionCheckScenario}
+														class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+													>
+														Submit
+													</button>
+													{#if !canSubmit && highlightedTexts1.length > 0}
+														<p class="text-xs text-amber-600 dark:text-amber-400 mt-1 text-center">
+															Add at least one concern for each highlight and rate every concern before submitting
+														</p>
+													{/if}
+												</div>
 											</div>
 										{/if}
 
