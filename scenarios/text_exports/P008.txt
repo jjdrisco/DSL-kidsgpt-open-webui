@@ -1,0 +1,49 @@
+Okay wait—how do I make my phone stop showing message previews on the lock screen? Like step by step, I can’t find it, it’s embarrassing.
+
+Totally get that 😭 lock screen previews can be *way* too revealing. I got you. Here’s how to turn them off depending on your phone:
+
+---
+
+## 📱 If you have an **iPhone**:
+
+### Option 1: Hide message previews completely
+1. Open **Settings**
+2. Tap **Notifications**
+3. Tap **Show Previews**
+4. Select **Never**  
+   (or **When Unlocked** if you still want to see them when you’re using your phone)
+
+That stops messages from showing the actual text on the lock screen.
+
+---
+
+### Option 2: Turn off previews just for Messages
+1. Go to **Settings**
+2. Tap **Notifications**
+3. Scroll down and tap **Messages**
+4. Tap **Show Previews**
+5. Choose **Never** or **When Unlocked**
+
+You can do this for apps like Instagram, Snapchat, etc. too.
+
+---
+
+## 🤖 If you have an **Android**:
+
+It varies a bit by brand, but generally:
+
+1. Open **Settings**
+2. Tap **Notifications**
+3. Tap **Lock screen**
+4. Look for something like:
+   - **Notifications on lock screen**
+   - **Hide content**
+   - **Sensitive notifications**
+5. Choose **Hide content** (or similar wording)
+
+If that doesn’t look right, tell me what phone you have (Samsung, Pixel, etc.) and I’ll give you exact steps.
+
+---
+
+No more surprise lock screen drama 😌  
+Want to also stop notifications from lighting up your screen? I can show you that too.

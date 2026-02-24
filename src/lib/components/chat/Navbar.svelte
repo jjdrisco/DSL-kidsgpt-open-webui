@@ -195,67 +195,69 @@
 						</Tooltip>
 					{/if}
 
-					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
-						<Menu
-							{chat}
-							{shareEnabled}
-							shareHandler={() => {
-								showShareChatModal = !showShareChatModal;
-							}}
-							archiveChatHandler={() => {
-								archiveChatHandler(chat.id);
-							}}
-							{moveChatHandler}
+					{#if $user?.role !== 'child'}
+						{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+							<Menu
+								{chat}
+								{shareEnabled}
+								shareHandler={() => {
+									showShareChatModal = !showShareChatModal;
+								}}
+								archiveChatHandler={() => {
+									archiveChatHandler(chat.id);
+								}}
+								{moveChatHandler}
+							>
+								<button
+									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+									id="chat-context-menu-button"
+								>
+									<div class=" m-auto self-center">
+										<EllipsisHorizontal className=" size-5" strokeWidth="1.5" />
+									</div>
+								</button>
+							</Menu>
+						{/if}
+
+						{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+							<Tooltip content={$i18n.t('Controls')}>
+								<button
+									class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+									on:click={async () => {
+										await showControls.set(!$showControls);
+									}}
+									aria-label="Controls"
+								>
+									<div class=" m-auto self-center">
+										<Knobs className=" size-5" strokeWidth="1" />
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
+
+						<!-- Theme Toggle Button -->
+						<Tooltip
+							content={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
 						>
 							<button
-								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								id="chat-context-menu-button"
-							>
-								<div class=" m-auto self-center">
-									<EllipsisHorizontal className=" size-5" strokeWidth="1.5" />
-								</div>
-							</button>
-						</Menu>
-					{/if}
-
-					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
-						<Tooltip content={$i18n.t('Controls')}>
-							<button
-								class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								on:click={async () => {
-									await showControls.set(!$showControls);
+								class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+								on:click={() => {
+									toggleTheme();
 								}}
-								aria-label="Controls"
+								aria-label={effectiveTheme === 'dark'
+									? 'Switch to Light Mode'
+									: 'Switch to Dark Mode'}
 							>
-								<div class=" m-auto self-center">
-									<Knobs className=" size-5" strokeWidth="1" />
+								<div class="m-auto self-center">
+									{#if effectiveTheme === 'dark'}
+										<Sun className="size-5 text-yellow-500" strokeWidth="2" />
+									{:else}
+										<Moon className="size-5 text-blue-600" strokeWidth="2" />
+									{/if}
 								</div>
 							</button>
 						</Tooltip>
 					{/if}
-
-					<!-- Theme Toggle Button -->
-					<Tooltip
-						content={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-					>
-						<button
-							class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-							on:click={() => {
-								toggleTheme();
-							}}
-							aria-label={effectiveTheme === 'dark'
-								? 'Switch to Light Mode'
-								: 'Switch to Dark Mode'}
-						>
-							<div class="m-auto self-center">
-								{#if effectiveTheme === 'dark'}
-									<Sun className="size-5 text-yellow-500" strokeWidth="2" />
-								{:else}
-									<Moon className="size-5 text-blue-600" strokeWidth="2" />
-								{/if}
-							</div>
-						</button>
-					</Tooltip>
 
 					{#if $user !== undefined && $user !== null}
 						<UserMenu

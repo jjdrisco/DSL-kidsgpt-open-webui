@@ -851,7 +851,7 @@ async def generate_chat_completion(
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
                 # WHITELIST ENFORCEMENT: Compare child's prompt against system prompt
-                if user.role == "child" and system:
+                if (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and system:
                     # Extract the last user message (child's prompt)
                     messages = payload.get("messages", [])
                     child_prompt = next(
@@ -864,9 +864,6 @@ async def generate_chat_completion(
                     )
 
                     if child_prompt:
-                        print(f"[DEBUG] ORIGINAL PROMPT: {child_prompt}")
-                        print(f"[DEBUG] PROMPT TO PROVIDER: {child_prompt}")
-
                         try:
                             # Perform async prompt comparison
                             comparison_result = await compare_child_prompt_to_system(
@@ -1045,7 +1042,8 @@ async def generate_chat_completion(
                     return PlainTextResponse(status_code=r.status, content=response)
 
             # WHITELIST ENFORCEMENT: Validate response against whitelist for child users
-            if user.role == "child" and isinstance(response, dict):
+            # Skip validation for internal bypass calls (e.g. Step-1 rewrite from middleware)
+            if (user.role == "child" or (isinstance(metadata, dict) and metadata.get("sandbox_mode"))) and isinstance(response, dict) and not bypass_system_prompt:
                 try:
                     # Extract the response text
                     response_text = None
@@ -1053,9 +1051,6 @@ async def generate_chat_completion(
                         choice = response["choices"][0]
                         if "message" in choice and "content" in choice["message"]:
                             response_text = choice["message"]["content"]
-
-                    if response_text:
-                        print(f"[DEBUG] RESPONSE: {response_text}")
 
                     if response_text and system:
                         # Perform response validation
@@ -1103,9 +1098,6 @@ async def generate_chat_completion(
                                 f"Blocking non-compliant response for user {user.id}: "
                                 f"violations={validation_result['violations']}"
                             )
-                            print(
-                                "[DEBUG] MODIFIED RESPONSE: [BLOCKED by whitelist validation]"
-                            )
                             return JSONResponse(
                                 status_code=200,
                                 content={
@@ -1127,15 +1119,6 @@ async def generate_chat_completion(
                 except Exception as e:
                     # Don't block the response if validation fails
                     log.error(f"Error in response validation check: {e}")
-
-            if user.role == "child" and isinstance(response, dict):
-                _final_content = None
-                try:
-                    _final_content = response["choices"][0]["message"]["content"]
-                except Exception:
-                    pass
-                if _final_content:
-                    print(f"[DEBUG] MODIFIED RESPONSE: " f"{_final_content}")
 
             return response
     except Exception as e:

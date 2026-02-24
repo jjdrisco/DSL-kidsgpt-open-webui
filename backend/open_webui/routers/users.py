@@ -1,4 +1,5 @@
 import logging
+import secrets
 import uuid
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -771,7 +772,11 @@ class CreateChildAccountForm(BaseModel):
     password: Optional[str] = None  # Optional, will generate if not provided
 
 
-@router.post("/child", response_model=UserModel)
+class CreateChildAccountResponse(UserModel):
+    generated_password: Optional[str] = None  # Only set when password was auto-generated
+
+
+@router.post("/child", response_model=CreateChildAccountResponse)
 async def create_child_account(
     form_data: CreateChildAccountForm,
     user=Depends(get_verified_user),
@@ -802,8 +807,30 @@ async def create_child_account(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use"
         )
 
-    # Generate password if not provided
-    password = form_data.password or str(uuid.uuid4())
+    # Generate passphrase if no password provided
+    _ADJECTIVES = [
+        "amber", "bold", "bright", "calm", "clever", "cool", "dark", "deep",
+        "fast", "fierce", "gentle", "grand", "happy", "keen", "kind", "light",
+        "lively", "lucky", "merry", "mighty", "neat", "noble", "proud", "quick",
+        "quiet", "sharp", "shiny", "silver", "smart", "smooth", "soft", "strong",
+        "sunny", "swift", "tall", "warm", "wild", "wise", "young", "zesty",
+    ]
+    _NOUNS = [
+        "apple", "bear", "bird", "brook", "cloud", "coral", "crane", "dawn",
+        "deer", "eagle", "elm", "falcon", "fern", "finch", "flame", "fox",
+        "hawk", "hill", "lake", "leaf", "lion", "maple", "moon", "moose",
+        "mountain", "oak", "otter", "peak", "pine", "pond", "rabbit", "rain",
+        "raven", "river", "robin", "rock", "rose", "sky", "snow", "star",
+        "stone", "storm", "swan", "tide", "tiger", "trail", "tree", "wolf",
+    ]
+    if form_data.password:
+        password = form_data.password
+    else:
+        word1 = secrets.choice(_ADJECTIVES)
+        word2 = secrets.choice(_NOUNS)
+        word3 = secrets.choice(_NOUNS)
+        num = secrets.randbelow(90) + 10  # 10-99
+        password = f"{word1}-{word2}-{word3}-{num}"
     hashed_password = get_password_hash(password)
 
     # Create auth record
@@ -840,7 +867,10 @@ async def create_child_account(
     if user.role == "user":
         Users.update_user_role_by_id(user.id, "parent", db=db)
 
-    return updated_user
+    return CreateChildAccountResponse(
+        **updated_user.model_dump(),
+        generated_password=password if not form_data.password else None,
+    )
 
 
 @router.get("/child/accounts", response_model=list[UserModel])

@@ -32,6 +32,9 @@ export interface ChildProfile {
 	created_at: number;
 	updated_at: number;
 	child_email?: string;
+	// Whitelist / feature control (set by parent)
+	selected_features?: string[];
+	selected_interface_modes?: string[];
 }
 
 export interface ChildProfileForm {
@@ -58,6 +61,8 @@ export interface ChildProfileForm {
 	child_internet_use_frequency?: string;
 	session_number?: number; // Optional, backend will determine if not provided
 	child_email?: string;
+	selected_features?: string[];
+	selected_interface_modes?: string[];
 }
 
 export const getChildProfiles = async (token: string = '') => {
@@ -236,6 +241,65 @@ export const getChildProfilesForUser = async (token: string = '', userId: string
 		.catch((err) => {
 			error = err.detail;
 			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/**
+ * Fetch the whitelist for the current child user.
+ * Calls GET /child-profiles/my-whitelist (uses backend email+parent_id lookup).
+ */
+export const getMyWhitelist = async (token: string = ''): Promise<string[]> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/child-profiles/my-whitelist`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+		if (!res.ok) return [];
+		const data = await res.json();
+		return Array.isArray(data?.whitelist_items) ? data.whitelist_items : [];
+	} catch {
+		return [];
+	}
+};
+
+export const updateChildProfileWhitelist = async (
+	token: string = '',
+	profileId: string,
+	whitelistItems: string[]
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/child-profiles/${profileId}/whitelist`, {
+		method: 'PATCH',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ whitelist_items: whitelistItems })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
 			return null;
 		});
 

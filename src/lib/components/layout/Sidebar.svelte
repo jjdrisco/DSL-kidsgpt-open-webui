@@ -63,8 +63,10 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Search from '../icons/Search.svelte';
 	import UserGroup from '../icons/UserGroup.svelte';
+	import WrenchAlt from '../icons/WrenchAlt.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
@@ -97,6 +99,20 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
+
+	// Current child for parent sidebar card
+	let sidebarCurrentChild: { name?: string; child_age?: string; id?: string } | null = null;
+
+	async function loadSidebarCurrentChild() {
+		try {
+			const profiles = await childProfileSync.getChildProfiles();
+			const currentId = childProfileSync.getCurrentChildId();
+			const match = currentId ? profiles.find((p) => p.id === currentId) : profiles[0];
+			sidebarCurrentChild = match ?? null;
+		} catch (e) {
+			console.warn('[Sidebar] Could not load current child:', e);
+		}
+	}
 
 	// Workflow state for interviewee users
 	let userType = 'user';
@@ -178,6 +194,11 @@
 	// Refresh workflow state when route changes (must be at top level)
 	$: if (isInterviewee && $page.url.pathname) {
 		fetchWorkflowState();
+	}
+
+	// Refresh current child card when route changes for parents
+	$: if (['parent', 'prolific'].includes($user?.role) && $page.url.pathname) {
+		loadSidebarCurrentChild();
 	}
 
 	const initFolders = async () => {
@@ -519,6 +540,9 @@
 			if (userType === 'interviewee') {
 				await fetchWorkflowState();
 			}
+			if (['parent', 'prolific'].includes($user?.role)) {
+				await loadSidebarCurrentChild();
+			}
 		}
 
 		unsubscribers = [
@@ -797,7 +821,7 @@
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
-								src="{WEBUI_BASE_URL}/static/favicon.png"
+								src="{WEBUI_BASE_URL}/static/whitelist-ai.png"
 								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
 								alt=""
 							/>
@@ -809,13 +833,9 @@
 			</div>
 
 			<div class="-mt-[0.5px]">
+				{#if !['parent', 'prolific'].includes($user?.role)}
 				<div class="">
-					<Tooltip
-						content={['parent', 'prolific'].includes($user?.role)
-							? $i18n.t("Test Children's Chat")
-							: $i18n.t('New Chat')}
-						placement="right"
-					>
+					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							href="/"
@@ -827,9 +847,7 @@
 								goto('/');
 								newChatHandler();
 							}}
-							aria-label={['parent', 'prolific'].includes($user?.role)
-								? $i18n.t("Test Children's Chat")
-								: $i18n.t('New Chat')}
+							aria-label={$i18n.t('New Chat')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
 								<PencilSquare className="size-4.5" />
@@ -857,6 +875,7 @@
 						</button>
 					</Tooltip>
 				</div>
+				{/if}
 
 				{#if ['parent', 'prolific'].includes($user?.role)}
 					<div>
@@ -876,6 +895,28 @@
 							>
 								<div class=" self-center flex items-center justify-center size-9">
 									<UserGroup className="size-4.5" />
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+
+					<div>
+						<Tooltip content={$i18n.t('Whitelist Sandbox')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/parent/whitelist-sandbox"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/parent/whitelist-sandbox');
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('Whitelist Sandbox')}
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<WrenchAlt className="size-4.5" />
 								</div>
 							</a>
 						</Tooltip>
@@ -1002,10 +1043,10 @@
 		bind:this={navElement}
 		id="sidebar"
 		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
+			? `bg-gray-50 dark:bg-gray-950 z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
+			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm {$mobile ? 'fixed' : 'relative'} top-0 left-0 overflow-x-hidden
         "
 		transition:slide={{ duration: 250, axis: 'x' }}
 		data-state={$showSidebar}
@@ -1026,7 +1067,7 @@
 				>
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
+						src="{WEBUI_BASE_URL}/static/whitelist-ai.png"
 						class="sidebar-new-chat-icon size-6 rounded-full"
 						alt=""
 					/>
@@ -1037,7 +1078,7 @@
 						id="sidebar-webui-name"
 						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
 					>
-						DataSmithGPT
+						Whitelist AI
 					</div>
 				</a>
 				<Tooltip
@@ -1314,6 +1355,7 @@
 				{/if}
 
 				<div class="pb-1.5">
+					{#if !['parent', 'prolific'].includes($user?.role)}
 					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
@@ -1321,20 +1363,14 @@
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
-							aria-label={['parent', 'prolific'].includes($user?.role)
-								? $i18n.t("Test Children's Chat")
-								: $i18n.t('New Chat')}
+							aria-label={$i18n.t('New Chat')}
 						>
 							<div class="self-center">
 								<PencilSquare className=" size-4.5" strokeWidth="2" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">
-									{['parent', 'prolific'].includes($user?.role)
-										? $i18n.t("Test Children's Chat")
-										: $i18n.t('New Chat')}
-								</div>
+								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
@@ -1361,6 +1397,7 @@
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
 					</div>
+					{/if}
 
 					{#if ['parent', 'prolific'].includes($user?.role)}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
@@ -1381,24 +1418,22 @@
 								</div>
 							</a>
 						</div>
-					{/if}
 
-					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
-								id="sidebar-notes-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/notes"
+								id="sidebar-whitelist-sandbox-button"
+								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+								href="/parent/whitelist-sandbox"
 								on:click={itemClickHandler}
 								draggable="false"
-								aria-label={$i18n.t('Notes')}
+								aria-label={$i18n.t('Whitelist Sandbox')}
 							>
 								<div class="self-center">
-									<Note className="size-4.5" strokeWidth="2" />
+									<WrenchAlt className="size-4.5" strokeWidth="2" />
 								</div>
 
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+								<div class="flex flex-1 self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('Whitelist Sandbox')}</div>
 								</div>
 							</a>
 						</div>
@@ -1419,7 +1454,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
 										viewBox="0 0 24 24"
-										stroke-width="2"
+										stroke-width="1.5"
 										stroke="currentColor"
 										class="size-4.5"
 									>
@@ -1439,6 +1474,7 @@
 					{/if}
 				</div>
 
+				{#if !['parent', 'prolific'].includes($user?.role)}
 				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
 					<Folder
 						id="sidebar-models"
@@ -1774,6 +1810,7 @@
 						</div>
 					</div>
 				</Folder>
+			{/if}
 			</div>
 
 			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
@@ -1781,6 +1818,27 @@
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
 				<div class="flex flex-col font-primary">
+					{#if ['parent', 'prolific'].includes($user?.role) && sidebarCurrentChild}
+						<a
+							href="/parent/whitelist-sandbox"
+							on:click={() => { loadSidebarCurrentChild(); }}
+							class="flex items-center gap-3 rounded-2xl px-2.5 py-2 mb-1 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						>
+							<div class="flex-shrink-0 size-7 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+								{(sidebarCurrentChild.name ?? '?').charAt(0).toUpperCase()}
+							</div>
+							<div class="flex flex-col min-w-0">
+								<span class="text-sm font-medium text-gray-900 dark:text-white truncate leading-tight">{sidebarCurrentChild.name ?? 'Child'}</span>
+								{#if sidebarCurrentChild.child_age}
+									<span class="text-xs text-gray-500 dark:text-gray-400 leading-tight">{sidebarCurrentChild.child_age}</span>
+								{/if}
+							</div>
+							<div class="ml-auto flex-shrink-0">
+								<WrenchAlt className="size-3.5 text-gray-400 dark:text-gray-500" />
+							</div>
+						</a>
+						<hr class="border-gray-100 dark:border-gray-800 mb-1" />
+					{/if}
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}

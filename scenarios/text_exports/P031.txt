@@ -1,0 +1,31 @@
+Is it correct to say 0.6 is bigger than 0.56 because six is bigger than five, or am I mixing it up?
+
+Great question! You’re *almost* thinking the right way — you just need one small adjustment. 😊  
+
+When comparing decimals, we have to look at **place value**, not just the digits by themselves.
+
+Let’s line them up:
+
+- 0.6  
+- 0.56  
+
+Now here’s the important trick:  
+0.6 is the same as **0.60** (you can add a zero at the end without changing the value).
+
+So now compare:
+
+- **0.60**  
+- **0.56**
+
+Now look at the hundredths place (the second number after the decimal):
+
+- 0.60 → 60 hundredths  
+- 0.56 → 56 hundredths  
+
+Since **60 is bigger than 56**, that means:
+
+✅ **0.6 is bigger than 0.56**
+
+So you weren’t totally mixing it up — you just need to compare the numbers by lining up the decimal places.  
+
+Want to try another one together? 😊

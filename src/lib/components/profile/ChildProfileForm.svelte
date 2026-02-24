@@ -6,12 +6,17 @@
 	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
 	import {
 		personalityTraits,
 		type PersonalityTrait,
 		type SubCharacteristic
 	} from '$lib/data/personalityTraits';
 	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
+	import { createChildAccount } from '$lib/apis/users';
+	import ChildPasswordModal from '$lib/components/profile/ChildPasswordModal.svelte';
+	import FeatureSelection from '$lib/components/profile/FeatureSelection.svelte';
+	import InterfaceModeSelection from '$lib/components/profile/InterfaceModeSelection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -42,6 +47,16 @@
 	let childGender: string = '';
 	let childCharacteristics: string = '';
 	let childEmail: string = '';
+
+	// Password modal state
+	let showPasswordModal = false;
+	let generatedPassword = '';
+	let createdChildEmail = '';
+	let createdChildName = '';
+
+	// Feature / interface-mode whitelist (set by parent)
+	let selectedFeatures: string[] = [];
+	let selectedInterfaceModes: string[] = [];
 
 	// Child quiz research fields (conditional)
 	let isOnlyChild: string = '';
@@ -160,6 +175,10 @@
 		childEmail = (sel as any)?.child_email ?? '';
 		childInternetUseFrequency = (sel as any)?.child_internet_use_frequency || '';
 
+		// Load whitelist settings
+		selectedFeatures = (sel as any)?.selected_features || [];
+		selectedInterfaceModes = (sel as any)?.selected_interface_modes || [];
+
 		// Parse personality traits from stored characteristics
 		if (sel?.child_characteristics) {
 			const characteristics = sel.child_characteristics;
@@ -236,6 +255,8 @@
 		}
 		(sel as any).child_email = childEmail;
 		(sel as any).child_internet_use_frequency = childInternetUseFrequency || null;
+		(sel as any).selected_features = selectedFeatures;
+		(sel as any).selected_interface_modes = selectedInterfaceModes;
 	}
 
 	async function deleteChild(index: number) {
@@ -291,6 +312,12 @@
 		if (isStudyMode && !childInternetUseFrequency) {
 			return 'Please indicate how often this child uses the Internet';
 		}
+		if (!childEmail.trim()) {
+			return 'Please enter an email address for the child account';
+		}
+		if (!childEmail.includes('@')) {
+			return 'Please enter a valid email address';
+		}
 		if (showResearchFields && requireResearchFields) {
 			if (!isOnlyChild) {
 				return 'Please indicate if this child is an only child';
@@ -343,6 +370,8 @@
 			};
 
 			profileData.child_internet_use_frequency = childInternetUseFrequency || null;
+			profileData.selected_features = selectedFeatures;
+			profileData.selected_interface_modes = selectedInterfaceModes;
 			if (showResearchFields) {
 				profileData.is_only_child = isOnlyChild === 'yes';
 				profileData.child_has_ai_use = childHasAIUse;
@@ -357,6 +386,26 @@
 
 			const newChild = await childProfileSync.createChildProfile(profileData);
 
+			// Create child login account
+			if (childEmail) {
+				try {
+					const token = localStorage.getItem('token') || '';
+					const accountResult = await createChildAccount(token, {
+						name: childName,
+						email: childEmail
+					});
+					if (accountResult?.generated_password) {
+						generatedPassword = accountResult.generated_password;
+						createdChildEmail = childEmail;
+						createdChildName = childName;
+						showPasswordModal = true;
+					}
+				} catch (accountError) {
+					console.error('Failed to create child account:', accountError);
+					toast.warning('Child profile created, but account creation failed. Please create the account manually.');
+				}
+			}
+
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
@@ -368,7 +417,9 @@
 				await onProfileCreated(newChild);
 			}
 
-			toast.success('Child profile created successfully!');
+			if (!showPasswordModal) {
+				toast.success('Child profile and account created successfully!');
+			}
 		} catch (error) {
 			console.error('Failed to create child profile:', error);
 			let errorMessage = 'Failed to create child profile';
@@ -395,6 +446,8 @@
 			childGender = '';
 			childCharacteristics = '';
 			childEmail = '';
+			selectedFeatures = [];
+			selectedInterfaceModes = [];
 			selectedSubCharacteristics = [];
 		}
 	}
@@ -479,6 +532,8 @@
 				};
 
 				profileData.child_internet_use_frequency = childInternetUseFrequency || null;
+				profileData.selected_features = selectedFeatures;
+				profileData.selected_interface_modes = selectedInterfaceModes;
 				if (showResearchFields) {
 					profileData.is_only_child = isOnlyChild === 'yes';
 					profileData.child_has_ai_use = childHasAIUse;
@@ -492,6 +547,26 @@
 				}
 
 				const newChild = await childProfileSync.createChildProfile(profileData);
+
+				// Create child login account
+				if (childEmail) {
+					try {
+						const token = localStorage.getItem('token') || '';
+						const accountResult = await createChildAccount(token, {
+							name: childName,
+							email: childEmail
+						});
+						if (accountResult?.generated_password) {
+							generatedPassword = accountResult.generated_password;
+							createdChildEmail = childEmail;
+							createdChildName = childName;
+							showPasswordModal = true;
+						}
+					} catch (accountError) {
+						console.error('Failed to create child account:', accountError);
+						toast.warning('Child profile created, but account creation failed. Please create the account manually.');
+					}
+				}
 
 				if (childProfiles.length === 0) {
 					childProfiles = [newChild];
@@ -527,6 +602,8 @@
 					};
 
 					updateData.child_internet_use_frequency = childInternetUseFrequency || null;
+					updateData.selected_features = selectedFeatures;
+					updateData.selected_interface_modes = selectedInterfaceModes;
 					if (showResearchFields) {
 						updateData.is_only_child = isOnlyChild === 'yes';
 						updateData.child_has_ai_use = childHasAIUse;
@@ -826,6 +903,27 @@
 							</select>
 						</div>
 
+<!-- MOVED TO /parent/whitelist-sandbox: Feature/mode selection is now configured in the Whitelist Sandbox page -->
+							<!-- <div class="pt-2">
+								<InterfaceModeSelection
+									childAge={childAge}
+									bind:selectedModes={selectedInterfaceModes}
+									onModesChange={(modes) => {
+										selectedInterfaceModes = modes;
+									}}
+								/>
+							</div>
+
+							<div class="pt-2">
+								<FeatureSelection
+									childAge={childAge}
+									bind:selectedFeatures={selectedFeatures}
+									onFeaturesChange={(features) => {
+										selectedFeatures = features;
+									}}
+								/>
+							</div> -->
+
 						<div>
 							<label
 								for="childGender"
@@ -938,6 +1036,39 @@
 								</div>
 							</div>
 						{/if}
+
+						<!-- Account Creation Section -->
+						<div class="pt-6 border-t border-gray-200 dark:border-gray-700">
+							<div class="mb-4">
+								<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-2">
+									{$i18n.t('Child Account Creation')}
+								</h3>
+								<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+									{$i18n.t(
+										'When you create a child profile, a user account will also be created for your child. This account will allow your child to interact with the AI system.'
+									)}
+								</p>
+							</div>
+
+							<div class="space-y-4">
+								<div>
+									<label
+										for="childEmail"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+									>
+										{$i18n.t('Child Email Address')} <span class="text-red-500">*</span>
+									</label>
+									<input
+										type="email"
+										id="childEmail"
+										bind:value={childEmail}
+										placeholder={$i18n.t("Enter child's email address")}
+										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+										required
+									/>
+								</div>
+							</div>
+						</div>
 
 						<!-- Research Fields (Conditional) -->
 						{#if showResearchFields}
@@ -1169,3 +1300,15 @@
 		{/if}
 	</div>
 </div>
+
+<ChildPasswordModal
+	bind:show={showPasswordModal}
+	childName={createdChildName}
+	childEmail={createdChildEmail}
+	password={generatedPassword}
+	on:close={() => {
+		showPasswordModal = false;
+		toast.success('Child profile and account created successfully!');
+		goto('/parent/whitelist-sandbox');
+	}}
+/>
