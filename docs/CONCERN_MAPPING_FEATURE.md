@@ -24,25 +24,33 @@ unstructured prose.
 Parents drag over text in the prompt/response to mark passages that concern them. Each highlight is
 saved immediately to the `selection` table (per-row) and accumulated in `highlightedTexts1`.
 
-### Step 2 — Rate & Map Concerns (updated)
+### Step 2 — Rate, Create Concerns & Match Highlights (updated)
 
-Parents now complete three sub-tasks:
+Parents now complete four sub-tasks across two sub-steps:
+
+#### Step 2a — Rate & Create Concerns
 
 1. **Rate overall concern level** — Likert scale (1 = Not concerned at all → 5 = Concerned).
 2. **Enumerate specific concerns** — click **+ Add Concern** to add named concern items. Each item
    has a free-text field: _"Describe this concern…"_
-3. **Link each concern to highlights** — for each concern, checkboxes list every highlight from
-   Step 1. Parents tick which highlight(s) each concern relates to.
+3. Click **Continue to Matching** to proceed.
+
+#### Step 2b — Match Highlights to Concerns
+
+4. **Match every highlight to ≥ 1 concern** — A highlight-centric interface lists each highlight
+   from Step 1 with checkboxes for every concern created in Step 2a. Parents must match _all_
+   highlights before submitting. A progress bar shows matched vs. remaining highlights.
 
 #### Validation rules
 
-| Condition                                                             | Blocked?                                          |
-| --------------------------------------------------------------------- | ------------------------------------------------- |
-| No concern level selected                                             | ✅ Yes                                            |
-| No concern items added                                                | ✅ Yes                                            |
-| All concern items have empty text                                     | ✅ Yes                                            |
-| Concern item has text but no linked highlight (when highlights exist) | ✅ Yes                                            |
-| No highlights exist (scenario fully free-text)                        | ✅ Concerns without linked highlights are allowed |
+| Condition                                                    | Blocked?                                          |
+| ------------------------------------------------------------ | ------------------------------------------------- |
+| No concern level selected                                    | ✅ Yes (Step 2a)                                  |
+| No concern items added                                       | ✅ Yes (Step 2a)                                  |
+| All concern items have empty text                            | ✅ Yes (Step 2a)                                  |
+| Any highlight not matched to ≥ 1 concern                     | ✅ Yes (Step 2b)                                  |
+| Any non-empty concern not linked to ≥ 1 highlight            | ✅ Yes (Step 2b)                                  |
+| No highlights exist (scenario fully free-text)               | ✅ Concerns without linked highlights are allowed |
 
 ### Submit
 
@@ -107,18 +115,22 @@ modification.
 
 ### New state variables
 
-| Variable          | Type            | Purpose                                   |
-| ----------------- | --------------- | ----------------------------------------- |
-| `concernMappings` | `ConcernItem[]` | Ordered list of parent-specified concerns |
+| Variable          | Type                    | Purpose                                           |
+| ----------------- | ----------------------- | ------------------------------------------------- |
+| `concernMappings` | `ConcernItem[]`         | Ordered list of parent-specified concerns         |
+| `step2SubStep`    | `'rate' \| 'match'`     | Current sub-step within Step 2 (create vs. match) |
 
 ### New helper functions
 
-| Function              | Signature                                                              | Purpose                                                  |
-| --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- |
-| `addConcernItem`      | `() => void`                                                           | Appends a blank `ConcernItem` to `concernMappings`       |
-| `removeConcernItem`   | `(id: string) => void`                                                 | Removes a concern item by UUID                           |
-| `toggleHighlightLink` | `(concernId: string, highlightText: string, checked: boolean) => void` | Adds or removes a highlight link for a concern item      |
-| `deriveConcernReason` | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string |
+| Function                 | Signature                                                              | Purpose                                                        |
+| ------------------------ | ---------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `addConcernItem`         | `() => void`                                                           | Appends a blank `ConcernItem` to `concernMappings`             |
+| `removeConcernItem`      | `(id: string) => void`                                                 | Removes a concern item by UUID                                 |
+| `toggleHighlightLink`    | `(concernId: string, highlightText: string, checked: boolean) => void` | Adds or removes a highlight link for a concern item            |
+| `deriveConcernReason`    | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string       |
+| `getUnmatchedHighlights` | `() => HighlightInfo[]`                                                | Returns highlights not yet linked to any concern               |
+| `allHighlightsMatched`   | `() => boolean`                                                        | Returns true when every highlight is linked to ≥ 1 concern     |
+| `allConcernsHaveHighlights` | `() => boolean`                                                     | Returns true when every non-empty concern has ≥ 1 linked highlight |
 
 ### State persistence
 
@@ -149,10 +161,11 @@ No backend changes were required. The `concern_mappings` payload fits within the
 `session_metadata: Optional[dict]` field on `ModerationSessionPayload` and is stored as-is in the
 `session_metadata` JSON column.
 
-The attention check instruction text was updated to reflect the new UI flow:
+The attention check instruction text was updated to reflect the new two-sub-step UI flow:
 
-> Step 3: Click "+ Add Concern", type "attention check" in the concern text field, and click
-> "Submit".
+> Step 3: Click "+ Add Concern", type "attention check" in the concern text field, then click
+> "Continue to Matching".
+> Step 4: Match the highlight to the "attention check" concern, then click "Submit".
 
 ---
 
@@ -246,4 +259,5 @@ The following JSON Schema describes the structure of `session_metadata.concern_m
 
 ## Last Updated
 
-2026-02-24
+2026-02-24  
+v2 — Two-sub-step matching workflow (Step 2a: Rate & Create, Step 2b: Match Highlights)
