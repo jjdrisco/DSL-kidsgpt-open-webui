@@ -13,20 +13,18 @@ This document provides a comprehensive guide to the moderation tool workflow, in
 
 The moderation system follows a structured workflow:
 
-### Initial Decision Flow (3-Step Process)
+### Initial Decision Flow (2-Step Simplified Process)
+
+> **Note (Feb 2026):** The flow was originally 3 steps (Highlight → Reflect → Decide), then updated through several iterations. It is now a **2-step identification-only experiment**: the reflection and moderation steps are disabled. Step 3 fields exist in the `ScenarioState` type but the step logic is commented out at runtime.
 
 1. **Step 1 - Highlight**: User highlights concerning text in the original response (optional)
-2. **Step 2 - Reflect**: User enters reflection using "I feel..." and "because..." template
-3. **Step 3 - Decide**: User chooses to either:
-   - **Accept**: Accept the original response (still proceeds to moderation panel)
-   - **Moderate**: Enter moderation to create a modified version
-   - **Not Applicable**: Mark scenario as not applicable (skips moderation panel)
+2. **Step 2 - Assess**: User rates concern level (1-5 Likert scale) and provides a reason
 
-**Note**: Both "Accept" and "Moderate" decisions navigate to the moderation panel, allowing users to optionally create moderated versions even after accepting the original.
+Completing Step 2 finishes the scenario. There is no decision step — users cannot accept, moderate, or create versions in the current simplified flow.
 
-### Moderation Panel
+### Moderation Panel (DISABLED)
 
-After choosing to moderate, users can:
+The moderation panel code exists but is not reachable in the current 2-step flow. It was previously accessible after Step 3 (Decide) and allowed users to:
 
 - Select up to 3 moderation strategies (standard + custom combined)
 - Add custom instructions via text input
@@ -199,21 +197,24 @@ After choosing to moderate, users can:
 
 #### Decision State
 
-- **`hasInitialDecision`**: Whether user completed initial 3-step flow
-- **`acceptedOriginal`**: Whether user accepted original response
 - **`markedNotApplicable`**: Whether scenario was marked as not applicable
 - **`attentionCheckSelected`**: Whether attention check was selected
+- **`attentionCheckPassed`**: Whether attention check was passed
 
 #### Initial Decision Flow State
 
-- **`initialDecisionStep`**: Current step (1, 2, or 3)
+- **`initialDecisionStep`**: Derived reactively from completion flags (1 or 2)
 - **`step1Completed`**: Whether highlighting step completed
-- **`step2Completed`**: Whether reflection step completed
-- **`step3Completed`**: Whether decision step completed
-- **`reflectionFeeling`**: "I feel..." text
-- **`reflectionReason`**: "because..." text
-- **`initialDecisionChoice`**: User's choice ('accept_original' | 'moderate' | null)
-- **`showInitialDecisionPane`**: Whether to show the 3-step pane
+- **`step2Completed`**: Whether concern assessment step completed (final active step)
+- **`step3Completed`**: Present in type but disabled at runtime
+- **`concernLevel`**: 1-5 Likert concern rating (Step 2)
+- **`concernReason`**: Free-text explanation (Step 2)
+- **`satisfactionLevel`**: 1-5, disabled (Step 3)
+- **`satisfactionReason`**: Free-text, disabled (Step 3)
+- **`nextAction`**: `'try_again' | 'move_on' | null`, disabled (Step 3)
+- **`showInitialDecisionPane`**: Whether to show the 2-step pane
+
+> **Removed fields**: `hasInitialDecision`, `acceptedOriginal`, `reflectionFeeling`, `reflectionReason`, `initialDecisionChoice`, `step4Completed`, `childAccomplish`, `assistantDoing`, `wouldShowChild`.
 
 ### localStorage Persistence
 
@@ -430,7 +431,7 @@ The displayed response is determined by:
 
 ## 7. User Decision Points
 
-### Initial Decision (3-Step Flow)
+### Initial Decision (2-Step Simplified Flow)
 
 #### Step 1 - Highlight
 
@@ -443,35 +444,19 @@ The displayed response is determined by:
   - "Continue" button (green if highlights exist, gray if none)
   - "Skip Scenario" button (marks as not applicable)
 
-#### Step 2 - Reflect
+#### Step 2 - Assess
 
-- **Purpose**: User enters reflection
+- **Purpose**: User rates concern and explains reasoning
 - **UI**: Two input fields:
-  - "I feel...": Text input
-  - "because...": Textarea
-- **Validation**: Both fields required to continue
+  - Concern level: 1-5 Likert scale radio buttons
+  - Concern reason: Free-text textarea ("Why?")
+- **Validation**: `concernLevel` is required to continue
+- **Completion**: Submitting this step **completes the scenario**
 - **Actions**:
   - "Back" button (returns to Step 1)
-  - "Continue" button (disabled until both fields filled)
+  - "Submit" button (disabled until concern level selected)
 
-#### Step 3 - Decide
-
-- **Purpose**: User makes initial decision
-- **UI**: Shows reflection summary, two large buttons
-- **Actions**:
-  - **"Accept" button**:
-    - Calls `saveStep3Decision('accept_original')`
-    - Sets `acceptedOriginal = true`
-    - Saves with `initial_decision: 'accept_original'`
-    - **Still navigates to moderation panel** (allows optional version creation)
-  - **"Moderate" button**:
-    - Calls `saveStep3Decision('moderate')`
-    - Sets `acceptedOriginal = false`
-    - Saves with `initial_decision: 'moderate'`
-    - Opens moderation panel for strategy selection
-  - **"Back" button**: Returns to Step 2
-
-**Important**: Both "Accept" and "Moderate" navigate to the moderation panel. Users who accept can still optionally create moderated versions if they change their mind.
+> **Historical:** Step 3 (Decide: Accept/Moderate) existed in earlier versions but is now disabled. The moderation panel, version management, and "Accept Original" flow are all unreachable in the current 2-step simplified flow.
 
 ### After Moderation Applied
 
@@ -577,12 +562,11 @@ The displayed response is determined by:
 ### Initial Decision Pane
 
 - **Location**: Below response area
-- **Visibility**: Shown when `showInitialDecisionPane && !hasInitialDecision`
+- **Visibility**: Shown when `showInitialDecisionPane && !step2Completed`
 - **Features**:
-  - 3-step indicator with progress
+  - 2-step indicator with progress
   - Step 1: Highlighting interface
-  - Step 2: Reflection form
-  - Step 3: Accept/Moderate decision
+  - Step 2: Concern assessment (Likert scale + reason)
 
 ## 10. Special Cases
 

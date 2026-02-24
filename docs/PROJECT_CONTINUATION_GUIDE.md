@@ -1,6 +1,6 @@
 # Project Continuation Guide
 
-**Last Updated**: 2026-02-02  
+**Last Updated**: 2026-02-23  
 **Project**: DSL KidsGPT Open WebUI  
 **Repository**: https://github.com/jjdrisco/DSL-kidsgpt-open-webui
 
@@ -428,6 +428,29 @@ python -m black . --exclude ".venv/|/venv/"
 ---
 
 ## Recent Changes & Context
+
+### Cross-Reference Attention Check & `isStudyMode` Prop (2026-02-22)
+
+- **New field**: `child_internet_use_frequency` added to `child_profile` table (migration `t1u2v3w4x5y6`). An 8-point internet use frequency question (reversed scale 8→1) in the child profile form, cross-referenced against the same question in the exit survey (forward scale 1→8) for detecting inattentive participants.
+- **`isStudyMode` prop**: `ChildProfileForm.svelte` now accepts `isStudyMode` (boolean, default `false`). When `true` (passed only from `/kids/profile`), shows the study-specific instructional banner and internet use frequency question. When `false` (used by `/parent` and `/parent/child-profile`), these elements are hidden.
+- **Backend**: ORM, Pydantic models, router, and `insert`/`update` methods updated. Export script includes the field in both `child_query` and `exit_query`.
+- **TypeScript**: `ChildProfile` and `ChildProfileForm` interfaces updated in `src/lib/apis/child-profiles/index.ts`.
+
+### Moderation Flow Simplified to 2 Steps (2026-02)
+
+- The moderation scenario flow was simplified from 4 steps → 3 steps → **2 steps** (identification-only experiment).
+- **Active steps**: Step 1 (Highlight), Step 2 (Assess — `concernLevel` 1-5 Likert + `concernReason`).
+- **Disabled**: Step 3 (moderation/satisfaction), moderation panel, accept/modify/confirm flows.
+- **Removed fields**: `childAccomplish`, `assistantDoing`, `wouldShowChild`, `step4Completed`, `reflectionFeeling`, `reflectionReason`.
+- **Removed column**: `would_show_child` (migration `84b2215f7772`).
+- See `docs/MODERATION_SURVEY_FLOW.md` and `docs/MODERATION_TOOL_DOCUMENTATION.md` for updated documentation.
+
+### Whitelist Enforcement & URL Filtering (2026-02)
+
+- Domain whitelist enforcement for child-facing chat.
+- See `WHITELIST_ENFORCEMENT.md` for details.
+
+---
 
 ### Svelte Compiler Warnings Fixed (2026-01-31)
 
@@ -873,5 +896,5 @@ When starting work on this project:
 
 ---
 
-**Last Updated**: 2026-02-02  
+**Last Updated**: 2026-02-23  
 **Maintained By**: Project Contributors
