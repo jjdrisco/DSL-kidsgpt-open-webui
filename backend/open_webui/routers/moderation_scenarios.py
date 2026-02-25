@@ -18,6 +18,9 @@ from open_webui.models.moderation import (
     ModerationSessionActivities,
     ModerationSessionActivityForm,
     ModerationSessionActivityModel,
+    ConcernItems,
+    ConcernItemBatchForm,
+    ConcernItemModel,
 )
 from open_webui.models.child_profiles import ChildProfiles
 from open_webui.models.scenarios import (
@@ -119,6 +122,56 @@ async def create_or_update_session(
         raise
     except Exception as e:
         log.error(f"Error upserting moderation session: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/moderation/concern-items/batch", response_model=list[ConcernItemModel])
+async def batch_upsert_concern_items(
+    form_data: ConcernItemBatchForm,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Batch upsert concern items for a session context.
+
+    Replaces all existing concern items for the given session context with
+    the supplied list, deleting any items not present in the new batch.
+    """
+    try:
+        if user.id != form_data.user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return ConcernItems.batch_upsert(form_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error batch upserting concern items: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/moderation/concern-items", response_model=list[ConcernItemModel])
+async def get_concern_items(
+    user_id: str,
+    child_id: str,
+    scenario_index: int,
+    attempt_number: int,
+    version_number: int,
+    session_number: int = 1,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Return all concern items for a session context, ordered by position."""
+    try:
+        if user.id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return ConcernItems.get_by_session_context(
+            user_id=user_id,
+            child_id=child_id,
+            scenario_index=scenario_index,
+            attempt_number=attempt_number,
+            version_number=version_number,
+            session_number=session_number,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error fetching concern items: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

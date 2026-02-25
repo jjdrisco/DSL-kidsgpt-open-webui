@@ -6,14 +6,15 @@ The **Concern Mapping** feature enhances the granularity of parental feedback in
 moderation-scenario survey workflow. Instead of capturing a single free-text explanation for why a
 parent finds an AI response concerning, parents can now:
 
-1. **Enumerate specific concerns** — add one or more named concern items, each describing a
-   discrete issue with the scenario.
-2. **Link each concern to highlights** — connect each concern to the specific text passages
-   highlighted in Step 1, creating an explicit many-to-many mapping between concerns and evidence.
+1. **Work from the text** — for each highlighted passage, describe what specifically concerns them
+   about it.
+2. **Build a shared concern pool** — newly described concerns join a session-wide pool so the same
+   concern can be quickly reused for subsequent highlights.
+3. **Rate each concern** — assign a 1–5 Likert severity rating to every concern added.
 
 This produces richer, structured data that analysts can use to understand _which_ highlighted
-passages drove _which_ parental concerns, rather than attempting to extract that relationship from
-unstructured prose.
+passages drove _which_ parental concerns, with the direction of the relationship anchored in the
+text itself rather than imposed top-down.
 
 ---
 
@@ -24,25 +25,26 @@ unstructured prose.
 Parents drag over text in the prompt/response to mark passages that concern them. Each highlight is
 saved immediately to the `selection` table (per-row) and accumulated in `highlightedTexts1`.
 
-### Step 2 — Rate & Map Concerns (updated)
+### Step 2 — Add Concerns for Each Highlight (updated)
 
-Parents now complete three sub-tasks:
+Step 2 is now a single, highlight-centric step. For every highlighted passage parents must:
 
-1. **Rate overall concern level** — Likert scale (1 = Not concerned at all → 5 = Concerned).
-2. **Enumerate specific concerns** — click **+ Add Concern** to add named concern items. Each item
-   has a free-text field: _"Describe this concern…"_
-3. **Link each concern to highlights** — for each concern, checkboxes list every highlight from
-   Step 1. Parents tick which highlight(s) each concern relates to.
+1. **Select existing concerns** (if any) — checkboxes show all concerns already added for previous
+   highlights. Selecting one links it to the current highlight too.
+2. **Add a new concern** — type a description in the inline text field and click **+ Add**. The
+   concern is created in the shared pool _and_ immediately linked to this highlight.
+3. **Rate each linked concern** — a per-concern Likert scale (1 = Not at all → 5 = Very) appears
+   for every concern linked to the current highlight.
+
+A progress bar at the top of Step 2 shows how many highlights have been addressed so far.
 
 #### Validation rules
 
-| Condition                                                             | Blocked?                                          |
-| --------------------------------------------------------------------- | ------------------------------------------------- |
-| No concern level selected                                             | ✅ Yes                                            |
-| No concern items added                                                | ✅ Yes                                            |
-| All concern items have empty text                                     | ✅ Yes                                            |
-| Concern item has text but no linked highlight (when highlights exist) | ✅ Yes                                            |
-| No highlights exist (scenario fully free-text)                        | ✅ Concerns without linked highlights are allowed |
+| Condition                                              | Blocked? |
+| ------------------------------------------------------ | -------- |
+| Any highlight has no concern linked to it              | ✅ Yes   |
+| Any concern with text has no Likert rating             | ✅ Yes   |
+| Any concern in the pool is not linked to any highlight | ✅ Yes   |
 
 ### Submit
 
@@ -59,36 +61,46 @@ backend.
 interface ConcernItem {
 	id: string; // UUID generated client-side
 	text: string; // Parent's free-text description of this concern
-	linkedHighlights: string[]; // Highlight text strings that this concern relates to
+	concernLevel: number | null; // Per-concern Likert rating (1–5); null until rated
 }
+```
+
+> **Schema change (v3):** The `linkedHighlights` array has been removed from `ConcernItem`.
+> Concern items are now standalone objects in a shared pool; the mapping between highlights and
+> concerns is stored separately in `highlightConcerns` (frontend) and
+> `session_metadata.highlight_concerns` (backend).
+
+### `highlightConcerns` (frontend state)
+
+```typescript
+// Maps each highlight's text to the IDs of concerns linked to it
+highlightConcerns: Record<string, string[]>;
+// Example: { "you can look this up": ["a1b2-...", "e5f6-..."], "without asking": ["a1b2-..."] }
 ```
 
 ### Backend persistence
 
-Concern mappings are stored in the existing `session_metadata` JSON column on the
-`moderation_session` table — no schema migration is required.
+Two structures are written to `session_metadata` on the `moderation_session` table when Step 2 is
+submitted:
 
 ```json
 {
-	"concern_mappings": [
-		{
-			"id": "a1b2c3d4-...",
-			"text": "The AI suggested the child could find this information online without parental guidance",
-			"linkedHighlights": ["you can look this up yourself", "without asking your parents"]
-		},
-		{
-			"id": "e5f6g7h8-...",
-			"text": "Response tone was too adult for the child's age",
-			"linkedHighlights": ["as an adult you understand"]
-		}
-	]
+	"highlight_concerns": {
+		"you can look this up yourself": ["a1b2c3d4-..."],
+		"without asking your parents": ["a1b2c3d4-...", "e5f6g7h8-..."]
+	}
 }
 ```
+
+Concern items themselves (text + per-concern Likert) are persisted to the dedicated `concern_item`
+table via `POST /api/v1/moderation/concern-items/batch`. The `linked_highlights` column on
+`concern_item` is derived from `highlight_concerns` at save time (for backward compatibility with
+existing analytics queries on that column).
 
 ### Backward-compatible `concern_reason`
 
 The existing `concern_reason` text column on `moderation_session` is still populated for all
-sessions using a derived string built from `concernMappings`:
+sessions using a derived string built from the concern pool and `highlightConcerns`:
 
 ```
 <concern text> (relates to: "<highlight 1>", "<highlight 2>"); <concern 2 text> ...
@@ -105,35 +117,47 @@ modification.
 
 `src/routes/(app)/moderation-scenario/+page.svelte`
 
-### New state variables
+### State variables
 
-| Variable          | Type            | Purpose                                   |
-| ----------------- | --------------- | ----------------------------------------- |
-| `concernMappings` | `ConcernItem[]` | Ordered list of parent-specified concerns |
+| Variable            | Type                       | Purpose                                                                 |
+| ------------------- | -------------------------- | ----------------------------------------------------------------------- |
+| `concernMappings`   | `ConcernItem[]`            | Shared pool of parent-specified concerns (no longer carries linked IDs) |
+| `highlightConcerns` | `Record<string, string[]>` | Maps each highlight text to the array of concern IDs linked to it       |
+| `newConcernInputs`  | `Record<string, string>`   | Tracks the "new concern" text field value for each highlight row        |
 
-### New helper functions
+### Helper functions
 
-| Function              | Signature                                                              | Purpose                                                  |
-| --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- |
-| `addConcernItem`      | `() => void`                                                           | Appends a blank `ConcernItem` to `concernMappings`       |
-| `removeConcernItem`   | `(id: string) => void`                                                 | Removes a concern item by UUID                           |
-| `toggleHighlightLink` | `(concernId: string, highlightText: string, checked: boolean) => void` | Adds or removes a highlight link for a concern item      |
-| `deriveConcernReason` | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string |
+| Function                    | Signature                                                              | Purpose                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `addConcernForHighlight`    | `(highlightText: string) => void`                                      | Creates a new concern from `newConcernInputs[highlightText]`, adds it to the pool, and links it to the highlight |
+| `addConcernItem`            | `() => void`                                                           | Appends a blank `ConcernItem` to the pool (used internally)                                                      |
+| `removeConcernItem`         | `(id: string) => void`                                                 | Removes a concern from the pool and all highlight links                                                          |
+| `toggleConcernLink`         | `(highlightText: string, concernId: string, checked: boolean) => void` | Adds or removes a concern ID from `highlightConcerns[highlightText]`                                             |
+| `deriveConcernReason`       | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string                                                         |
+| `getUnmatchedHighlights`    | `() => HighlightInfo[]`                                                | Returns highlights not yet linked to any concern                                                                 |
+| `allHighlightsMatched`      | `() => boolean`                                                        | Returns true when every highlight has ≥ 1 concern linked                                                         |
+| `allConcernsHaveHighlights` | `() => boolean`                                                        | Returns true when every non-empty concern is referenced by ≥ 1 highlight                                         |
 
 ### State persistence
 
-Concern mappings are persisted through the following paths:
+- **localStorage** — `highlightConcerns` and `concernMappings` are both saved via
+  `saveCurrentScenarioState()` → `scenarioStates` Map. Restored in
+  `restoreFromLocalStorageIfMissing()`.
+- **Backend (concern_item table)** — concern items saved via `saveConcernItemsBatch()` with
+  `linked_highlights` derived from `highlightConcerns`.
+- **Backend (session_metadata)** — `highlight_concerns` dict saved inside `session_metadata` when
+  `completeStep2()` posts to `/api/v1/moderation/sessions`.
 
-- **localStorage** — via `saveCurrentScenarioState()` → `scenarioStates` Map (keyed by
-  assignment/scenario identifier). Restored in `restoreFromLocalStorageIfMissing()`.
-- **Backend** — saved in `session_metadata.concern_mappings` when `completeStep2()` posts to
-  `/api/v1/moderation/sessions`. Restored during `loadScenario()` from
-  `backendSession.session_metadata.concern_mappings`.
+**Restoration priority** (in `loadScenario`):
+
+1. `session_metadata.highlight_concerns` (newest sessions)
+2. Derived from `concern_item.linked_highlights` (older sessions)
+3. Derived from legacy `session_metadata.concern_mappings[].linkedHighlights` (earliest sessions)
 
 ### Attention check compatibility
 
-The attention check step-2 tracking (previously looked for `"attention check"` in
-`concernReason`) now scans all `concernMappings[].text` entries for the string:
+The attention check step-2 tracking scans all `concernMappings[].text` entries for the string
+`"attention check"` (case-insensitive):
 
 ```javascript
 state.attentionCheckStep2Passed = concernMappings.some((c) =>
@@ -141,28 +165,28 @@ state.attentionCheckStep2Passed = concernMappings.some((c) =>
 );
 ```
 
+The attention check instruction text directs the participant to:
+
+> Step 2: For the highlighted text, type "attention check" in the concern text field and click
+> "+ Add", then rate your concern level. Click "Submit".
+
 ---
 
 ## Backend
 
-No backend changes were required. The `concern_mappings` payload fits within the existing
-`session_metadata: Optional[dict]` field on `ModerationSessionPayload` and is stored as-is in the
-`session_metadata` JSON column.
+The backend `concern_item` table and `moderation_session.session_metadata` JSONField accept the new
+data without schema migration. Key points:
 
-The attention check instruction text was updated to reflect the new UI flow:
-
-> Step 3: Click "+ Add Concern", type "attention check" in the concern text field, and click
-> "Submit".
+- `ConcernItemRow.linked_highlights` remains in the table; it is now **derived** at save time from
+  the `highlightConcerns` mapping rather than stored directly on the concern object.
+- The canonical source of truth for highlight ↔ concern associations is
+  `session_metadata.highlight_concerns`.
 
 ---
 
 ## Analytics / Export
 
-Analysts can access structured concern data in two ways:
-
-### 1. Structured (recommended for new analyses)
-
-Query `moderation_session.session_metadata` and parse `concern_mappings`:
+### 1. Highlight-centric (recommended for new analyses)
 
 ```sql
 SELECT
@@ -170,15 +194,25 @@ SELECT
     ms.user_id,
     ms.child_id,
     ms.scenario_id,
-    cm.value ->> 'text' AS concern_text,
-    cm.value ->> 'linkedHighlights' AS linked_highlights
+    hc.key   AS highlight_text,
+    hc.value AS concern_ids
 FROM moderation_session ms,
-     jsonb_array_elements(ms.session_metadata -> 'concern_mappings') AS cm
+     jsonb_each(ms.session_metadata -> 'highlight_concerns') AS hc
 WHERE ms.is_final_version = TRUE;
 ```
 
-_(Adjust JSON operators for your database driver; SQLite uses `json_each` instead of
-`jsonb_array_elements`.)_
+Cross-reference concern text via the `concern_item` table:
+
+```sql
+SELECT
+    ci.session_id,
+    ci.text AS concern_text,
+    ci.concern_level,
+    ci.linked_highlights
+FROM concern_item ci
+WHERE ci.user_id = '<user_id>'
+  AND ci.scenario_index = <index>;
+```
 
 ### 2. Legacy flat string (backward compatible)
 
@@ -195,36 +229,48 @@ WHERE is_final_version = TRUE;
 
 ## Machine-Readable Schema
 
-The following JSON Schema describes the structure of `session_metadata.concern_mappings`:
+### `session_metadata.highlight_concerns`
 
 ```json
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "concern_mappings",
-	"title": "ConcernMappings",
-	"description": "Array of parental concern items produced in Step 2 of the moderation scenario workflow",
-	"type": "array",
-	"items": {
-		"type": "object",
-		"required": ["id", "text", "linkedHighlights"],
-		"properties": {
-			"id": {
-				"type": "string",
-				"format": "uuid",
-				"description": "Client-generated UUID for the concern item"
-			},
-			"text": {
-				"type": "string",
-				"minLength": 1,
-				"description": "Parent's free-text description of this specific concern"
-			},
-			"linkedHighlights": {
-				"type": "array",
-				"items": { "type": "string" },
-				"description": "Highlight text strings from Step 1 that this concern relates to"
-			}
-		},
-		"additionalProperties": false
+	"$id": "highlight_concerns",
+	"title": "HighlightConcerns",
+	"description": "Maps each highlight text (from Step 1) to the IDs of concerns linked to it",
+	"type": "object",
+	"additionalProperties": {
+		"type": "array",
+		"items": {
+			"type": "string",
+			"format": "uuid",
+			"description": "ID of a ConcernItem in the concern_item table"
+		}
+	}
+}
+```
+
+### `concern_item` row (unchanged table, updated meaning)
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "concern_item_row",
+	"title": "ConcernItemRow",
+	"type": "object",
+	"required": ["id", "session_id", "user_id", "child_id", "text"],
+	"properties": {
+		"id": { "type": "string", "format": "uuid" },
+		"session_id": { "type": "string" },
+		"user_id": { "type": "string" },
+		"child_id": { "type": "string" },
+		"scenario_index": { "type": "integer" },
+		"text": { "type": "string", "minLength": 1 },
+		"concern_level": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+		"linked_highlights": {
+			"type": ["array", "null"],
+			"items": { "type": "string" },
+			"description": "Derived at save time from highlight_concerns; kept for backward compat"
+		}
 	}
 }
 ```
@@ -246,4 +292,6 @@ The following JSON Schema describes the structure of `session_metadata.concern_m
 
 ## Last Updated
 
-2026-02-24
+2026-02-24  
+v3 — Highlight-centric single-step concern workflow; `linkedHighlights` moved from `ConcernItem`
+to `session_metadata.highlight_concerns`
