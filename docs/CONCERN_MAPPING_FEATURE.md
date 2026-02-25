@@ -40,11 +40,11 @@ A progress bar at the top of Step 2 shows how many highlights have been addresse
 
 #### Validation rules
 
-| Condition                                                    | Blocked? |
-| ------------------------------------------------------------ | -------- |
-| Any highlight has no concern linked to it                    | ✅ Yes   |
-| Any concern with text has no Likert rating                   | ✅ Yes   |
-| Any concern in the pool is not linked to any highlight       | ✅ Yes   |
+| Condition                                              | Blocked? |
+| ------------------------------------------------------ | -------- |
+| Any highlight has no concern linked to it              | ✅ Yes   |
+| Any concern with text has no Likert rating             | ✅ Yes   |
+| Any concern in the pool is not linked to any highlight | ✅ Yes   |
 
 ### Submit
 
@@ -74,7 +74,7 @@ interface ConcernItem {
 
 ```typescript
 // Maps each highlight's text to the IDs of concerns linked to it
-highlightConcerns: Record<string, string[]>
+highlightConcerns: Record<string, string[]>;
 // Example: { "you can look this up": ["a1b2-...", "e5f6-..."], "without asking": ["a1b2-..."] }
 ```
 
@@ -119,24 +119,24 @@ modification.
 
 ### State variables
 
-| Variable            | Type                        | Purpose                                                                   |
-| ------------------- | --------------------------- | ------------------------------------------------------------------------- |
-| `concernMappings`   | `ConcernItem[]`             | Shared pool of parent-specified concerns (no longer carries linked IDs)   |
-| `highlightConcerns` | `Record<string, string[]>`  | Maps each highlight text to the array of concern IDs linked to it         |
-| `newConcernInputs`  | `Record<string, string>`    | Tracks the "new concern" text field value for each highlight row           |
+| Variable            | Type                       | Purpose                                                                 |
+| ------------------- | -------------------------- | ----------------------------------------------------------------------- |
+| `concernMappings`   | `ConcernItem[]`            | Shared pool of parent-specified concerns (no longer carries linked IDs) |
+| `highlightConcerns` | `Record<string, string[]>` | Maps each highlight text to the array of concern IDs linked to it       |
+| `newConcernInputs`  | `Record<string, string>`   | Tracks the "new concern" text field value for each highlight row        |
 
 ### Helper functions
 
-| Function                    | Signature                                                                   | Purpose                                                                   |
-| --------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `addConcernForHighlight`    | `(highlightText: string) => void`                                           | Creates a new concern from `newConcernInputs[highlightText]`, adds it to the pool, and links it to the highlight |
-| `addConcernItem`            | `() => void`                                                                | Appends a blank `ConcernItem` to the pool (used internally)               |
-| `removeConcernItem`         | `(id: string) => void`                                                      | Removes a concern from the pool and all highlight links                   |
-| `toggleConcernLink`         | `(highlightText: string, concernId: string, checked: boolean) => void`      | Adds or removes a concern ID from `highlightConcerns[highlightText]`      |
-| `deriveConcernReason`       | `(mappings: ConcernItem[]) => string`                                       | Produces the backward-compatible `concern_reason` string                  |
-| `getUnmatchedHighlights`    | `() => HighlightInfo[]`                                                     | Returns highlights not yet linked to any concern                          |
-| `allHighlightsMatched`      | `() => boolean`                                                             | Returns true when every highlight has ≥ 1 concern linked                  |
-| `allConcernsHaveHighlights` | `() => boolean`                                                             | Returns true when every non-empty concern is referenced by ≥ 1 highlight  |
+| Function                    | Signature                                                              | Purpose                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `addConcernForHighlight`    | `(highlightText: string) => void`                                      | Creates a new concern from `newConcernInputs[highlightText]`, adds it to the pool, and links it to the highlight |
+| `addConcernItem`            | `() => void`                                                           | Appends a blank `ConcernItem` to the pool (used internally)                                                      |
+| `removeConcernItem`         | `(id: string) => void`                                                 | Removes a concern from the pool and all highlight links                                                          |
+| `toggleConcernLink`         | `(highlightText: string, concernId: string, checked: boolean) => void` | Adds or removes a concern ID from `highlightConcerns[highlightText]`                                             |
+| `deriveConcernReason`       | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string                                                         |
+| `getUnmatchedHighlights`    | `() => HighlightInfo[]`                                                | Returns highlights not yet linked to any concern                                                                 |
+| `allHighlightsMatched`      | `() => boolean`                                                        | Returns true when every highlight has ≥ 1 concern linked                                                         |
+| `allConcernsHaveHighlights` | `() => boolean`                                                        | Returns true when every non-empty concern is referenced by ≥ 1 highlight                                         |
 
 ### State persistence
 

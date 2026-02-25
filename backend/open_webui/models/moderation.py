@@ -625,7 +625,11 @@ class ConcernItemTable:
 
             results: List[ConcernItemModel] = []
             for item in form.items:
-                existing = db.query(ConcernItemRow).filter(ConcernItemRow.id == item.id).first()
+                existing = (
+                    db.query(ConcernItemRow)
+                    .filter(ConcernItemRow.id == item.id)
+                    .first()
+                )
                 if existing:
                     existing.text = item.text
                     existing.concern_level = item.concern_level

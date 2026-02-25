@@ -2339,9 +2339,7 @@
 	 * Get highlights that haven't been linked to any concern yet.
 	 */
 	function getUnmatchedHighlights(): HighlightInfo[] {
-		return highlightedTexts1.filter(
-			(h) => !(highlightConcerns[h.text] ?? []).length
-		);
+		return highlightedTexts1.filter((h) => !(highlightConcerns[h.text] ?? []).length);
 	}
 
 	/**
@@ -2828,7 +2826,7 @@
 			concernLevel,
 			concernReason,
 			concernMappings: [...concernMappings],
-		highlightConcerns: { ...highlightConcerns },
+			highlightConcerns: { ...highlightConcerns },
 			satisfactionLevel,
 			satisfactionReason,
 			nextAction,
@@ -3212,12 +3210,15 @@
 
 			// Restore highlight-concern mapping
 			if (backendSession.session_metadata?.highlight_concerns) {
-				highlightConcerns = backendSession.session_metadata.highlight_concerns as Record<string, string[]>;
+				highlightConcerns = backendSession.session_metadata.highlight_concerns as Record<
+					string,
+					string[]
+				>;
 			} else if (dbItems && dbItems.length > 0) {
 				// Derive from legacy linked_highlights on ConcernItemRows
 				const derived: Record<string, string[]> = {};
 				for (const item of dbItems) {
-					for (const hText of (item.linked_highlights ?? [])) {
+					for (const hText of item.linked_highlights ?? []) {
 						derived[hText] = [...(derived[hText] ?? []), item.id];
 					}
 				}
@@ -3226,7 +3227,7 @@
 				// Derive from legacy session_metadata.concern_mappings
 				const derived: Record<string, string[]> = {};
 				for (const c of backendSession.session_metadata.concern_mappings as any[]) {
-					for (const hText of (c.linkedHighlights ?? [])) {
+					for (const hText of c.linkedHighlights ?? []) {
 						derived[hText] = [...(derived[hText] ?? []), c.id ?? ''];
 					}
 				}
@@ -4575,11 +4576,7 @@
 		}
 
 		// Validate each concern with text has at least one linked highlight (when highlights exist)
-		if (
-			!isAttentionCheckScenario &&
-			highlightedTexts1.length > 0 &&
-			!allConcernsHaveHighlights()
-		) {
+		if (!isAttentionCheckScenario && highlightedTexts1.length > 0 && !allConcernsHaveHighlights()) {
 			toast.error('Please link each concern to at least one highlight');
 			return;
 		}
@@ -7088,41 +7085,69 @@
 														on:click={() => navigateToStep(1)}
 														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
 													>
-														<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+														<svg
+															class="w-3 h-3 flex-shrink-0"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M10 19l-7-7m0 0l7-7m-7 7h18"
+															></path>
 														</svg>
 														<span>Back</span>
 													</button>
 												</div>
 
 												<p class="text-sm text-gray-600 dark:text-gray-400">
-													For each highlighted passage, describe what concerns you about it. You can reuse a concern across multiple highlights.
+													For each highlighted passage, describe what concerns you about it. You can
+													reuse a concern across multiple highlights.
 												</p>
 
 												{#if highlightedTexts1.length === 0}
-													<div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+													<div
+														class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+													>
 														<p class="text-xs text-yellow-800 dark:text-yellow-200">
-															⚠️ No highlights found from Step 1. Go back and highlight text that concerns you.
+															⚠️ No highlights found from Step 1. Go back and highlight text that
+															concerns you.
 														</p>
 													</div>
 												{:else}
 													<!-- Progress bar -->
-													{@const matchedCount = highlightedTexts1.filter((h) => (highlightConcerns[h.text] ?? []).length > 0).length}
+													{@const matchedCount = highlightedTexts1.filter(
+														(h) => (highlightConcerns[h.text] ?? []).length > 0
+													).length}
 													<div class="mb-2">
 														<div class="flex items-center justify-between mb-1">
 															<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-																{matchedCount} of {highlightedTexts1.length} highlight{highlightedTexts1.length !== 1 ? 's' : ''} addressed
+																{matchedCount} of {highlightedTexts1.length} highlight{highlightedTexts1.length !==
+																1
+																	? 's'
+																	: ''} addressed
 															</span>
 															{#if matchedCount === highlightedTexts1.length}
-																<span class="text-xs font-medium text-green-600 dark:text-green-400">All addressed!</span>
+																<span class="text-xs font-medium text-green-600 dark:text-green-400"
+																	>All addressed!</span
+																>
 															{:else}
-																<span class="text-xs font-medium text-amber-600 dark:text-amber-400">{highlightedTexts1.length - matchedCount} remaining</span>
+																<span class="text-xs font-medium text-amber-600 dark:text-amber-400"
+																	>{highlightedTexts1.length - matchedCount} remaining</span
+																>
 															{/if}
 														</div>
 														<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 															<div
-																class="h-2 rounded-full transition-all duration-300 {matchedCount === highlightedTexts1.length ? 'bg-green-500' : 'bg-blue-500'}"
-																style="width: {highlightedTexts1.length > 0 ? (matchedCount / highlightedTexts1.length) * 100 : 0}%"
+																class="h-2 rounded-full transition-all duration-300 {matchedCount ===
+																highlightedTexts1.length
+																	? 'bg-green-500'
+																	: 'bg-blue-500'}"
+																style="width: {highlightedTexts1.length > 0
+																	? (matchedCount / highlightedTexts1.length) * 100
+																	: 0}%"
 															></div>
 														</div>
 													</div>
@@ -7132,13 +7157,23 @@
 														{#each highlightedTexts1 as highlight, hIdx (highlight.text)}
 															{@const linkedIds = highlightConcerns[highlight.text] ?? []}
 															{@const isAddressed = linkedIds.length > 0}
-															<div class="p-3 border rounded-lg transition-colors {isAddressed ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}">
+															<div
+																class="p-3 border rounded-lg transition-colors {isAddressed
+																	? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10'
+																	: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}"
+															>
 																<!-- Highlight label -->
 																<div class="flex items-start space-x-2 mb-2">
-																	<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold flex-shrink-0 mt-0.5 {isAddressed ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}">
+																	<span
+																		class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold flex-shrink-0 mt-0.5 {isAddressed
+																			? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
+																			: 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}"
+																	>
 																		{hIdx + 1}
 																	</span>
-																	<span class="text-sm text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed">
+																	<span
+																		class="text-sm text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed"
+																	>
 																		"{highlight.text}"
 																	</span>
 																</div>
@@ -7147,17 +7182,28 @@
 																	<!-- Existing concerns as checkboxes -->
 																	{#if concernMappings.filter((c) => c.text.trim()).length > 0}
 																		<div>
-																			<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Select existing concern(s):</p>
+																			<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+																				Select existing concern(s):
+																			</p>
 																			<div class="space-y-1">
-																				{#each concernMappings.filter((c) => c.text.trim()) as concern (concern.id)}
-																					<label class="flex items-start space-x-2 cursor-pointer p-1.5 rounded hover:bg-white/50 dark:hover:bg-gray-600/50 transition-colors">
+																				{#each concernMappings.filter( (c) => c.text.trim() ) as concern (concern.id)}
+																					<label
+																						class="flex items-start space-x-2 cursor-pointer p-1.5 rounded hover:bg-white/50 dark:hover:bg-gray-600/50 transition-colors"
+																					>
 																						<input
 																							type="checkbox"
 																							checked={linkedIds.includes(concern.id)}
-																							on:change={(e) => toggleConcernLink(highlight.text, concern.id, e.currentTarget.checked)}
+																							on:change={(e) =>
+																								toggleConcernLink(
+																									highlight.text,
+																									concern.id,
+																									e.currentTarget.checked
+																								)}
 																							class="mt-0.5 w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
 																						/>
-																						<span class="text-xs text-gray-700 dark:text-gray-300">{concern.text}</span>
+																						<span class="text-xs text-gray-700 dark:text-gray-300"
+																							>{concern.text}</span
+																						>
 																					</label>
 																				{/each}
 																			</div>
@@ -7167,15 +7213,27 @@
 																	<!-- Add new concern inline -->
 																	<div>
 																		<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
-																			{concernMappings.filter((c) => c.text.trim()).length > 0 ? 'Or add a new concern:' : 'Add a concern: '}
+																			{concernMappings.filter((c) => c.text.trim()).length > 0
+																				? 'Or add a new concern:'
+																				: 'Add a concern: '}
 																			<span class="text-red-500">*</span>
 																		</p>
 																		<div class="flex items-center space-x-2">
 																			<input
 																				type="text"
 																				value={newConcernInputs[highlight.text] ?? ''}
-																				on:input={(e) => { newConcernInputs = { ...newConcernInputs, [highlight.text]: e.currentTarget.value }; }}
-																				on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addConcernForHighlight(highlight.text); } }}
+																				on:input={(e) => {
+																					newConcernInputs = {
+																						...newConcernInputs,
+																						[highlight.text]: e.currentTarget.value
+																					};
+																				}}
+																				on:keydown={(e) => {
+																					if (e.key === 'Enter') {
+																						e.preventDefault();
+																						addConcernForHighlight(highlight.text);
+																					}
+																				}}
 																				placeholder="Describe a concern about this highlight…"
 																				class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
 																			/>
@@ -7191,10 +7249,16 @@
 																	</div>
 
 																	<!-- Per-linked-concern Likert rating -->
-																	{#each concernMappings.filter((c) => linkedIds.includes(c.id)) as concern (concern.id)}
-																		<div class="p-2 bg-white dark:bg-gray-700/50 rounded border border-gray-200 dark:border-gray-600">
-																			<p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
-																				How concerned are you about "<span class="italic">{concern.text}</span>"?
+																	{#each concernMappings.filter( (c) => linkedIds.includes(c.id) ) as concern (concern.id)}
+																		<div
+																			class="p-2 bg-white dark:bg-gray-700/50 rounded border border-gray-200 dark:border-gray-600"
+																		>
+																			<p
+																				class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate"
+																			>
+																				How concerned are you about "<span class="italic"
+																					>{concern.text}</span
+																				>"?
 																				<span class="text-red-500">*</span>
 																			</p>
 																			<div class="flex gap-1 flex-wrap">
@@ -7203,10 +7267,15 @@
 																						type="button"
 																						on:click={() => {
 																							concernMappings = concernMappings.map((c) =>
-																								c.id === concern.id ? { ...c, concernLevel: opt.value } : c
+																								c.id === concern.id
+																									? { ...c, concernLevel: opt.value }
+																									: c
 																							);
 																						}}
-																						class="flex-1 min-w-[60px] px-2 py-1 text-xs rounded border transition-colors {concern.concernLevel === opt.value ? 'bg-blue-500 border-blue-500 text-white font-semibold' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400'}"
+																						class="flex-1 min-w-[60px] px-2 py-1 text-xs rounded border transition-colors {concern.concernLevel ===
+																						opt.value
+																							? 'bg-blue-500 border-blue-500 text-white font-semibold'
+																							: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400'}"
 																					>
 																						{opt.value}. {opt.label}
 																					</button>
@@ -7223,8 +7292,12 @@
 												<!-- Submit button -->
 												{@const canSubmit =
 													highlightedTexts1.length > 0 &&
-													highlightedTexts1.every((h) => (highlightConcerns[h.text] ?? []).length > 0) &&
-													concernMappings.filter((c) => c.text.trim()).every((c) => c.concernLevel !== null || isAttentionCheckScenario)}
+													highlightedTexts1.every(
+														(h) => (highlightConcerns[h.text] ?? []).length > 0
+													) &&
+													concernMappings
+														.filter((c) => c.text.trim())
+														.every((c) => c.concernLevel !== null || isAttentionCheckScenario)}
 												<div>
 													<button
 														on:click={completeStep2}
@@ -7235,7 +7308,8 @@
 													</button>
 													{#if !canSubmit && highlightedTexts1.length > 0}
 														<p class="text-xs text-amber-600 dark:text-amber-400 mt-1 text-center">
-															Add at least one concern for each highlight and rate every concern before submitting
+															Add at least one concern for each highlight and rate every concern
+															before submitting
 														</p>
 													{/if}
 												</div>

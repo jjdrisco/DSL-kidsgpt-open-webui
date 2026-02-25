@@ -40,7 +40,9 @@ def upgrade() -> None:
             sa.Column("position", sa.Integer, nullable=False, server_default="0"),
             sa.Column("text", sa.Text, nullable=False, server_default=""),
             sa.Column("concern_level", sa.Integer, nullable=True),
-            sa.Column("linked_highlights", sa.Text, nullable=True),  # JSON stored as Text
+            sa.Column(
+                "linked_highlights", sa.Text, nullable=True
+            ),  # JSON stored as Text
             sa.Column("created_at", sa.BigInteger, nullable=False),
             sa.Column("updated_at", sa.BigInteger, nullable=False),
         )
