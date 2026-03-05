@@ -1,0 +1,16 @@
+id,user_id,name,child_age,child_gender,child_characteristics,is_only_child,child_has_ai_use,child_ai_use_contexts,parent_llm_monitoring_level,attempt_number,is_current,session_number,created_at,updated_at,user_name,user_email,user_role,prolific_pid,user_session_number,consent_given
+ed4b0356-f042-4f5b-afda-ab4001be0676,5816f81b-0a6d-4154-95a0-646f0172b765,bob4,,Non-binary,,,,null,,1,1,1,1771135223487939000,1771135223487939000,1,prolific_1@prolific.study,prolific,1,1,1
+64dd1b8f-1304-4152-902d-8560c4dfc096,63ba2aff-e78e-4c3a-9446-c49e625808d7,beth4,11,,,,,null,,1,1,1,1771284339478758000,1771293150654715000,test parent,test@test.test,parent,,1,0
+e30ee1a7-8c24-4d5a-b2d0-2042afcccd0e,6a389526-6e20-4502-981f-8cbe4588b1af,bobbp,12 years old,Non-binary,,,,null,,1,1,1,1771564895812815000,1771564895812815000,TEST99,prolific_TEST99@prolific.study,prolific,TEST99,1,1
+2cfc59ee-3285-4f30-af18-73a3138958fb,8bd84e23-009f-4142-89d0-9bad1a711eb6,chat,,Non-binary,"Conscientiousness: Is systematic, likes to keep things in order, Is efficient, gets things done
+
+Additional characteristics:
+na",0,prefer_not_to_say,[],prefer_not_to_say,1,0,1,1771033581407829000,1771033581407829000,admin john,jjdrisco@ucsd.edu,admin,,1,1
+4ec5a33c-0151-485f-a5b4-8640c116a596,8bd84e23-009f-4142-89d0-9bad1a711eb6,bob,,Female,"Emotional Stability: Can be tense
+
+Additional characteristics:
+na",0,no,[],plan_to,1,0,1,1771092298951210000,1771092298951210000,admin john,jjdrisco@ucsd.edu,admin,,1,1
+4f33895c-62c5-4697-a4a6-c7ec0951c26c,8bd84e23-009f-4142-89d0-9bad1a711eb6,bob2,,Non-binary,"Agreeableness: Is compassionate, has a soft heart
+
+Additional characteristics:
+no",0,yes,"[""school_homework"", ""general_knowledge""]",plan_to,1,1,1,1771093676380921000,1771093676380921000,admin john,jjdrisco@ucsd.edu,admin,,1,1
