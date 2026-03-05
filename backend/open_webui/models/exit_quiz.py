@@ -152,5 +152,19 @@ class ExitQuizTable:
             db.commit()
             return True
 
+    def delete_responses_by_user_child(self, user_id: str, child_id: str) -> int:
+        """Delete all exit quiz responses for a user/child across all attempts. Returns count deleted."""
+        with get_db() as db:
+            result = (
+                db.query(ExitQuizResponse)
+                .filter(
+                    ExitQuizResponse.user_id == user_id,
+                    ExitQuizResponse.child_id == child_id,
+                )
+                .delete()
+            )
+            db.commit()
+            return result
+
 
 ExitQuizzes = ExitQuizTable()

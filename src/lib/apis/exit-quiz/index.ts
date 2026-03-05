@@ -42,13 +42,15 @@ export const createExitQuiz = async (
 export const listExitQuiz = async (
 	token: string,
 	child_id?: string,
-	current_only?: boolean
+	allAttempts?: boolean
 ): Promise<ExitQuizResponse[]> => {
-	const url = new URL(`${WEBUI_API_BASE_URL}/exit-quiz`);
-	if (child_id) url.searchParams.set('child_id', child_id);
-	if (current_only === true) url.searchParams.set('current_only', 'true');
+	const params = new URLSearchParams();
+	if (child_id) params.set('child_id', child_id);
+	if (allAttempts === true) params.set('all_attempts', 'true');
+	const query = params.toString();
+	const url = `${WEBUI_API_BASE_URL}/exit-quiz${query ? '?' + query : ''}`;
 
-	const res = await fetch(url.toString(), {
+	const res = await fetch(url, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -74,4 +76,25 @@ export const listExitQuiz = async (
 		// Response was not JSON (e.g. HTML); return empty so repopulation doesn't throw
 		return [];
 	}
+};
+
+export const resetExitQuiz = async (
+	token: string,
+	child_id: string
+): Promise<{deleted: number}> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/exit-quiz/reset`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ child_id })
+	});
+
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({}));
+		throw new Error(err.detail || 'Failed to reset exit quiz');
+	}
+	return res.json();
 };
