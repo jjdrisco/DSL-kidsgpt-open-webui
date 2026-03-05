@@ -30,7 +30,9 @@ saved immediately to the `selection` table (per-row) and accumulated in `highlig
 Step 2 is now a single, highlight-centric step. For every highlighted passage parents must:
 
 1. **Select existing concerns** (if any) — checkboxes show all concerns already added for previous
-   highlights. Selecting one links it to the current highlight too.
+   highlights. Selecting one links it to the current highlight too. **A red × icon lets the parent
+   remove any concern from the pool; the deletion is propagated to every highlight and synced to
+   the backend instantly.**
 2. **Add a new concern** — type a description in the inline text field and click **+ Add**. The
    concern is created in the shared pool _and_ immediately linked to this highlight.
 3. **Rate each linked concern** — a per-concern Likert scale (1 = Not at all → 5 = Very) appears
@@ -132,6 +134,7 @@ modification.
 | `addConcernForHighlight`    | `(highlightText: string) => void`                                      | Creates a new concern from `newConcernInputs[highlightText]`, adds it to the pool, and links it to the highlight |
 | `addConcernItem`            | `() => void`                                                           | Appends a blank `ConcernItem` to the pool (used internally)                                                      |
 | `removeConcernItem`         | `(id: string) => void`                                                 | Removes a concern from the pool and all highlight links                                                          |
+| `handleRemoveConcern`        | `(id: string) => Promise<void>`                                        | Wrapper that also syncs the updated pool to the backend (called by the UI delete button) |
 | `toggleConcernLink`         | `(highlightText: string, concernId: string, checked: boolean) => void` | Adds or removes a concern ID from `highlightConcerns[highlightText]`                                             |
 | `deriveConcernReason`       | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string                                                         |
 | `getUnmatchedHighlights`    | `() => HighlightInfo[]`                                                | Returns highlights not yet linked to any concern                                                                 |

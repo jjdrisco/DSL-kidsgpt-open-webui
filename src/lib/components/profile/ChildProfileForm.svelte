@@ -471,7 +471,7 @@
 
 	async function loadChildProfile() {
 		try {
-			childProfiles = await childProfileSync.getChildProfiles();
+			childProfiles = await childProfileSync.syncFromBackend();
 			if (!childProfiles || !Array.isArray(childProfiles)) {
 				childProfiles = [];
 			}

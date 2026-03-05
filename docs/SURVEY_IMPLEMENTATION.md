@@ -4,6 +4,8 @@
 
 The webapp has two survey types: **Initial Survey** (pre-assignment) and **Exit Survey** (post-assignment, Task 3). Both are integrated into the assignment workflow and track completion state.
 
+> **Note:** The assignment instructions page (`/assignment-instructions`) was recently streamlined. Task descriptions are now presented as a single summary sentence, the old scroll‑indicator timer was removed, and ancillary notices (help video, attention‑check warning, and ready modal) remain but have been kept visually compact. An explicit reminder about the moderation task – “if a scenario raises no concerns, click Skip” – has also been added so participants know they don’t need to respond to every question.
+
 ## Survey Types
 
 ### 1. Initial Survey (`/initial-survey`)

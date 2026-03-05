@@ -12,10 +12,6 @@
 	let startButtonClicked: boolean = false;
 	// State to track if instructions have been read (loaded from backend)
 	let instructionsCompleted: boolean = false;
-	// State for scroll indicator
-	let showScrollIndicator: boolean = false;
-	let hasScrolled: boolean = false;
-	let scrollContainer: HTMLDivElement | null = null;
 	// State for ready modal
 	let showReadyModal: boolean = false;
 
@@ -53,32 +49,8 @@
 			}
 		} catch (e) {}
 
-		// Set up scroll indicator
-		const timer = setTimeout(() => {
-			if (!hasScrolled) {
-				showScrollIndicator = true;
-			}
-		}, 8000); // Show after 8 seconds
-
-		const handleScroll = () => {
-			hasScrolled = true;
-			showScrollIndicator = false;
-		};
-
-		// Attach to the actual scroll container (use bind:this, attached after render)
-		const el = scrollContainer ?? document.querySelector('[data-assignment-scroll]');
-		if (el) {
-			el.addEventListener('scroll', handleScroll);
-		}
-		window.addEventListener('scroll', handleScroll);
-
+	
 		return () => {
-			clearTimeout(timer);
-			const target = scrollContainer ?? document.querySelector('[data-assignment-scroll]');
-			if (target) {
-				target.removeEventListener('scroll', handleScroll);
-			}
-			window.removeEventListener('scroll', handleScroll);
 			window.removeEventListener('workflow-updated', handleWorkflowUpdate);
 		};
 	});
@@ -166,11 +138,7 @@
 		</div>
 	</nav>
 
-	<div
-		bind:this={scrollContainer}
-		data-assignment-scroll
-		class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900"
-	>
+	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
 		<div class="max-w-4xl mx-auto px-4 py-8">
 			<!-- Header -->
 			<div class="text-center mb-12">
@@ -180,112 +148,26 @@
 				</p>
 			</div>
 
-			<!-- Task Steps -->
-			<div class="space-y-6 mb-8">
-				<!-- Task 1 -->
-				<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-					<div class="flex items-start space-x-4">
-						<div class="flex-shrink-0">
-							<div
-								class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg"
-							>
-								1
-							</div>
-						</div>
-						<div class="flex-1">
-							<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-								Child Profile Setup
-							</h3>
-							<p class="text-gray-600 dark:text-gray-300">
-								Create a profile for your child including age, gender, interests, and
-								characteristics.
-							</p>
-						</div>
-					</div>
-				</div>
+<!-- Task Steps (condensed) -->
+		<p class="text-gray-600 dark:text-gray-300 mb-4">
+			This study has three consecutive tasks: create a child profile, review and moderate
+			example AI responses, and finally complete a short exit survey. When moderating,
+			you don’t need to answer every question; if a scenario raises no concerns, simply
+			click <em>Skip</em> and move on.
+		</p>
 
-				<!-- Task 2 -->
-				<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-					<div class="flex items-start space-x-4">
-						<div class="flex-shrink-0">
-							<div
-								class="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-lg"
-							>
-								2
-							</div>
-						</div>
-						<div class="flex-1">
-							<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-								Moderation Scenarios
-							</h3>
-							<p class="text-gray-600 dark:text-gray-300">
-								Review and moderate AI responses to ensure they are appropriate for your child.
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- Task 3 -->
-				<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-					<div class="flex items-start space-x-4">
-						<div class="flex-shrink-0">
-							<div
-								class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-lg"
-							>
-								3
-							</div>
-						</div>
-						<div class="flex-1">
-							<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Exit Survey</h3>
-							<p class="text-gray-600 dark:text-gray-300">
-								Complete a brief survey about your experience and provide some additional
-								information.
-							</p>
-						</div>
-					</div>
-				</div>
+<!-- Help Videos Notice (trimmed) -->
+		<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-8">
+			<p class="text-blue-700 dark:text-blue-300">
+				📹 Tutorial videos are available via the help button on task pages.
+			</p>
 			</div>
 
-			<!-- Help Videos Notice -->
-			<div
-				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-8"
-			>
-				<h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">
-					📹 Tutorial Videos Available
-				</h3>
-				<p class="text-blue-700 dark:text-blue-300 mb-3">
-					Some task pages may include a help button in the top-right corner that opens a tutorial
-					video specific to that task.
-				</p>
-				<div class="flex items-center gap-2">
-					<span class="text-blue-700 dark:text-blue-300 text-sm">Example:</span>
-					<button
-						on:click|preventDefault|stopPropagation
-						class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-						aria-label="Help button example (non-functional)"
-					>
-						Help
-					</button>
-				</div>
-			</div>
-
-			<!-- Important Notes -->
-			<div
-				class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 mb-8"
-			>
-				<h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
-					Note: Attention Check Questions
-				</h3>
-				<ul class="space-y-2 text-yellow-700 dark:text-yellow-300">
-					<li class="flex items-start">
-						<span class="mr-2">•</span>
-						<span>We have implemented multiple types of attention check questions. </span>
-					</li>
-					<li class="flex items-start">
-						<span class="mr-2">•</span>
-						<span>Please read all content and complete this task to the best of your ability.</span>
-					</li>
-				</ul>
+<!-- Important Notes (brief) -->
+		<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-8">
+			<p class="text-yellow-700 dark:text-yellow-300">
+				⚠️ This survey contains attention‑check questions; please read everything carefully.
+			</p>
 			</div>
 
 			<!-- Done Button -->
@@ -318,28 +200,6 @@
 			</div>
 		</div>
 	</div>
-
-	<!-- Scroll Indicator -->
-	{#if showScrollIndicator}
-		<div
-			class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce"
-		>
-			<span class="text-sm text-gray-400 dark:text-gray-500 mb-1">Scroll down</span>
-			<svg
-				class="w-6 h-6 text-gray-400 dark:text-gray-500"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M19 14l-7 7m0 0l-7-7m7 7V3"
-				></path>
-			</svg>
-		</div>
-	{/if}
 
 	<!-- Ready Modal -->
 	{#if showReadyModal}
