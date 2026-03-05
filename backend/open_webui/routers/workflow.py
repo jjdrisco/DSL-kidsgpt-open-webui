@@ -22,7 +22,7 @@ from open_webui.models.moderation import (
 from open_webui.models.child_profiles import ChildProfile, ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizResponse, ExitQuizzes
 from open_webui.models.assignment_time_tracking import AssignmentSessionActivity
-from open_webui.models.scenarios import ScenarioAssignments
+from open_webui.models.scenarios import ScenarioAssignment, ScenarioAssignments
 from open_webui.models.workflow_draft import (
     WorkflowDraft,
     get_draft,
@@ -395,9 +395,19 @@ async def reset_user_workflow(
                 or 0
             )
 
-            # Calculate next attempt number
+            max_assignment_attempt = (
+                db.query(func.max(ScenarioAssignment.attempt_number))
+                .filter(ScenarioAssignment.participant_id == user.id)
+                .scalar()
+                or 0
+            )
+
+            # Calculate next attempt number — must be strictly higher than any existing
+            # assignments, sessions, or profile records so that old data is never surfaced
+            # after a reset (scenario_assignments are not deleted on reset; they're filtered
+            # by attempt_number which must not match any leftover rows).
             new_attempt_number = (
-                max(max_moderation_attempt, max_child_attempt, max_exit_attempt) + 1
+                max(max_moderation_attempt, max_child_attempt, max_exit_attempt, max_assignment_attempt) + 1
             )
 
             # Child profiles persist across attempts - do NOT set is_current=False.
@@ -420,8 +430,10 @@ async def reset_user_workflow(
             # Clear workflow drafts (exit survey, moderation) for this user
             db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user.id).delete()
 
-            # Note: scenario_assignments now use attempt_number, so old assignments
-            # are automatically excluded when fetching by current attempt_number
+            # scenario_assignments are NOT deleted on reset — they are filtered by attempt_number
+            # when fetched (get_assignments_for_child filters by current_attempt_number).
+            # The new_attempt_number above is always strictly greater than any existing
+            # scenario_assignments.attempt_number, so old assignments are never surfaced.
 
             db.commit()
 
