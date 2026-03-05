@@ -400,6 +400,8 @@ export interface ScenarioAssignResponse {
 		weight: number;
 		sampling_prob: number;
 	};
+	/** code displayed for attention-check scenario, if any */
+	attention_check_code?: string | null;
 }
 
 export interface ScenarioStatusUpdateRequest {
@@ -551,6 +553,10 @@ export const abandonScenario = async (
 	return res.json();
 };
 
+// attention-check API functions have been deprecated in favour of
+// assignment-level code logic.  The server no longer exposes
+// /moderation/attention-checks/random; callers should ignore these types.
+
 export interface AttentionCheckResponse {
 	scenario_id: string;
 	prompt_text: string;
@@ -560,24 +566,7 @@ export interface AttentionCheckResponse {
 	sentiment?: string;
 }
 
-export const getRandomAttentionCheck = async (
-	token: string
-): Promise<AttentionCheckResponse | null> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/attention-checks/random`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	});
-	if (!res.ok) {
-		if (res.status === 404) {
-			return null; // No attention checks available
-		}
-		throw await res.json();
-	}
-	return res.json();
-};
+// NOTE: getRandomAttentionCheck removed.  See new attention-check plan.
 
 // Highlights API functions
 
@@ -621,6 +610,7 @@ export interface AssignmentWithScenario {
 	status: string;
 	assigned_at: number;
 	started_at?: number;
+	attention_check_code?: string | null;
 }
 
 export const getAssignmentsForChild = async (

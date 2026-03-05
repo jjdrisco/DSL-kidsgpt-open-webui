@@ -26,6 +26,7 @@ from open_webui.models.child_profiles import ChildProfiles
 from open_webui.models.scenarios import (
     Scenarios,
     ScenarioAssignments,
+    ScenarioAssignment,
     ScenarioAssignmentForm,
     ScenarioAssignmentModel,
     ScenarioModel,
@@ -192,6 +193,8 @@ class ScenarioAssignResponse(BaseModel):
     response_text: str
     assignment_position: Optional[int] = None
     sampling_audit: Optional[dict] = None
+    # attention vérification code, if assigned to this row
+    attention_check_code: Optional[str] = None
 
 
 @router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
@@ -239,6 +242,7 @@ async def assign_scenario(
 
             db.commit()
 
+        # include attention_check_code in response if already present (should be null here)
         return ScenarioAssignResponse(
             assignment_id=assignment.assignment_id,
             scenario_id=selected_scenario.scenario_id,
@@ -246,6 +250,7 @@ async def assign_scenario(
             response_text=selected_scenario.response_text,
             assignment_position=assignment.assignment_position,
             sampling_audit=sampling_audit,
+            attention_check_code=getattr(assignment, 'attention_check_code', None),
         )
     except HTTPException:
         raise
@@ -682,6 +687,8 @@ class AssignmentWithScenario(BaseModel):
     status: str
     assigned_at: int
     started_at: Optional[int] = None
+    # code associated to this assignment (client shows it if present)
+    attention_check_code: Optional[str] = None
 
 
 @router.get(
@@ -739,6 +746,7 @@ async def get_assignments_for_child(
                         status=assignment.status,
                         assigned_at=assignment.assigned_at,
                         started_at=assignment.started_at,
+                        attention_check_code=assignment.attention_check_code,
                     )
                 )
 
@@ -748,6 +756,56 @@ async def get_assignments_for_child(
     except Exception as e:
         log.error(f"Error getting assignments for child {child_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ---------------------------------------------------------------------------
+# Attention-code utilities
+# ---------------------------------------------------------------------------
+
+import secrets
+import string
+
+
+def _generate_attention_code(length: int = 5) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
+@router.patch(
+    "/moderation/scenarios/assignments/{assignment_id}/attention-code",
+    response_model=dict,
+)
+async def patch_assignment_attention_code(
+    assignment_id: str, user: UserModel = Depends(get_verified_user)
+):
+    """Ensure an assignment has a short attention check code.
+
+    If the row already contains a code it is returned unchanged. Otherwise a new
+    code is generated, persisted, and returned. Only the owning participant may
+    call this route.
+    """
+    try:
+        with get_db() as db:
+            assignment = (
+                db.query(ScenarioAssignment)
+                .filter(ScenarioAssignment.assignment_id == assignment_id)
+                .first()
+            )
+            if not assignment or assignment.participant_id != user.id:
+                raise HTTPException(status_code=404, detail="Assignment not found")
+            code = assignment.attention_check_code
+            if not code:
+                code = _generate_attention_code()
+                assignment.attention_check_code = code
+                db.commit()
+        return {"assignment_id": assignment_id, "attention_check_code": code}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error patching attention code for {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# ========== ADMIN ENDPOINTS ==========
 
 
 # ========== ADMIN ENDPOINTS ==========
