@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Optional, List
+from typing import Dict, Optional, List
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, Index, Boolean, Integer
@@ -541,6 +541,7 @@ class ConcernItemRow(Base):
     text = Column(Text, nullable=False, default="")
     concern_level = Column(Integer, nullable=True)
     linked_highlights = Column(JSONField, nullable=True)
+    highlight_levels = Column(JSONField, nullable=True)
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
@@ -573,6 +574,7 @@ class ConcernItemModel(BaseModel):
     text: str
     concern_level: Optional[int] = None
     linked_highlights: Optional[List[str]] = None
+    highlight_levels: Optional[Dict[str, Optional[int]]] = None
     created_at: int
     updated_at: int
 
@@ -583,6 +585,7 @@ class ConcernItemForm(BaseModel):
     text: str
     concern_level: Optional[int] = None
     linked_highlights: Optional[List[str]] = None
+    highlight_levels: Optional[Dict[str, Optional[int]]] = None
 
 
 class ConcernItemBatchForm(BaseModel):
@@ -634,6 +637,7 @@ class ConcernItemTable:
                     existing.text = item.text
                     existing.concern_level = item.concern_level
                     existing.linked_highlights = item.linked_highlights
+                    existing.highlight_levels = item.highlight_levels
                     existing.position = item.position
                     existing.updated_at = ts
                     db.commit()
@@ -654,6 +658,7 @@ class ConcernItemTable:
                         text=item.text,
                         concern_level=item.concern_level,
                         linked_highlights=item.linked_highlights,
+                        highlight_levels=item.highlight_levels,
                         created_at=ts,
                         updated_at=ts,
                     )
