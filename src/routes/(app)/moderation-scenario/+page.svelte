@@ -6862,6 +6862,40 @@
 									</div>
 								</div>
 							{/if}
+
+							<!-- Not Applicable Indicator (moved from response bubble) -->
+							{#if markedNotApplicable}
+								<div class="mt-3">
+									<div
+										class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+									>
+										<div class="flex items-center space-x-2">
+											<svg
+												class="w-4 h-4 text-gray-600 dark:text-gray-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+												></path>
+											</svg>
+											<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+												Marked as not applicable
+											</span>
+										</div>
+										<button
+											on:click={unmarkNotApplicable}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+										>
+											Undo
+										</button>
+									</div>
+								</div>
+							{/if}
 						{/if}
 
 						<!-- Unified Initial Decision Pane -->
@@ -7841,40 +7875,6 @@
 									</div>
 									<button
 										on:click={undoScenarioCompleted}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-									>
-										Undo
-									</button>
-								</div>
-							</div>
-						{/if}
-
-						<!-- Not Applicable Indicator (moved from response bubble) -->
-						{#if markedNotApplicable}
-							<div class="mt-3">
-								<div
-									class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-								>
-									<div class="flex items-center space-x-2">
-										<svg
-											class="w-4 h-4 text-gray-600 dark:text-gray-400"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-											></path>
-										</svg>
-										<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-											Marked as not applicable
-										</span>
-									</div>
-									<button
-										on:click={unmarkNotApplicable}
 										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 									>
 										Undo
