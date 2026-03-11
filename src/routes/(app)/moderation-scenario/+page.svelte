@@ -5549,10 +5549,12 @@
 							existingAssignments.sort(
 								(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
 							);
-							const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
-								a.prompt_text,
-								a.response_text
-							]);
+						const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
+							a.prompt_text,
+							a.attention_check_code
+								? a.response_text + `\n\n[Attention code: ${a.attention_check_code}]`
+								: a.response_text
+						]);
 							const baseIdentifiers: string[] = existingAssignments.map((a) => a.assignment_id);
 							const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
 							scenarioList = list;
@@ -5583,9 +5585,10 @@
 										satisfactionReason: '',
 										nextAction: null
 									};
-									existingState.assignment_id = assignment.assignment_id;
-									existingState.scenario_id = assignment.scenario_id;
-									scenarioStates.set(identifier, existingState);
+								existingState.assignment_id = assignment.assignment_id;
+								existingState.scenario_id = assignment.scenario_id;
+								existingState.attention_check_code = assignment.attention_check_code ?? null;
+								scenarioStates.set(identifier, existingState);
 								}
 							});
 							if (scenarioList.length > 0) {
