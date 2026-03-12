@@ -68,6 +68,8 @@ class ModerationSessionPayload(BaseModel):
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
+    response_highlighted_html: Optional[str] = None
+    prompt_highlighted_html: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
     # Attention check tracking
@@ -110,6 +112,8 @@ async def create_or_update_session(
             custom_instructions=form_data.custom_instructions,
             highlighted_texts=form_data.highlighted_texts,
             refactored_response=form_data.refactored_response,
+            response_highlighted_html=form_data.response_highlighted_html,
+            prompt_highlighted_html=form_data.prompt_highlighted_html,
             is_final_version=form_data.is_final_version,
             session_metadata=form_data.session_metadata,
             is_attention_check=form_data.is_attention_check,

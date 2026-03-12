@@ -195,7 +195,7 @@
 		// Rehydrate from backend: only use responses for the current attempt (after reset, this returns [] so form stays empty)
 		if (token) {
 			try {
-				const rows = await listExitQuiz(token, childId || undefined, true);
+				const rows = await listExitQuiz(token, childId || undefined, false);
 				if (rows && Array.isArray(rows) && rows.length > 0) {
 					const latest = [...rows].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0];
 					const ans: Record<string, unknown> = (latest?.answers as Record<string, unknown>) || {};

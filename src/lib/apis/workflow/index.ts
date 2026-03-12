@@ -75,6 +75,7 @@ export interface WorkflowStateResponse {
 		moderation_completed_count: number;
 		moderation_total: number;
 		exit_survey_completed: boolean;
+		moderation_finalized?: boolean;
 	};
 }
 

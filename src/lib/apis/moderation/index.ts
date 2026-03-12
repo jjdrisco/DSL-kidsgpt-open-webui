@@ -54,8 +54,8 @@ export interface ModerationSessionPayload {
 	strategies?: string[];
 	custom_instructions?: string[]; // Simplified from {id, text}[] to string[]
 	highlighted_texts?: Array<{ text: string; start_offset?: number; end_offset?: number }>;
-	responseHighlightedHTML?: string; // HTML with <mark> elements for response
-	promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
+	response_highlighted_html?: string; // HTML with <mark> elements for response
+	prompt_highlighted_html?: string; // HTML with <mark> elements for prompt
 	refactored_response?: string;
 	is_final_version?: boolean;
 	session_metadata?: Record<string, any>;
@@ -84,8 +84,8 @@ export interface ModerationSessionResponse {
 	strategies?: string[];
 	custom_instructions?: string[];
 	highlighted_texts?: Array<{ text: string; start_offset?: number; end_offset?: number }>;
-	responseHighlightedHTML?: string; // HTML with <mark> elements for response
-	promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
+	response_highlighted_html?: string; // HTML with <mark> elements for response
+	prompt_highlighted_html?: string; // HTML with <mark> elements for prompt
 	refactored_response?: string;
 	session_metadata?: Record<string, any>;
 	is_attention_check: boolean;

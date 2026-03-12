@@ -58,6 +58,8 @@ class ModerationSession(Base):
     custom_instructions = Column(JSONField, nullable=True)  # Array of strings
     highlighted_texts = Column(JSONField, nullable=True)  # Array of strings
     refactored_response = Column(Text, nullable=True)  # Final moderated response
+    response_highlighted_html = Column(Text, nullable=True)  # HTML with <mark> elements for response
+    prompt_highlighted_html = Column(Text, nullable=True)  # HTML with <mark> elements for prompt
     session_metadata = Column(
         JSONField, nullable=True
     )  # Any additional data (answers, etc.)
@@ -115,6 +117,8 @@ class ModerationSessionModel(BaseModel):
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
+    response_highlighted_html: Optional[str] = None
+    prompt_highlighted_html: Optional[str] = None
     session_metadata: Optional[dict] = None
     is_attention_check: bool
     attention_check_selected: bool
@@ -148,6 +152,8 @@ class ModerationSessionForm(BaseModel):
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
+    response_highlighted_html: Optional[str] = None
+    prompt_highlighted_html: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
     is_attention_check: Optional[bool] = False
@@ -301,6 +307,13 @@ class ModerationSessionTable:
                 obj.custom_instructions = form.custom_instructions
                 obj.highlighted_texts = form.highlighted_texts
                 obj.refactored_response = form.refactored_response
+                # Only overwrite HTML columns if a new non-None value is provided.
+                # This prevents a later save (e.g. completeStep2) with an empty variable
+                # from overwriting the HTML that was correctly saved by an earlier step.
+                if form.response_highlighted_html is not None:
+                    obj.response_highlighted_html = form.response_highlighted_html
+                if form.prompt_highlighted_html is not None:
+                    obj.prompt_highlighted_html = form.prompt_highlighted_html
                 obj.is_final_version = bool(form.is_final_version)
                 # Merge session_metadata instead of replacing it to preserve data from previous steps
                 if form.session_metadata:
@@ -352,6 +365,8 @@ class ModerationSessionTable:
                     custom_instructions=form.custom_instructions,
                     highlighted_texts=form.highlighted_texts,
                     refactored_response=form.refactored_response,
+                    response_highlighted_html=form.response_highlighted_html,
+                    prompt_highlighted_html=form.prompt_highlighted_html,
                     session_metadata=form.session_metadata,
                     is_attention_check=bool(form.is_attention_check),
                     attention_check_selected=bool(form.attention_check_selected),

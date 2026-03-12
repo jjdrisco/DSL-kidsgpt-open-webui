@@ -11,10 +11,10 @@
   let submitting = false;
   let localSubmitted = false;
 
-  // True once submitted locally or once the parent has recorded a result
-  $: displaySubmitted = localSubmitted || passed !== null;
-  // Reset local state when switching to a fresh (unsubmitted) scenario
-  $: if (passed === null) { localSubmitted = false; }
+  // True once submitted locally or once the parent has recorded a correct result
+  $: displaySubmitted = localSubmitted || passed === true;
+  // Reset local state when switching scenarios or after a wrong attempt
+  $: if (passed !== true) { localSubmitted = false; }
 
   function submit() {
     const value = entry.trim();
@@ -78,6 +78,14 @@
     opacity: 0.5;
     cursor: default;
   }
+  .passed-msg {
+    color: #16a34a;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  :global(.dark) .passed-msg {
+    color: #4ade80;
+  }
 </style>
 
 <div class="bar">
@@ -90,4 +98,7 @@
     on:keydown={(e) => e.key === 'Enter' && submit()}
   />
   <button on:click={submit} disabled={submitting || displaySubmitted}>Submit</button>
+  {#if passed === true}
+    <span class="passed-msg">Attention check passed</span>
+  {/if}
 </div>

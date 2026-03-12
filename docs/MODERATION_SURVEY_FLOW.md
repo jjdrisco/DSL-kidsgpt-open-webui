@@ -8,38 +8,32 @@ The moderation survey flow allows parents to review AI responses to child prompt
 
 ### Scenario Sources
 
-- **Personality-based scenarios**: Generated from child profile characteristics using `generateScenariosFromPersonalityData()` in `src/lib/data/personalityQuestions.ts` (primary source)
-- **Custom scenario**: User-created scenario option (always appears last)
+Scenarios come from the `scenarios` database table (managed via the admin panel). There are no hardcoded or personality-generated scenarios — the pool is entirely DB-backed.
 
-**Note**: Hardcoded default scenarios have been deprecated and are no longer used. The system now relies entirely on personality-based scenarios generated from child profile characteristics. The old hardcoded scenarios (previously at lines 80-92 in `moderation-scenario/+page.svelte`) have been commented out.
+- **Regular scenarios**: Drawn from the `scenarios` table via weighted sampling (`POST /moderation/scenarios/assign`).
+- **Attention check slot**: One position per session is injected with an attention check; the expected code is stored in `attention_check_code` on the `scenario_assignments` row.
+- **Custom scenario**: User-created option (always appears last); not assigned via the weighted-sampling endpoint.
 
-### Scenario Selection Process
-
-**Backend Endpoint**: `GET /moderation/scenarios/available`
-
-- Location: `backend/open_webui/routers/moderation_scenarios.py` (lines 168-221)
-- Returns unseen scenario indices (0-11) for the current session
-- Filters out scenarios already seen by the user for the given child_id
-- Randomly shuffles available scenarios
+### Scenario Assignment Process
 
 **Frontend Flow** (`moderation-scenario/+page.svelte`):
 
-1. On mount (lines 1962-2311):
-   - Loads child profiles via `loadChildProfiles()` (line 500)
-   - For Prolific users: Fetches available scenarios from backend (lines 2055-2109)
-   - Generates personality-based scenarios via `generatePersonalityScenarios()` (line 546)
-   - Applies attention check marker to one random scenario (line 317)
-   - Ensures custom scenario is always last (line 301)
+1. On mount, the component:
+   - Calls `fetchWorkflowStateForModeration()` → reads `/workflow/state` to restore the `moderationFinalized` flag only (not full scenario state).
+   - Fetches `currentAttemptNumber` via `getCurrentAttempt()`.
+   - Calls `getAssignmentsForChild(childId, attemptNumber)` to fetch any existing `scenario_assignments` rows for this child at the current `attempt_number`.
+   - For any unfilled slots (up to `SCENARIOS_PER_SESSION`, default 6), calls `assignScenario()` which POSTs to `/moderation/scenarios/assign`.
+   - **No `workflow_draft` is read for scenario state.** Per-scenario state is restored inside `loadScenario()` from `getModerationSessions()` (backend DB), with the in-memory `scenarioStates` Map as a session-only fallback for same-session navigation.
+2. Each `assignScenario()` call returns `assignment_id`, `scenario_id`, `prompt_text`, `response_text`, and optionally `attention_check_code`.
+3. The resulting `scenarioList` array and `scenarioIdentifiers` (assignment IDs) are locked for the session.
 
-2. Scenario Package Persistence:
-   - Scenarios are packaged and stored in localStorage with key `scenarioPkg_{childId}_{sessionNumber}`
-   - Package includes: version, childId, sessionNumber, list of [question, response] pairs, createdAt
-   - Once locked for a session, scenarios don't regenerate (prevents re-ordering)
+**Backend Endpoint**: `POST /moderation/scenarios/assign`
 
-3. Scenario List Building:
-   - Base scenarios come exclusively from personality data (no fallback to hardcoded defaults)
-   - Attention check is randomly injected into one response (line 317)
-   - Custom scenario is appended at the end (line 301)
+- Location: `backend/open_webui/routers/moderation_scenarios.py`
+- Performs weighted sampling: `p(s) ∝ 1/(n_assigned + 1)^α` — favors less-seen scenarios.
+- Creates a `scenario_assignments` row with `status='assigned'` and increments `scenarios.n_assigned`.
+
+**`SCENARIOS_PER_SESSION`**: Configurable in Admin → Scenarios → Study Configuration (default: 6).
 
 ## 2. Moderation Decision Tree Flow
 
@@ -98,32 +92,45 @@ The moderation workflow currently follows a 2-step identification-only process:
 
 **Data Saved**:
 
-- `highlighted_texts`: Array of highlighted phrases
+- `highlighted_texts`: Array of highlighted phrase objects (text, start_offset, end_offset)
+- `response_highlighted_html`: Raw HTML with `<mark>` elements for the response pane
+- `prompt_highlighted_html`: Raw HTML with `<mark>` elements for the prompt pane
 - `initial_decision`: `undefined` (no decision yet) or `'not_applicable'` (if skipped)
 
-#### Step 2: Concern Assessment (`initialDecisionStep === 2`)
+#### Step 2: Concern Mapping (`initialDecisionStep === 2`)
 
 **Function**: `completeStep2()`
 
 **Actions**:
 
-- User answers two questions:
-  - `concernLevel`: 1-5 Likert scale (concern level)
-  - `concernReason`: Free-text explanation ("Why?")
-- `concernLevel` is required to proceed
+Step 2 uses the Concern Mapping model. For each highlighted passage the parent must:
+
+1. Add one or more free-text concern descriptions to a shared per-scenario pool (`concernMappings[]`).
+2. Link each highlight to at least one concern (`highlightConcerns` map: `Record<highlight_text, concern_id[]>`).
+3. Assign a 1–5 Likert severity rating to every concern in the pool.
+
+Submission is blocked until: every highlight has at least one linked concern, every concern has a rating, and every concern in the pool is linked to at least one highlight.
 
 **Completion**:
 
-- `completeStep2()`: Validates concern level, saves to backend, **completes the scenario**
+`completeStep2()`:
+1. Calls `POST /moderation/concern-items/batch` to persist the full concern pool to the `concern_item` table.
+2. Calls `POST /moderation/sessions` with concern summary data and `initial_decision='moderate'`.
+3. Calls `POST /moderation/scenarios/complete` to set `status='completed'` on the assignment row.
+4. Sets `step2Completed = true`.
 
 **Endpoints**:
 
-- `POST /moderation/sessions` - Save concern assessment data
+- `POST /moderation/concern-items/batch` — Batch-saves all concern items (canonical concern data)
+- `POST /moderation/sessions` — Saves concern summary to session row
+- `POST /moderation/scenarios/complete` — Marks assignment as completed, computes `issue_any`
 
 **Data Saved**:
 
-- `concern_level`: 1-5 number (direct column)
-- `session_metadata.concern_reason`: Free-text explanation
+- `concern_item` table: one row per concern with `text`, `concern_level`, `assignment_id`, session identifiers
+- `concern_level` (direct column on `moderation_session`): **max** of all per-concern ratings (backward compat)
+- `concern_reason` (direct column): derived concatenated string of all concern texts (backward compat)
+- `session_metadata.highlight_concerns`: the `highlightConcerns` map for analyst join-back
 
 #### Step 3: Satisfaction Check — DISABLED
 
@@ -149,12 +156,19 @@ The following fields were removed from `ScenarioState` in earlier refactors:
 
 ### Frontend State Management
 
-**Local Storage Keys** (child-specific):
+**In-memory state** (primary, session-scoped):
 
-- `moderationScenarioStates_{childId}`: Map of scenario index -> ScenarioState
-- `moderationScenarioTimers_{childId}`: Map of scenario index -> time in seconds
-- `moderationCurrentScenario_{childId}`: Current scenario index
-- `scenarioPkg_{childId}_{sessionNumber}`: Canonical scenario package
+- `scenarioStates: Map<string, ScenarioState>` — keyed by assignment ID; holds per-scenario UI state for the current page session. Populated/updated by `saveCurrentScenarioState()`. Not persisted to localStorage or backend draft.
+- On page reload / navigation, state is restored from the backend DB (`getModerationSessions()`) inside `loadScenario()`, not from localStorage or `workflow_draft`.
+
+**`workflow_draft` usage** (minimal):
+
+- Written only by `proceedToNextStep()` with `{ moderation_finalized: true }` when the user completes all scenarios and navigates to the exit survey.
+- Read by `fetchWorkflowStateForModeration()` at mount to restore the `moderationFinalized` flag.
+- Deleted on workflow reset (`deleteWorkflowDraft()`).
+- **Not** used for scenario state, selected moderations, highlights, or any other per-scenario data.
+
+> **Removed (March 2026):** The localStorage keys `moderationScenarioStates_{childId}`, `moderationScenarioTimers_{childId}`, `moderationCurrentScenario_{childId}`, and the `scenarioPkg_{childId}_{sessionNumber}` package are no longer written. The hybrid localStorage + backend draft merge system (`restoreFromLocalStorageIfMissing`, `loadSavedStates`, `backendProvided` Set) has been removed in favour of the backend-primary restore approach.
 
 **ScenarioState Interface** (current):
 
@@ -233,11 +247,14 @@ A scenario is **completed** when any of the following conditions are met:
   - `is_final_version`: Boolean marking final choice
   - `strategies`: JSON array of strategy names
   - `custom_instructions`: JSON array of custom instruction texts
-  - `highlighted_texts`: JSON array of highlighted phrases
-  - `refactored_response`: Final moderated response text
+  - `highlighted_texts`: JSON array of highlighted phrase objects (text, start_offset, end_offset)
+  - `response_highlighted_html`: HTML string with `<mark>` elements for the response pane (added in migration `aa11bb22cc44`)
+  - `prompt_highlighted_html`: HTML string with `<mark>` elements for the prompt pane (added in migration `aa11bb22cc44`)
+  - `concern_level`: Max per-concern Likert rating (1–5); backward-compat aggregate
+  - `concern_reason`: Derived concatenated concern text; backward-compat string
+  - `refactored_response`: Final moderated response text (unused in current 2-step flow)
   - `session_metadata`: JSON object with:
-    - `child_accomplish`: Step 2 comprehension check answer
-    - `assistant_doing`: Step 2 comprehension check answer
+    - `highlight_concerns`: Map of highlight text → concern IDs (Concern Mapping join key)
     - `decision`: Final decision type ('accept_original', 'moderate', 'not_applicable')
     - `decided_at`: Timestamp when decision was made
     - `highlights_saved_at`: Timestamp when highlights were saved
@@ -252,10 +269,9 @@ A scenario is **completed** when any of the following conditions are met:
    - When continued: Saves `highlighted_texts` only, `version_number: 0`
 
 2. **Step 2** (`completeStep2()`):
-   - Saves `concern_level` to DIRECT COLUMN
-   - Saves `concern_reason` to `session_metadata`
-   - Updates `version_number: 0` row
-   - Preserves highlights from Step 1
+   - `POST /moderation/concern-items/batch` — saves full concern pool to `concern_item` table (canonical)
+   - `POST /moderation/sessions` — saves `concern_level` (max rating), `concern_reason` (derived), `session_metadata.highlight_concerns`
+   - `POST /moderation/scenarios/complete` — sets `status='completed'`, computes `issue_any`
    - **This is the final active step** — completing it finishes the scenario
 
 3. **Step 3** (DISABLED):
@@ -267,8 +283,8 @@ A scenario is **completed** when any of the following conditions are met:
    - Sets all step completion flags to true
 
 5. **State persistence** (`saveCurrentScenarioState()`):
-   - Saves to localStorage on every state change
-   - Reactive statement triggers on key state changes
+   - Updates the in-memory `scenarioStates` Map only — no backend write, no localStorage write.
+   - The reactive auto-save block has been removed. State is only durably persisted to the backend at step-completion boundaries (Steps 1 and 2) and at finalization.
 
 **Finalization** (`finalizeModeration()` - line 1936):
 
@@ -290,34 +306,32 @@ A scenario is **completed** when any of the following conditions are met:
 
 ## 4. Attention Check Flow
 
-**Detection**:
+**Assignment**:
 
-- One scenario randomly selected to have attention check marker appended to response
-- Marker: `<!--ATTN-CHECK-->`
-- `isAttentionCheckScenario` reactive variable detects the marker
+- One slot per session is designated as the attention check at assignment time.
+- `assignScenario()` returns `attention_check_code` (a short string) on the assignment row for the designated slot.
+- No separate API call is needed — the code is embedded in the `scenario_assignments` record.
+
+**Content-match normalization**:
+
+- `loadScenario()` uses a `stripAttentionSuffix` helper to strip the `\n\n[Attention code: ...]` suffix from `original_response` before comparing to the DB session's stored response. This ensures that attention-check scenarios saved before the suffix was introduced correctly match their existing `moderation_session` row and restore `markedNotApplicable = true`.
+
+**UI**:
+
+- `AttentionCheckBar.svelte` is rendered for the attention check scenario.
+- It accepts a `code` prop (the expected value — never displayed to the participant) and emits a `submit` event with the user's entry.
+- The parent page compares the entry to `attention_check_code` to determine pass/fail.
 
 **Behavior (non-blocking — users can proceed regardless)**:
 
-- Attention check pass/fail is tracked for analytics only; it does NOT block progress
-- `attentionCheckStep1Passed`: Tracks if user highlighted anything (Step 1)
-- `attentionCheckStep2Passed`: Tracks if user entered appropriate content (Step 2)
-- `attentionCheckStep3Passed`: Tracks if user selected "I read the instructions" from the Attention Check dropdown
-- `attentionCheckPassed = step1 && step2 && step3` — overall pass/fail for analytics
-
-- When user selects "I read the instructions" from the Attention Check dropdown:
-  1. Immediately saves attention check as passed to backend (`attention_check_passed: true`)
-  2. Sets completion flags and closes panels
-  3. Automatically navigates to next scenario after 1 second delay
-  4. Shows success message: "✓ Passed attention check! Moving to next scenario..."
-
-- Tracks: `attention_check_selected`, `attention_check_passed` in database
-- State persists when navigating back — scenario shows as completed
+- Attention check pass/fail is tracked for analytics only; it does NOT block progress.
+- `attentionCheckPassed` — overall pass/fail flag stored in `ScenarioState` and persisted to the backend.
+- State persists when navigating back — scenario shows as completed.
 
 **Endpoint**: `POST /moderation/sessions`
 
 - `is_attention_check`: true
-- `attention_check_selected`: true
-- `attention_check_passed`: true
+- `attention_check_passed`: true/false
 
 ## 5. Custom Scenario Flow
 
@@ -370,10 +384,15 @@ A scenario is **completed** when any of the following conditions are met:
 
 ### Scenarios
 
-6. **Get Available Scenarios**: `GET /moderation/scenarios/available?child_id={child_id}`
-   - Returns unseen scenario indices for current session
-   - Filters out scenarios already seen by user
-   - Location: `backend/open_webui/routers/moderation_scenarios.py` (line 172)
+6. **Assign Scenario**: `POST /moderation/scenarios/assign`
+   - Performs weighted sampling and creates a `scenario_assignments` row with `status='assigned'`
+   - Returns `assignment_id`, `scenario_id`, prompt/response text, and optional `attention_check_code`
+   - Location: `backend/open_webui/routers/moderation_scenarios.py`
+
+6a. **Concern Items Batch Save**: `POST /moderation/concern-items/batch`
+   - Persists the full per-scenario concern pool to the `concern_item` table
+   - Called at end of Step 2 before `POST /moderation/sessions`
+   - Location: `backend/open_webui/routers/moderation_scenarios.py`
 
 ### Activity Tracking
 
@@ -436,22 +455,21 @@ flowchart TD
 - `version_number`: 0
 - `initial_decision`: 'not_applicable'
 
-### 2. Complete Concern Assessment (Step 2)
+### 2. Complete Concern Mapping (Step 2)
 
 **Function**: `completeStep2()`
 
 **Flow**:
 
-1. Validates `concernLevel` is selected (1-5)
-2. Sets `step2Completed = true`
-3. Saves to backend with concern data
-4. Scenario is now complete
+1. Validates: every highlight has a linked concern, every concern has a rating, every concern is linked.
+2. Calls `POST /moderation/concern-items/batch` with the full concern pool.
+3. Sets `step2Completed = true`, saves session row and completes assignment.
 
-**Endpoint**: `POST /moderation/sessions`
+**Endpoints**:
 
-- `version_number`: 0
-- `concern_level`: 1-5 number
-- `session_metadata.concern_reason`: Free-text explanation
+- `POST /moderation/concern-items/batch` — concern pool (canonical)
+- `POST /moderation/sessions` — session summary (`concern_level` = max rating, `concern_reason` = derived string, `session_metadata.highlight_concerns`)
+- `POST /moderation/scenarios/complete` — `issue_any` computed from highlight count
 
 ### Historical: Accept Original / Moderate / Confirm Version
 
