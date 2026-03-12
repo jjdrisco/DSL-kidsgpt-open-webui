@@ -12,11 +12,13 @@
 This session fixed two compounding bugs that caused **old scenarios to reappear after a survey reset**:
 
 ### Bug A — `onWorkflowResetHandler` was an incomplete frontend reset
+
 **File**: `src/routes/(app)/moderation-scenario/+page.svelte` (~line 5263)
 
 **Problem**: The handler cleared `scenarioList`, `scenarioIdentifiers`, `scenarioStates`, `scenarioTimers`, `selectedScenarioIndex`, and `moderationFinalized` — but left `scenariosLockedForSession`, `step1/2/3Completed`, `highlightedTexts1`, `selectedModerations`, `concernMappings`, `highlightConcerns`, `concernHighlightLevels`, and all other per-scenario state variables untouched.
 
 Two downstream effects:
+
 1. The reactive statement `$: if (... || step1Completed || ...)` at ~line 5831 could fire `saveCurrentScenarioState()` during the 400 ms navigation window with stale flags, writing a dirty draft under the new attempt number.
 2. `saveCurrentScenarioState()` has a guard `if (scenariosLockedForSession && scenarioList.length > 0 ...)` that saves `scenario_list` into the draft. With `scenariosLockedForSession` still `true`, the `onDestroy` async save could write old scenarios into the new-attempt draft.
 
@@ -24,25 +26,25 @@ Two downstream effects:
 
 ```javascript
 function onWorkflowResetHandler() {
-    console.log('🔄 Workflow reset detected, clearing all scenario state');
-    resetAllScenarioStates(); // clears scenariosLockedForSession, steps, concerns, timers, etc.
-    scenarioList = [];        // resetAllScenarioStates does not clear scenarioList itself
+	console.log('🔄 Workflow reset detected, clearing all scenario state');
+	resetAllScenarioStates(); // clears scenariosLockedForSession, steps, concerns, timers, etc.
+	scenarioList = []; // resetAllScenarioStates does not clear scenarioList itself
 
-    // Proactively delete backend draft to prevent onDestroy async-save race
-    if (selectedChildId && typeof window !== 'undefined') {
-        const token =
-            (typeof window !== 'undefined' && localStorage.token) ||
-            localStorage.getItem('token') || '';
-        if (token) {
-            deleteWorkflowDraft(token, selectedChildId, 'moderation').catch(() => {});
-        }
-    }
+	// Proactively delete backend draft to prevent onDestroy async-save race
+	if (selectedChildId && typeof window !== 'undefined') {
+		const token =
+			(typeof window !== 'undefined' && localStorage.token) || localStorage.getItem('token') || '';
+		if (token) {
+			deleteWorkflowDraft(token, selectedChildId, 'moderation').catch(() => {});
+		}
+	}
 }
 ```
 
 ---
 
 ### Bug B — Backend `reset_user_workflow` didn't include `scenario_assignments.attempt_number`
+
 **File**: `backend/open_webui/routers/workflow.py` (~line 376)
 
 **Problem**: `reset_user_workflow` computed `new_attempt_number = max(moderation_session, child_profile, exit_quiz_response) + 1`. It never looked at `scenario_assignments.attempt_number`. The result: if a user had no completed `moderation_session` rows at attempt 2 (they reset before finishing), the next reset computed `max(mod=1, child=1, exit=0) + 1 = 2` again — landing on the same attempt number. The old `scenario_assignments` rows at attempt 2 were then returned by `getAssignmentsForChild` (which filters by `current_attempt_number`), restoring the previous scenarios.
@@ -69,19 +71,23 @@ new_attempt_number = (
 ## 2. Prior Session Work (same branch, already committed)
 
 ### Accessibility improvements
+
 - All `text-xs` → `text-sm`/`text-base` in Step 2 concern section
 - Checkbox sizes `w-4 h-4` → `w-5 h-5`, severity buttons `px-2 py-0.5` → `px-3 py-1.5`
 
 ### 500 errors on concern-items endpoints (fixed via direct SQL + alembic stamp)
+
 - `concern_item` table was never created — DB was at revision `u88v99w00x11` with divergent heads
 - Created table directly via SQLite, stamped alembic
 
 ### `highlight_levels` field added to `ConcernItemRow`
+
 - `persistConcernItems` was sending `highlight_levels` but the field didn't exist on the backend
 - Added `highlight_levels: Optional[Dict[str, Optional[int]]]` to `ConcernItemRow`, `ConcernItemModel`, `ConcernItemForm`, and `batch_upsert`
 - Created migration `bb11cc22dd33_add_highlight_levels_to_concern_item.py`
 
 ### Divergent alembic heads resolved
+
 - Three heads: `u88v99w00x11`, `z33a44b55c66`, `bb11cc22dd33`
 - Created `merge_all_heads_2026_03_03.py` → single head `merge_all_heads_2026_03_03`
 
@@ -99,26 +105,26 @@ new_attempt_number = (
 
 ## 4. Key File Locations
 
-| File | Purpose |
-|------|---------|
-| `src/routes/(app)/moderation-scenario/+page.svelte` | Main survey page (~8446 lines) |
-| `backend/open_webui/routers/workflow.py` | Reset endpoint (~line 366), attempt number logic |
-| `backend/open_webui/models/moderation.py` | `ModerationSession`, `ConcernItemRow`, `ConcernItemModel` |
-| `backend/open_webui/models/scenarios.py` | `ScenarioAssignment`, `ScenarioAssignmentTable` |
-| `backend/open_webui/migrations/versions/` | All alembic migrations |
-| `src/lib/apis/moderation/index.ts` | Frontend API helpers incl. `getAssignmentsForChild`, `deleteWorkflowDraft` |
-| `src/lib/components/layout/Sidebar/UserMenu.svelte` | "Reset survey" button (~line 357) |
+| File                                                | Purpose                                                                    |
+| --------------------------------------------------- | -------------------------------------------------------------------------- |
+| `src/routes/(app)/moderation-scenario/+page.svelte` | Main survey page (~8446 lines)                                             |
+| `backend/open_webui/routers/workflow.py`            | Reset endpoint (~line 366), attempt number logic                           |
+| `backend/open_webui/models/moderation.py`           | `ModerationSession`, `ConcernItemRow`, `ConcernItemModel`                  |
+| `backend/open_webui/models/scenarios.py`            | `ScenarioAssignment`, `ScenarioAssignmentTable`                            |
+| `backend/open_webui/migrations/versions/`           | All alembic migrations                                                     |
+| `src/lib/apis/moderation/index.ts`                  | Frontend API helpers incl. `getAssignmentsForChild`, `deleteWorkflowDraft` |
+| `src/lib/components/layout/Sidebar/UserMenu.svelte` | "Reset survey" button (~line 357)                                          |
 
 ### Key functions in `+page.svelte`
 
-| Function | Line | Purpose |
-|----------|------|---------|
-| `onWorkflowResetHandler` | ~5263 | **[FIXED this session]** Handles workflow-reset event |
-| `resetAllScenarioStates` | ~670 | Comprehensive in-memory state reset (clears `scenariosLockedForSession` etc.) |
-| `saveCurrentScenarioState` | ~2775 | Saves draft; guarded by `scenariosLockedForSession && scenarioList.length > 0` |
-| `fetchWorkflowStateForModeration` | ~5417 | On-mount: loads draft → assignments → generates new |
-| `loadRandomScenarios` | ~797 | Creates/loads assignments from backend |
-| `onDestroy` | ~5821 | Calls `saveCurrentScenarioState()` async |
+| Function                          | Line  | Purpose                                                                        |
+| --------------------------------- | ----- | ------------------------------------------------------------------------------ |
+| `onWorkflowResetHandler`          | ~5263 | **[FIXED this session]** Handles workflow-reset event                          |
+| `resetAllScenarioStates`          | ~670  | Comprehensive in-memory state reset (clears `scenariosLockedForSession` etc.)  |
+| `saveCurrentScenarioState`        | ~2775 | Saves draft; guarded by `scenariosLockedForSession && scenarioList.length > 0` |
+| `fetchWorkflowStateForModeration` | ~5417 | On-mount: loads draft → assignments → generates new                            |
+| `loadRandomScenarios`             | ~797  | Creates/loads assignments from backend                                         |
+| `onDestroy`                       | ~5821 | Calls `saveCurrentScenarioState()` async                                       |
 
 ### Draft restoration logic (`fetchWorkflowStateForModeration` ~line 5442)
 
@@ -136,6 +142,7 @@ if (draftAttemptNumber !== currentAttemptNumber && !draftIsFinalized) {
     }
 }
 ```
+
 > Note: The `&& !draftIsFinalized` condition was added in commit `dcfbcd590f` to preserve finalized drafts for review. This is intentional behavior.
 
 ---
@@ -157,7 +164,9 @@ Also uncommitted: data-export CSV/notebook files in `data-exports/` (should not 
 ## 6. Recommended Next Steps
 
 ### Immediate
+
 1. **Commit** the two bug fixes:
+
    ```bash
    git add backend/open_webui/routers/workflow.py \
            backend/open_webui/models/scenarios.py \
@@ -173,6 +182,7 @@ Also uncommitted: data-export CSV/notebook files in `data-exports/` (should not 
 3. **Build**: `npm run build` — already confirmed clean after Bug A fix.
 
 ### Secondary
+
 - Investigate `loadScenario` error `ReferenceError: Cannot access 'backendProvided' before initialization` (visible in the console log at ~line 3172) — separate bug, `backendProvided` is used before its `const` declaration.
 - Consider whether `ModerationSession` records should be reset (currently kept, excluded by `attempt_number` filter).
 

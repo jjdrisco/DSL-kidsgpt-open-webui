@@ -114,6 +114,7 @@ Submission is blocked until: every highlight has at least one linked concern, ev
 **Completion**:
 
 `completeStep2()`:
+
 1. Calls `POST /moderation/concern-items/batch` to persist the full concern pool to the `concern_item` table.
 2. Calls `POST /moderation/sessions` with concern summary data and `initial_decision='moderate'`.
 3. Calls `POST /moderation/scenarios/complete` to set `status='completed'` on the assignment row.
@@ -390,9 +391,10 @@ A scenario is **completed** when any of the following conditions are met:
    - Location: `backend/open_webui/routers/moderation_scenarios.py`
 
 6a. **Concern Items Batch Save**: `POST /moderation/concern-items/batch`
-   - Persists the full per-scenario concern pool to the `concern_item` table
-   - Called at end of Step 2 before `POST /moderation/sessions`
-   - Location: `backend/open_webui/routers/moderation_scenarios.py`
+
+- Persists the full per-scenario concern pool to the `concern_item` table
+- Called at end of Step 2 before `POST /moderation/sessions`
+- Location: `backend/open_webui/routers/moderation_scenarios.py`
 
 ### Activity Tracking
 
