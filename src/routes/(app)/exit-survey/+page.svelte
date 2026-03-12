@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { goto, afterNavigate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { showSidebar, user, mobile } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
@@ -192,17 +192,18 @@
 			console.warn('Failed to get attempt number or child ID', e);
 		}
 
-		// Rehydrate from backend: only use responses for the current attempt (after reset, this returns [] so form stays empty)
+		// Rehydrate from backend: fetch all attempts so repopulation works regardless of attempt-number
+		// state (same pattern as child profile which has no attempt filtering). After an explicit
+		// "Reset survey" the rows are deleted, so allAttempts=true still returns [] post-reset.
 		if (token) {
 			try {
-				const rows = await listExitQuiz(token, childId || undefined, false);
+				const rows = await listExitQuiz(token, childId || undefined, true);
 				if (rows && Array.isArray(rows) && rows.length > 0) {
 					const latest = [...rows].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0];
 					const ans: Record<string, unknown> = (latest?.answers as Record<string, unknown>) || {};
 					applyAnswersToForm(ans);
 					isSaved = true;
 					await tick(); // flush so bind:group and DOM see the updated values
-					window.dispatchEvent(new Event('workflow-updated'));
 					return;
 				}
 			} catch (e) {
@@ -228,18 +229,11 @@
 		if (!$mobile) {
 			showSidebar.set(true);
 		}
+		// Repopulate form from backend on every mount (same pattern as ChildProfileForm).
+		// onMount fires on every component mount including re-navigation, so no afterNavigate needed.
 		await loadSavedResponses();
-		// hydration complete
 		isLoaded = true;
-	});
-
-	// Repopulate when navigating back to exit survey (e.g. from completion) so the form shows saved data for the session
-	afterNavigate(async ({ to }) => {
-		if (to?.pathname && to.pathname.startsWith('/exit-survey')) {
-			isLoaded = false;
-			await loadSavedResponses();
-			isLoaded = true;
-		}
+		window.dispatchEvent(new Event('workflow-updated')); // always refresh sidebar after page loads
 	});
 
 	async function submitSurvey() {
