@@ -64,18 +64,30 @@ class ConsentAuditTable:
         import uuid
 
         with get_db() as db:
-            # Idempotency check: if user has already given consent for this session, return existing record
-            if form.consent_given and form.prolific_pid and form.session_id:
-                existing = (
-                    db.query(ConsentAudit)
-                    .filter_by(
-                        user_id=form.user_id,
-                        prolific_pid=form.prolific_pid,
-                        session_id=form.session_id,
-                        consent_given=True,
+            # Idempotency check: if user has already given consent, return existing record
+            if form.consent_given:
+                if form.prolific_pid and form.session_id:
+                    existing = (
+                        db.query(ConsentAudit)
+                        .filter_by(
+                            user_id=form.user_id,
+                            prolific_pid=form.prolific_pid,
+                            session_id=form.session_id,
+                            consent_given=True,
+                        )
+                        .first()
                     )
-                    .first()
-                )
+                else:
+                    # Non-Prolific users: deduplicate by user + consent version
+                    existing = (
+                        db.query(ConsentAudit)
+                        .filter_by(
+                            user_id=form.user_id,
+                            consent_given=True,
+                            consent_version=form.consent_version,
+                        )
+                        .first()
+                    )
                 if existing:
                     return ConsentAuditModel.model_validate(existing)
 
