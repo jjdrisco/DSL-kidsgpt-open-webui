@@ -195,6 +195,9 @@ class ScenarioAssignment(Base):
         Integer, nullable=True
     )  # Position in session (0-indexed)
 
+    # Attention check code assigned after session generation (nullable)
+    attention_check_code = Column(String, nullable=True)
+
     # Outcome fields
     issue_any = Column(Integer, nullable=True)  # 0, 1, or NULL
     skip_stage = Column(String, nullable=True)  # Stage where skip occurred
@@ -280,6 +283,8 @@ class ScenarioAssignmentModel(BaseModel):
     skip_reason: Optional[str] = None
     skip_reason_text: Optional[str] = None
     duration_seconds: Optional[int] = None
+    # optional code for attention check
+    attention_check_code: Optional[str] = None
 
 
 class ScenarioAssignmentForm(BaseModel):

@@ -22,6 +22,8 @@
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
+	import { getMyWhitelist } from '$lib/apis/child-profiles';
+
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -68,6 +70,23 @@
 	}
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+
+	// ── Whitelist-based suggestions for child users ─────────────────────
+	let childWhitelistPrompts: { content: string; title: [string, string] }[] = [];
+
+	onMount(async () => {
+		if ($user?.role === 'child') {
+			try {
+				const wl = await getMyWhitelist(localStorage.getItem('token') ?? '');
+				childWhitelistPrompts = wl.map((item) => ({
+					content: `Tell me about ${item}`,
+					title: [item, 'Ask me anything!']
+				}));
+			} catch {
+				childWhitelistPrompts = [];
+			}
+		}
+	});
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -237,10 +256,12 @@
 		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
-					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-						$config?.default_prompt_suggestions ??
-						[]}
+					suggestionPrompts={childWhitelistPrompts.length > 0
+						? childWhitelistPrompts
+						: (atSelectedModel?.info?.meta?.suggestion_prompts ??
+							models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+							$config?.default_prompt_suggestions ??
+							[])}
 					inputValue={prompt}
 					{onSelect}
 				/>

@@ -49,26 +49,50 @@ async def create_exit_quiz_response(
 async def list_exit_quiz_responses(
     child_id: Optional[str] = None,
     attempt_number: Optional[int] = None,
+    all_attempts: bool = False,
     current_user: UserModel = Depends(get_verified_user),
 ):
     """
     List exit quiz responses.
-    - Use attempt_number to filter to a specific attempt
-    - If not specified, defaults to current attempt number
+    - all_attempts=true: return responses across all attempt numbers
+    - Otherwise defaults to current attempt number
     """
     try:
-        # Default to current attempt if not specified
-        if attempt_number is None:
-            attempt_number = get_current_attempt_number(current_user.id)
+        if all_attempts:
+            resolved_attempt = None
+        elif attempt_number is None:
+            resolved_attempt = get_current_attempt_number(current_user.id)
+        else:
+            resolved_attempt = attempt_number
 
         items = ExitQuizzes.get_responses_by_user(
             current_user.id,
             child_id=child_id,
-            attempt_number=attempt_number,
+            attempt_number=resolved_attempt,
         )
         return [ExitQuizResponse(**i.model_dump()) for i in items]
     except Exception as e:
         log.error(f"Error listing exit quiz responses: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class ExitQuizResetRequest(BaseModel):
+    child_id: str
+
+
+@router.post("/exit-quiz/reset")
+async def reset_exit_quiz_responses(
+    form_data: ExitQuizResetRequest,
+    current_user: UserModel = Depends(get_verified_user),
+):
+    """Delete all exit quiz responses for the current user + child, across all attempts."""
+    try:
+        deleted = ExitQuizzes.delete_responses_by_user_child(
+            current_user.id, form_data.child_id
+        )
+        return {"deleted": deleted}
+    except Exception as e:
+        log.error(f"Error resetting exit quiz responses: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

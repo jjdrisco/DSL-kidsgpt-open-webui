@@ -14,6 +14,7 @@ from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.models.child_profiles import (
     ChildProfileModel,
     ChildProfileForm,
+    WhitelistUpdateForm,
     ChildProfiles,
 )
 from open_webui.models.users import UserModel
@@ -49,6 +50,9 @@ class ChildProfileResponse(BaseModel):
     created_at: int
     updated_at: int
     child_email: Optional[str] = None
+    # Whitelist / feature control
+    selected_features: Optional[list[str]] = None
+    selected_interface_modes: Optional[list[str]] = None
 
 
 class ChildProfileStatsResponse(BaseModel):
@@ -96,6 +100,34 @@ async def create_child_profile(
         raise HTTPException(
             status_code=500, detail=f"Failed to create child profile: {error_detail}"
         )
+
+
+@router.get("/child-profiles/my-whitelist")
+async def get_my_whitelist(
+    current_user: UserModel = Depends(get_verified_user),
+):
+    """Return the whitelist for the currently logged-in child user.
+
+    Replicates the middleware lookup: match child_email against the parent's
+    profiles, fall back to the parent's current (is_current=True) profile.
+    Non-child callers receive an empty list.
+    """
+    if current_user.role != "child" or not current_user.parent_id:
+        return {"whitelist_items": []}
+
+    try:
+        profile = ChildProfiles.get_child_profile_by_child_email(
+            current_user.parent_id, current_user.email
+        )
+        if not profile:
+            profile = ChildProfiles.get_current_child_profile(current_user.parent_id)
+        items = []
+        if profile and profile.selected_features:
+            items = profile.selected_features
+        return {"whitelist_items": items}
+    except Exception as e:
+        log.error(f"Error fetching whitelist for child {current_user.id}: {e}")
+        return {"whitelist_items": []}
 
 
 @router.get("/child-profiles", response_model=List[ChildProfileResponse])
@@ -164,6 +196,29 @@ async def delete_child_profile(
         raise
     except Exception as e:
         log.error(f"Error deleting child profile: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch(
+    "/child-profiles/{profile_id}/whitelist", response_model=ChildProfileResponse
+)
+async def patch_child_profile_whitelist(
+    profile_id: str,
+    form_data: WhitelistUpdateForm,
+    current_user: UserModel = Depends(get_verified_user),
+):
+    """Replace the whitelist (selected_features) for a child profile."""
+    try:
+        profile = ChildProfiles.update_selected_features(
+            profile_id, current_user.id, form_data.whitelist_items
+        )
+        if not profile:
+            raise HTTPException(status_code=404, detail="Child profile not found")
+        return ChildProfileResponse(**profile.model_dump())
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error updating whitelist for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

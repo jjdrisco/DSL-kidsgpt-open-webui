@@ -52,6 +52,8 @@ One row per exposure to a scenario, tracking the assignment lifecycle.
 - `weight`: Calculated weight for this scenario
 - `sampling_prob`: Realized sampling probability
 - `assignment_position`: Position in session (0-indexed)
+- `attempt_number`: Current attempt number at time of assignment; used to scope all queries to the active attempt
+- `attention_check_code`: Nullable string; set on the one slot designated as the attention check; contains the expected entry text (never shown to the participant)
 - `issue_any`: 0, 1, or NULL (calculated from highlights for completed)
 - `skip_stage`: Stage where skip occurred
 - `skip_reason`: Reason code for skip
@@ -275,22 +277,9 @@ Mark an assignment as abandoned and trigger reassignment.
 }
 ```
 
-#### `GET /api/v1/moderation/attention-checks/random`
+#### ~~`GET /api/v1/moderation/attention-checks/random`~~ — **Deprecated**
 
-Get a random active attention check scenario.
-
-**Response:**
-
-```json
-{
-	"scenario_id": "ac_xxxx",
-	"prompt_text": "...",
-	"response_text": "...",
-	"trait_theme": "attention_check",
-	"trait_phrase": "attention_check",
-	"sentiment": "neutral"
-}
-```
+This endpoint has been removed. Attention checks are now handled entirely at assignment time: when `POST /moderation/scenarios/assign` designates a slot as the attention check, it sets `attention_check_code` on the returned `scenario_assignments` row. The `AttentionCheckBar.svelte` component handles user input client-side — no separate API call is needed.
 
 #### `POST /api/v1/moderation/highlights`
 
@@ -580,11 +569,11 @@ The frontend calls `loadRandomScenarios()` which:
 
 ### Attention Check Integration
 
-Attention checks are loaded via:
+Attention checks are handled at assignment time:
 
-1. Call `GET /moderation/attention-checks/random` API
-2. Add instruction suffix to response
-3. Shuffle into scenario list (not at position 0 or last)
+1. `POST /moderation/scenarios/assign` returns `attention_check_code` (non-null) for the designated attention check slot — no separate API call.
+2. The frontend passes the code as a prop to `AttentionCheckBar.svelte` (never displayed to the participant).
+3. On submit, the parent page compares the user's entry to `attention_check_code` and records pass/fail to the session row.
 
 ### Abandonment Detection
 
@@ -659,19 +648,19 @@ See `TESTING_SCENARIO_SELECTION.md` for comprehensive testing procedures.
 - Check that counters increment atomically
 - Verify sampling audit fields in assignments table
 
-### Attention checks not loading
+### Attention check code missing from assignments
 
 **Causes:**
 
-- No active attention checks in database
-- API endpoint error
-- Authentication token missing
+- No active attention check scenarios in the `attention_check_scenarios` table
+- Assignment logic did not designate an attention check slot for the session
 
 **Solutions:**
 
 - Check attention check counts: `SELECT COUNT(*) FROM attention_check_scenarios WHERE is_active=1`
-- Upload attention checks via admin panel
-- Check browser console for API errors
+- Upload attention checks via admin panel if none exist
+- Verify assignments have a code: `SELECT attention_check_code FROM scenario_assignments WHERE participant_id = '...' AND attempt_number = ...`
+- Check backend logs for errors in the assign endpoint
 
 ## Migration Notes
 

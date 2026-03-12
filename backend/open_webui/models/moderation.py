@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Optional, List
+from typing import Dict, Optional, List
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, Index, Boolean, Integer
@@ -58,6 +58,8 @@ class ModerationSession(Base):
     custom_instructions = Column(JSONField, nullable=True)  # Array of strings
     highlighted_texts = Column(JSONField, nullable=True)  # Array of strings
     refactored_response = Column(Text, nullable=True)  # Final moderated response
+    response_highlighted_html = Column(Text, nullable=True)  # HTML with <mark> elements for response
+    prompt_highlighted_html = Column(Text, nullable=True)  # HTML with <mark> elements for prompt
     session_metadata = Column(
         JSONField, nullable=True
     )  # Any additional data (answers, etc.)
@@ -115,6 +117,8 @@ class ModerationSessionModel(BaseModel):
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
+    response_highlighted_html: Optional[str] = None
+    prompt_highlighted_html: Optional[str] = None
     session_metadata: Optional[dict] = None
     is_attention_check: bool
     attention_check_selected: bool
@@ -148,6 +152,8 @@ class ModerationSessionForm(BaseModel):
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
+    response_highlighted_html: Optional[str] = None
+    prompt_highlighted_html: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
     is_attention_check: Optional[bool] = False
@@ -301,6 +307,13 @@ class ModerationSessionTable:
                 obj.custom_instructions = form.custom_instructions
                 obj.highlighted_texts = form.highlighted_texts
                 obj.refactored_response = form.refactored_response
+                # Only overwrite HTML columns if a new non-None value is provided.
+                # This prevents a later save (e.g. completeStep2) with an empty variable
+                # from overwriting the HTML that was correctly saved by an earlier step.
+                if form.response_highlighted_html is not None:
+                    obj.response_highlighted_html = form.response_highlighted_html
+                if form.prompt_highlighted_html is not None:
+                    obj.prompt_highlighted_html = form.prompt_highlighted_html
                 obj.is_final_version = bool(form.is_final_version)
                 # Merge session_metadata instead of replacing it to preserve data from previous steps
                 if form.session_metadata:
@@ -352,6 +365,8 @@ class ModerationSessionTable:
                     custom_instructions=form.custom_instructions,
                     highlighted_texts=form.highlighted_texts,
                     refactored_response=form.refactored_response,
+                    response_highlighted_html=form.response_highlighted_html,
+                    prompt_highlighted_html=form.prompt_highlighted_html,
                     session_metadata=form.session_metadata,
                     is_attention_check=bool(form.is_attention_check),
                     attention_check_selected=bool(form.attention_check_selected),
@@ -518,3 +533,182 @@ class ModerationSessionActivityTable:
 
 
 ModerationSessionActivities = ModerationSessionActivityTable()
+
+
+# ---------------------------------------------------------------------------
+# ConcernItem table — one row per concern per scenario attempt
+# ---------------------------------------------------------------------------
+
+
+class ConcernItemRow(Base):
+    __tablename__ = "concern_item"
+
+    id = Column(Text, primary_key=True)
+    session_id = Column(Text, nullable=False, index=True)
+    user_id = Column(Text, nullable=False, index=True)
+    child_id = Column(Text, nullable=False)
+    scenario_index = Column(Integer, nullable=False)
+    attempt_number = Column(Integer, nullable=False)
+    version_number = Column(Integer, nullable=False)
+    session_number = Column(Integer, nullable=False, default=1)
+    scenario_id = Column(Text, nullable=True)
+    position = Column(Integer, nullable=False, default=0)
+    text = Column(Text, nullable=False, default="")
+    concern_level = Column(Integer, nullable=True)
+    linked_highlights = Column(JSONField, nullable=True)
+    highlight_levels = Column(JSONField, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        Index(
+            "ix_concern_item_context",
+            "user_id",
+            "child_id",
+            "scenario_index",
+            "attempt_number",
+            "version_number",
+            "session_number",
+        ),
+    )
+
+
+class ConcernItemModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    session_id: str
+    user_id: str
+    child_id: str
+    scenario_index: int
+    attempt_number: int
+    version_number: int
+    session_number: int
+    scenario_id: Optional[str] = None
+    position: int
+    text: str
+    concern_level: Optional[int] = None
+    linked_highlights: Optional[List[str]] = None
+    highlight_levels: Optional[Dict[str, Optional[int]]] = None
+    created_at: int
+    updated_at: int
+
+
+class ConcernItemForm(BaseModel):
+    id: str
+    position: int
+    text: str
+    concern_level: Optional[int] = None
+    linked_highlights: Optional[List[str]] = None
+    highlight_levels: Optional[Dict[str, Optional[int]]] = None
+
+
+class ConcernItemBatchForm(BaseModel):
+    session_id: str
+    user_id: str
+    child_id: str
+    scenario_index: int
+    attempt_number: int
+    version_number: int
+    session_number: int = 1
+    scenario_id: Optional[str] = None
+    items: List[ConcernItemForm]
+
+
+class ConcernItemTable:
+    def batch_upsert(self, form: ConcernItemBatchForm) -> List[ConcernItemModel]:
+        """Insert or replace all concern items for a given session context.
+
+        Existing rows that belong to the same
+        (user_id, child_id, scenario_index, attempt_number, version_number, session_number)
+        but whose ids are **not** present in the new batch are deleted first so that
+        removed concerns don't linger.
+        """
+        with get_db() as db:
+            ts = int(time.time() * 1000)
+
+            # Collect incoming ids
+            incoming_ids = {item.id for item in form.items}
+
+            # Delete rows that are no longer in the batch
+            db.query(ConcernItemRow).filter(
+                ConcernItemRow.user_id == form.user_id,
+                ConcernItemRow.child_id == form.child_id,
+                ConcernItemRow.scenario_index == form.scenario_index,
+                ConcernItemRow.attempt_number == form.attempt_number,
+                ConcernItemRow.version_number == form.version_number,
+                ConcernItemRow.session_number == form.session_number,
+                ConcernItemRow.id.notin_(incoming_ids),
+            ).delete(synchronize_session=False)
+
+            results: List[ConcernItemModel] = []
+            for item in form.items:
+                existing = (
+                    db.query(ConcernItemRow)
+                    .filter(ConcernItemRow.id == item.id)
+                    .first()
+                )
+                if existing:
+                    existing.text = item.text
+                    existing.concern_level = item.concern_level
+                    existing.linked_highlights = item.linked_highlights
+                    existing.highlight_levels = item.highlight_levels
+                    existing.position = item.position
+                    existing.updated_at = ts
+                    db.commit()
+                    db.refresh(existing)
+                    results.append(ConcernItemModel.model_validate(existing))
+                else:
+                    new_row = ConcernItemRow(
+                        id=item.id,
+                        session_id=form.session_id,
+                        user_id=form.user_id,
+                        child_id=form.child_id,
+                        scenario_index=form.scenario_index,
+                        attempt_number=form.attempt_number,
+                        version_number=form.version_number,
+                        session_number=form.session_number,
+                        scenario_id=form.scenario_id,
+                        position=item.position,
+                        text=item.text,
+                        concern_level=item.concern_level,
+                        linked_highlights=item.linked_highlights,
+                        highlight_levels=item.highlight_levels,
+                        created_at=ts,
+                        updated_at=ts,
+                    )
+                    db.add(new_row)
+                    db.commit()
+                    db.refresh(new_row)
+                    results.append(ConcernItemModel.model_validate(new_row))
+
+            return results
+
+    def get_by_session_context(
+        self,
+        user_id: str,
+        child_id: str,
+        scenario_index: int,
+        attempt_number: int,
+        version_number: int,
+        session_number: int,
+    ) -> List[ConcernItemModel]:
+        """Return all concern items for a session context, ordered by position."""
+        with get_db() as db:
+            rows = (
+                db.query(ConcernItemRow)
+                .filter(
+                    ConcernItemRow.user_id == user_id,
+                    ConcernItemRow.child_id == child_id,
+                    ConcernItemRow.scenario_index == scenario_index,
+                    ConcernItemRow.attempt_number == attempt_number,
+                    ConcernItemRow.version_number == version_number,
+                    ConcernItemRow.session_number == session_number,
+                )
+                .order_by(ConcernItemRow.position)
+                .all()
+            )
+            return [ConcernItemModel.model_validate(r) for r in rows]
+
+
+ConcernItems = ConcernItemTable()

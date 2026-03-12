@@ -25,7 +25,10 @@
 		type HighlightCreateRequest,
 		type ScenarioAssignResponse,
 		getAssignmentsForChild,
-		type AssignmentWithScenario
+		type AssignmentWithScenario,
+		saveConcernItemsBatch,
+		getConcernItems,
+		type ConcernItemResponse
 	} from '$lib/apis/moderation';
 	import {
 		getChildProfileById,
@@ -35,7 +38,6 @@
 	import {
 		finalizeModeration,
 		getWorkflowState,
-		getWorkflowDraft,
 		saveWorkflowDraft,
 		deleteWorkflowDraft,
 		resetUserWorkflow,
@@ -51,10 +53,10 @@
 	} from '$lib/data/personalityTraits';
 	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import { getRandomScenarios, type QAPair } from '$lib/data/scenarioBank';
-	import { getRandomAttentionCheck, type AttentionCheckQAPair } from '$lib/data/attentionCheckBank';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
+	import AttentionCheckBar from '$lib/components/moderation/AttentionCheckBar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -139,13 +141,6 @@
 			'Only select this if you saw attention check instructions embedded in the scenario text. If you did not see any special instructions in the scenario, do not select this option.'
 	};
 
-	// Attention check marker and instruction suffix
-	// Marker is embedded in response text to identify attention check scenarios.
-	// Suffix contains 3-step instructions appended to attention check responses.
-	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
-	const ATTENTION_CHECK_SUFFIX =
-		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"). \n3) Step 3: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n' +
-		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
 	const CUSTOM_SCENARIO_PROMPT = '[Create Your Own Scenario]';
@@ -162,6 +157,7 @@
 			moderation_completed_count?: number;
 			moderation_total?: number;
 			exit_survey_completed?: boolean;
+			moderation_finalized?: boolean;
 		};
 	} | null = null;
 	// Track if user has clicked "Done" button - only enable Next Task after Done is pressed
@@ -489,39 +485,6 @@
 		let list: Array<[string, string]> = basePairs.slice();
 		let identifiers: string[] = baseIdentifiers.slice();
 
-		// Load one attention check question from the database via API
-		try {
-			const token = localStorage.getItem('token');
-			const attentionCheck = await getRandomAttentionCheck(token || undefined);
-			if (attentionCheck) {
-				// Apply instruction suffix to the attention check question
-				const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
-				const attentionCheckPair: [string, string] = [
-					attentionCheck.question,
-					attentionCheckResponse
-				];
-
-				// Get scenarioId from attention check (API or fallback)
-				const attentionCheckId = attentionCheck.scenarioId || `ac_fallback_${Date.now()}`;
-
-				// Shuffle attention check into the list (not at index 0, not at last position)
-				const result = shuffleAttentionCheckIntoList(
-					list,
-					attentionCheckPair,
-					identifiers,
-					attentionCheckId
-				);
-				list = result.list;
-				identifiers = result.identifiers;
-			} else {
-				console.warn(
-					'⚠️ No attention check question available, proceeding without attention check'
-				);
-			}
-		} catch (error) {
-			console.error('Error loading attention check:', error);
-			// Continue without attention check if loading fails
-		}
 
 		// disable custom scenario
 		// Ensure custom scenario is last
@@ -541,65 +504,6 @@
 		//}
 		return { list, identifiers };
 	}
-
-	/**
-	 * Shuffles an attention check question into the scenario list.
-	 * The attention check will NOT be placed at index 0 (first scenario) or at the last position.
-	 *
-	 * @param list - The base scenario list
-	 * @param attentionCheckPair - The attention check question/response pair with instructions already appended
-	 * @param identifiers - The base identifiers array (parallel to list)
-	 * @param attentionCheckId - The identifier for the attention check (scenarioId from API or fallback)
-	 * @returns Object with list and identifiers, both with attention check inserted
-	 */
-	function shuffleAttentionCheckIntoList(
-		list: Array<[string, string]>,
-		attentionCheckPair: [string, string],
-		identifiers: string[],
-		attentionCheckId: string
-	): { list: Array<[string, string]>; identifiers: string[] } {
-		if (!Array.isArray(list) || list.length === 0) {
-			// If list is empty, just add the attention check
-			return { list: [attentionCheckPair], identifiers: [attentionCheckId] };
-		}
-
-		// Skip if attention check already exists in list
-		if (list.some(([, res]) => (res || '').includes(ATTENTION_CHECK_MARKER))) {
-			return { list, identifiers };
-		}
-
-		// Valid positions: 1 through list.length - 1 (not index 0, not last index)
-		// The custom scenario was removed, so list.length IS the last position — exclude it.
-		const validPositions = [];
-		for (let i = 1; i < list.length; i++) {
-			validPositions.push(i);
-		}
-
-		if (validPositions.length === 0) {
-			// If no valid positions (shouldn't happen), just append
-			return {
-				list: [...list, attentionCheckPair],
-				identifiers: [...identifiers, attentionCheckId]
-			};
-		}
-
-		// Randomly select a position
-		const randomPosition = validPositions[Math.floor(Math.random() * validPositions.length)];
-
-		// Insert at the selected position in both list and identifiers
-		const updatedList = [...list];
-		updatedList.splice(randomPosition, 0, attentionCheckPair);
-
-		const updatedIdentifiers = [
-			...identifiers.slice(0, randomPosition),
-			attentionCheckId,
-			...identifiers.slice(randomPosition)
-		];
-
-		return { list: updatedList, identifiers: updatedIdentifiers };
-	}
-
-	// Current scenario selection is persisted via saveCurrentScenarioState -> saveWorkflowDraft
 
 	// Custom scenario state
 	let customScenarioPrompt: string = '';
@@ -777,7 +681,7 @@
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
 		attentionCheckSelected = false;
-		attentionCheckPassed = false;
+		attentionCheckPassed = null;
 		attentionCheckProcessing = false;
 		markedNotApplicable = false;
 		// Reset unified initial decision flow state
@@ -785,6 +689,11 @@
 		step2Completed = false;
 		step3Completed = false;
 		concernLevel = null;
+		concernMappings = [];
+		highlightConcerns = {};
+		newConcernInputs = {};
+		newConcernLevels = {};
+		concernHighlightLevels = {};
 		// showInitialDecisionPane is now derived
 		// Reset custom scenario state
 		customScenarioPrompt = '';
@@ -946,21 +855,22 @@
 					(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
 				);
 
-				for (const assignment of existingAssignments) {
-					basePairs.push([assignment.prompt_text, assignment.response_text]);
-					const position = assignment.assignment_position || 0;
-					baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
-					assignmentMap.set(position, {
-						assignment_id: assignment.assignment_id,
-						scenario_id: assignment.scenario_id
-					});
-				}
-
-				console.log(`✅ Loaded ${basePairs.length} existing scenarios from backend`);
-
-				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
-				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
-				scenarioList = list;
+                for (const assignment of existingAssignments) {
+                    let prompt = assignment.prompt_text;
+                    const existingResponseText = assignment.attention_check_code
+                        ? assignment.response_text + `\n\n[Attention code: ${assignment.attention_check_code}]`
+                        : assignment.response_text;
+                    basePairs.push([prompt, existingResponseText]);
+                    const position = assignment.assignment_position || 0;
+                    baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
+                    assignmentMap.set(position, {
+                        assignment_id: assignment.assignment_id,
+                        scenario_id: assignment.scenario_id,
+                        attention_check_code: assignment.attention_check_code ?? null
+                    });
+                }
+                const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+                scenarioList = list;
 				scenarioIdentifiers = identifiers;
 
 				// Store assignment IDs in scenario states (keyed by identifier)
@@ -980,22 +890,22 @@
 							showOriginal1: false,
 							showComparisonView: false,
 							attentionCheckSelected: false,
-							attentionCheckPassed: false,
-							attentionCheckStep1Passed: false,
-							attentionCheckStep2Passed: false,
-							attentionCheckStep3Passed: false,
+							attentionCheckPassed: null,
 							markedNotApplicable: false,
 							step1Completed: false,
 							step2Completed: false,
 							step3Completed: false,
 							concernLevel: null,
 							concernReason: '',
+							concernMappings: [],
+							highlightConcerns: {},
 							satisfactionLevel: null,
 							satisfactionReason: '',
 							nextAction: null
 						};
 						existingState.assignment_id = assignment.assignment_id;
 						existingState.scenario_id = assignment.scenario_id;
+						existingState.attention_check_code = assignment.attention_check_code ?? null;
 						scenarioStates.set(identifier, existingState);
 					}
 				});
@@ -1003,9 +913,6 @@
 				if (scenarioList.length > 0) {
 					scenariosLockedForSession = true;
 					console.log('✅ Using existing assignments, scenarioList length:', scenarioList.length);
-
-					// Load saved states for this child after scenarios are loaded
-					await loadSavedStates();
 
 					// Load the first scenario to ensure UI is updated (force reload)
 					await loadScenario(0, true);
@@ -1020,7 +927,7 @@
 				// Assign scenarios one by one using weighted sampling
 				const basePairs: Array<[string, string]> = [];
 				const baseIdentifiers: string[] = [];
-				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> =
+				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string; attention_check_code?: string | null }> =
 					new Map();
 
 				for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
@@ -1032,13 +939,17 @@
 							alpha: 1.0 // Default alpha for weighted sampling
 						});
 
-						basePairs.push([assignResponse.prompt_text, assignResponse.response_text]);
+                            let prompt = assignResponse.prompt_text;
+                            const newResponseText = assignResponse.attention_check_code
+                                ? assignResponse.response_text + `\n\n[Attention code: ${assignResponse.attention_check_code}]`
+                                : assignResponse.response_text;
+                            basePairs.push([prompt, newResponseText]);
 						baseIdentifiers.push(assignResponse.assignment_id); // Use assignment_id as identifier
 						assignmentMap.set(i, {
 							assignment_id: assignResponse.assignment_id,
-							scenario_id: assignResponse.scenario_id
+							scenario_id: assignResponse.scenario_id,
+							attention_check_code: assignResponse.attention_check_code ?? null
 						});
-
 						console.log(
 							`✅ Assigned scenario ${i + 1}/${SCENARIOS_PER_SESSION}: ${assignResponse.scenario_id}`
 						);
@@ -1066,6 +977,40 @@
 
 				console.log(`✅ Created ${basePairs.length} new scenarios from backend`);
 
+				// Pick one assignment at random to receive an attention check code
+				const allAssignments = Array.from(assignmentMap.entries()); // [[position, {assignment_id,...}], ...]
+				if (allAssignments.length > 0) {
+					const [winnerPosition, winnerAssignment] = allAssignments[Math.floor(Math.random() * allAssignments.length)];
+					try {
+						const acRes = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winnerAssignment.assignment_id}/attention-code`, {
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${token}`
+							}
+						});
+						if (acRes.ok) {
+							const acBody = await acRes.json();
+							const code: string = acBody.attention_check_code;
+							winnerAssignment.attention_check_code = code;
+							assignmentMap.set(winnerPosition, winnerAssignment);
+							// Append the code to the response text already stored in basePairs
+							const pairIndex = baseIdentifiers.indexOf(winnerAssignment.assignment_id);
+							if (pairIndex !== -1) {
+								basePairs[pairIndex] = [
+									basePairs[pairIndex][0],
+									basePairs[pairIndex][1] + `\n\n[Attention code: ${code}]`
+								];
+							}
+							console.log(`🔐 Assigned attention code ${code} to assignment ${winnerAssignment.assignment_id}`);
+						} else {
+							console.warn('⚠️ Failed to assign attention check code:', await acRes.text());
+						}
+					} catch (acErr) {
+						console.error('⚠️ Error calling attention-code endpoint:', acErr);
+					}
+				}
+
 				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
 				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
 				scenarioList = list;
@@ -1088,22 +1033,22 @@
 							showOriginal1: false,
 							showComparisonView: false,
 							attentionCheckSelected: false,
-							attentionCheckPassed: false,
-							attentionCheckStep1Passed: false,
-							attentionCheckStep2Passed: false,
-							attentionCheckStep3Passed: false,
+							attentionCheckPassed: null,
 							markedNotApplicable: false,
 							step1Completed: false,
 							step2Completed: false,
 							step3Completed: false,
 							concernLevel: null,
 							concernReason: '',
+							concernMappings: [],
+							highlightConcerns: {},
 							satisfactionLevel: null,
 							satisfactionReason: '',
 							nextAction: null
 						};
 						existingState.assignment_id = assignment.assignment_id;
 						existingState.scenario_id = assignment.scenario_id;
+						existingState.attention_check_code = assignment.attention_check_code ?? null;
 						scenarioStates.set(identifier, existingState);
 					}
 				});
@@ -1111,9 +1056,6 @@
 				if (scenarioList.length > 0) {
 					scenariosLockedForSession = true;
 					console.log('✅ Created new assignments, scenarioList length:', scenarioList.length);
-
-					// Load saved states for this child after scenarios are loaded
-					await loadSavedStates();
 
 					// Load the first scenario to ensure UI is updated (force reload)
 					await loadScenario(0, true);
@@ -1132,10 +1074,30 @@
 		}
 	}
 
-	// Detects if current scenario is an attention check by checking for ATTENTION_CHECK_MARKER in response
-	$: isAttentionCheckScenario = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
-		ATTENTION_CHECK_MARKER
-	);
+	/**
+	 * Determine whether the scenario at a given index is an attention check.
+	 * The backend now supplies a short code on each assignment when an
+	 * attention check is present.  We store that code in the scenario state as
+	 * `attention_check_code`.  A non-null value indicates an attention check.
+	 */
+	function isAttentionCheckByIndex(index: number): boolean {
+		const identifier = getScenarioId(index);
+		const state = scenarioStates.get(identifier);
+		return state?.attention_check_code != null;
+	}
+
+	// Reactive convenience variable for the currently selected scenario
+	$: isAttentionCheckScenario = isAttentionCheckByIndex(selectedScenarioIndex);
+	$: canSubmit =
+		highlightedTexts1.length > 0 &&
+		highlightedTexts1.every((h) => {
+			const ids = highlightConcerns[h.text] ?? [];
+			return (
+				ids.length > 0 &&
+				(isAttentionCheckScenario ||
+					ids.every((id) => (concernHighlightLevels[h.text]?.[id] ?? null) !== null))
+			);
+		});
 
 	// Custom scenario helper - reactive variable (NOT a function!)
 	$: isCustomScenario = scenarioList[selectedScenarioIndex]?.[0] === CUSTOM_SCENARIO_PROMPT;
@@ -1212,6 +1174,11 @@
 				step3Completed = false;
 				step3Completed = false;
 				concernLevel = null;
+				concernMappings = [];
+				highlightConcerns = {};
+				newConcernInputs = {};
+				newConcernLevels = {};
+				concernHighlightLevels = {};
 				// showOriginal1 and showInitialDecisionPane are now derived
 
 				// Wait for DOM to update, then scroll to top after custom scenario loads
@@ -1256,16 +1223,10 @@
 	function isScenarioCompleted(index: number): boolean {
 		const identifier = getScenarioId(index);
 		const state = scenarioStates.get(identifier);
-		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
-
+		const isAttentionCheck = isAttentionCheckByIndex(index);
 		if (state) {
-			// For attention checks: completed if selected AND result is known (passed or failed)
-			if (
-				isAttentionCheck &&
-				state.attentionCheckSelected &&
-				state.attentionCheckPassed !== null &&
-				state.attentionCheckPassed !== undefined
-			) {
+			// For attention checks: completed if selected
+			if (isAttentionCheck && state.attentionCheckSelected) {
 				return true;
 			}
 			// Completed if: marked not applicable or confirmed a version (including accept original = -1)
@@ -1276,10 +1237,7 @@
 		if (index === selectedScenarioIndex) {
 			// For attention checks: completed if selected AND result is known (passed or failed)
 			if (
-				isAttentionCheck &&
-				attentionCheckSelected &&
-				attentionCheckPassed !== null &&
-				attentionCheckPassed !== undefined
+				isAttentionCheck && attentionCheckSelected
 			) {
 				return true;
 			}
@@ -1307,6 +1265,13 @@
 		endOffset?: number; // absolute character offset within scenario text (-1 = unknown)
 	}
 
+	// Concern item interface for Step 2 concern enumeration + highlight matching
+	interface ConcernItem {
+		id: string;
+		text: string; // Parent's description of this specific concern
+		concernLevel: number | null; // Per-concern Likert rating (1-5)
+	}
+
 	// Version management interfaces
 	interface ModerationVersion {
 		response: string;
@@ -1326,14 +1291,12 @@
 		customInstructions: Array<{ id: string; text: string }>;
 		showOriginal1: boolean;
 		showComparisonView: boolean;
-		// Attention check tracking: selected indicates user selected the option,
-		// passed indicates the attention check scenario was successfully completed
+		// Attention check tracking: selected indicates user attempted to enter code,
+		// passed indicates they got it correct.  `attention_check_code` stores the
+		// expected value when present.
 		attentionCheckSelected: boolean;
-		attentionCheckPassed: boolean;
-		// Attention check step tracking (non-blocking - for analytics only)
-		attentionCheckStep1Passed: boolean; // Step 1: Highlighted anything
-		attentionCheckStep2Passed: boolean; // Step 2: Entered "attention check" in concern reason
-		attentionCheckStep3Passed: boolean; // Step 3: Selected "I read the instructions"
+		attentionCheckPassed: boolean | null;
+		attention_check_code?: string | null;
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		// Unified initial decision flow state (3-step flow)
@@ -1344,7 +1307,10 @@
 		// Removed step4Completed - now 3-step flow
 		// Removed childAccomplish and assistantDoing - no longer collected in Step 2
 		concernLevel: number | null; // Step 2 (Assess): Concern assessment (1-5)
-		concernReason: string; // Step 2 (Assess): "Why?" explanation
+		concernReason: string; // Step 2 (Assess): "Why?" explanation (derived from mappings)
+		concernMappings: ConcernItem[]; // Step 2 (Assess): Array of concerns with linked highlights
+		highlightConcerns: Record<string, string[]>; // Step 2 (Assess): highlight text → [concern IDs]
+		concernHighlightLevels: Record<string, Record<string, number | null>>; // per (highlight, concern) pair rating
 		satisfactionLevel: number | null; // Step 3 (Update): Satisfaction level (1-5 Likert scale)
 		satisfactionReason: string; // Step 3 (Update): "Why?" for satisfaction
 		nextAction: 'try_again' | 'move_on' | null; // Step 3 (Update): Next action after satisfaction check
@@ -1382,6 +1348,9 @@
 	let timerInterval: NodeJS.Timeout | null = null;
 	let currentTimerStart: number | null = null;
 
+	// Attempt tracking - initialized from backend on load, updated after resets
+	let currentAttemptNumber: number = 1;
+
 	// Abandonment detection state
 	let scenarioStartTimes: Map<string, number> = new Map(); // Track when each scenario was started (keyed by identifier)
 	let abandonmentTimeout: NodeJS.Timeout | null = null;
@@ -1396,7 +1365,7 @@
 	// Attention check state: selected when user chooses "I read the instructions",
 	// passed when attention check scenario is completed, processing during async save
 	let attentionCheckSelected: boolean = false;
-	let attentionCheckPassed: boolean = false;
+	let attentionCheckPassed: boolean | null = null;
 	let attentionCheckProcessing: boolean = false;
 
 	// Version management state
@@ -1407,9 +1376,7 @@
 	// Reactive computation for current scenario completion
 	// Scenario is completed if: marked as not applicable OR a version has been confirmed (including accept original = -1) OR attention check passed
 	$: currentScenarioCompleted = (() => {
-		const isAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
-			ATTENTION_CHECK_MARKER
-		);
+		const isAttentionCheck = isAttentionCheckByIndex(selectedScenarioIndex);
 		// Completion check: use confirmedVersionIndex as the primary signal for all
 		// scenarios (completeStep2 always sets it to 0 on submit).  For attention checks
 		// that haven't yet been submitted we also accept attentionCheckSelected+pass/fail
@@ -1417,10 +1384,7 @@
 		const completed =
 			markedNotApplicable ||
 			confirmedVersionIndex !== null ||
-			(isAttentionCheck &&
-				attentionCheckSelected &&
-				attentionCheckPassed !== null &&
-				attentionCheckPassed !== undefined);
+			(isAttentionCheck && attentionCheckSelected);
 		console.log('Reactive: currentScenarioCompleted =', completed, {
 			isAttentionCheck,
 			attentionCheckSelected,
@@ -1438,13 +1402,9 @@
 		scenarioList.forEach((_, index) => {
 			if (isScenarioCompleted(index)) completedInMap++;
 		});
-		const isCurrentAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
-			ATTENTION_CHECK_MARKER
-		);
+		const isCurrentAttentionCheck = isAttentionCheckByIndex(selectedScenarioIndex);
 		const currentCompleted = isCurrentAttentionCheck
-			? attentionCheckSelected &&
-				attentionCheckPassed !== null &&
-				attentionCheckPassed !== undefined
+			? attentionCheckSelected
 			: markedNotApplicable || confirmedVersionIndex !== null;
 		const currentIdentifier = getScenarioId(selectedScenarioIndex);
 		const currentNotInMap = !scenarioStates.has(currentIdentifier);
@@ -1538,7 +1498,12 @@
 
 	// Step 2 (Assess): Concern assessment fields
 	let concernLevel: number | null = null; // 1-5 (mapped from: 1=Not concerned at all, 2=Somewhat unconcerned, 3=Neutral, 4=Somewhat concerned, 5=Concerned)
-	let concernReason: string = ''; // "Why?" field - required text explanation
+	let concernReason: string = ''; // "Why?" field - derived from concernMappings for backward compat
+	let concernMappings: ConcernItem[] = []; // Array of specific concerns with linked highlights
+	let highlightConcerns: Record<string, string[]> = {}; // highlight text → [concern IDs]
+	let newConcernInputs: Record<string, string> = {}; // per-highlight new concern input values
+	let newConcernLevels: Record<string, number | null> = {}; // per-highlight pending concern level (rated before adding)
+	let concernHighlightLevels: Record<string, Record<string, number | null>> = {}; // per (highlight, concern) pair rating
 
 	// Step 3 (Update): Satisfaction check fields (after version created)
 	let satisfactionLevel: number | null = null; // 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
@@ -2236,6 +2201,178 @@
 	}
 
 	/**
+	 * Add a new concern to the shared pool and immediately link it to the given highlight.
+	 * The new concern text is taken from newConcernInputs[highlightText].
+	 */
+	function addConcernForHighlight(highlightText: string) {
+		const text = (newConcernInputs[highlightText] ?? '').trim();
+		if (!text) return;
+		const id = crypto.randomUUID();
+		concernMappings = [...concernMappings, { id, text, concernLevel: null }];
+		// Initialize per-pair rating to null — user rates after adding via the severity row
+		concernHighlightLevels = {
+			...concernHighlightLevels,
+			[highlightText]: { ...(concernHighlightLevels[highlightText] ?? {}), [id]: null }
+		};
+		highlightConcerns = {
+			...highlightConcerns,
+			[highlightText]: [...(highlightConcerns[highlightText] ?? []), id]
+		};
+		newConcernInputs = { ...newConcernInputs, [highlightText]: '' };
+	}
+
+	/**
+	 * Add a standalone concern to the shared pool (not linked to any highlight yet).
+	 * Used for backward compat / attention check flow.
+	 */
+	function addConcernItem() {
+		concernMappings = [
+			...concernMappings,
+			{ id: crypto.randomUUID(), text: '', concernLevel: null }
+		];
+	}
+
+	/**
+	 * Remove a concern item by id from the concern pool and all highlight links.
+	 * This function only mutates local state; use `handleRemoveConcern` when the
+	 * change should be synced to the backend as well.
+	 */
+	function removeConcernItem(id: string) {
+		concernMappings = concernMappings.filter((c) => c.id !== id);
+		// Remove from all highlight links
+		const updated: Record<string, string[]> = {};
+		for (const [hText, ids] of Object.entries(highlightConcerns)) {
+			const filtered = ids.filter((cId) => cId !== id);
+			if (filtered.length > 0) updated[hText] = filtered;
+		}
+		highlightConcerns = updated;
+		// Remove per-pair levels for this concern
+		const updatedLevels: Record<string, Record<string, number | null>> = {};
+		for (const [hText, pairs] of Object.entries(concernHighlightLevels)) {
+			const { [id]: _r, ...rest } = pairs;
+			if (Object.keys(rest).length > 0) updatedLevels[hText] = rest;
+		}
+		concernHighlightLevels = updatedLevels;
+	}
+
+	// Persist the current concernMappings/highlightConcerns pool to backend
+	async function persistConcernItems() {
+		const sessionId = `scenario_${selectedScenarioIndex}`;
+		const userId = $user?.id || 'unknown';
+		const childId = selectedChildId || 'unknown';
+		try {
+			await saveConcernItemsBatch(localStorage.token, {
+				session_id: sessionId,
+				user_id: userId,
+				child_id: childId,
+				scenario_index: selectedScenarioIndex,
+				attempt_number: currentAttemptNumber,
+				version_number: 0,
+				session_number: sessionNumber,
+				scenario_id: getCurrentScenarioId() ?? undefined,
+				items: concernMappings.map((c, idx) => ({
+					id: c.id,
+					position: idx,
+					text: c.text,
+					concern_level: (() => {
+						const levels = Object.entries(highlightConcerns)
+							.filter(([, ids]) => ids.includes(c.id))
+							.flatMap(([hText]) => {
+								const v = concernHighlightLevels[hText]?.[c.id];
+								return v !== null && v !== undefined ? [v] : [];
+							});
+						return levels.length > 0 ? Math.max(...levels) : null;
+					})(),
+					linked_highlights: Object.entries(highlightConcerns)
+						.filter(([, ids]) => ids.includes(c.id))
+						.map(([hText]) => hText),
+					highlight_levels: Object.entries(highlightConcerns)
+						.filter(([, ids]) => ids.includes(c.id))
+						.reduce((acc: Record<string, number | null>, [hText]) => {
+							acc[hText] = concernHighlightLevels[hText]?.[c.id] ?? null;
+							return acc;
+						}, {})
+				}))
+			});
+		} catch (e) {
+			console.error('Failed to sync concern items after removal (non-blocking):', e);
+		}
+	}
+
+	// Wrapper invoked by UI when user clicks delete button
+	async function handleRemoveConcern(id: string) {
+		removeConcernItem(id);
+		await persistConcernItems();
+	}
+
+	/**
+	 * Toggle whether a concern from the pool is linked to a specific highlight.
+	 */
+	function toggleConcernLink(highlightText: string, concernId: string, checked: boolean) {
+		const current = highlightConcerns[highlightText] ?? [];
+		if (checked) {
+			highlightConcerns = {
+				...highlightConcerns,
+				[highlightText]: [...current.filter((id) => id !== concernId), concernId]
+			};
+			// Init per-pair level to null if not already set
+			if ((concernHighlightLevels[highlightText]?.[concernId]) === undefined) {
+				concernHighlightLevels = {
+					...concernHighlightLevels,
+					[highlightText]: { ...(concernHighlightLevels[highlightText] ?? {}), [concernId]: null }
+				};
+			}
+		} else {
+			const updated = current.filter((id) => id !== concernId);
+			highlightConcerns = { ...highlightConcerns, [highlightText]: updated };
+		}
+	}
+
+	/**
+	 * Derive a plain-text concern reason string from the concern mappings and highlight links.
+	 * Used to populate the backward-compatible concernReason field.
+	 */
+	function deriveConcernReason(mappings: ConcernItem[]): string {
+		return mappings
+			.filter((c) => c.text.trim())
+			.map((c) => {
+				const linkedHighlightTexts = Object.entries(highlightConcerns)
+					.filter(([, ids]) => ids.includes(c.id))
+					.map(([hText]) => hText);
+				return linkedHighlightTexts.length > 0
+					? `${c.text.trim()} (relates to: ${linkedHighlightTexts.map((h) => `"${h}"`).join(', ')})`
+					: c.text.trim();
+			})
+			.join('; ');
+	}
+
+	/**
+	 * Get highlights that haven't been linked to any concern yet.
+	 */
+	function getUnmatchedHighlights(): HighlightInfo[] {
+		return highlightedTexts1.filter((h) => !(highlightConcerns[h.text] ?? []).length);
+	}
+
+	/**
+	 * Check if all highlights have been linked to at least one concern.
+	 */
+	function allHighlightsMatched(): boolean {
+		if (highlightedTexts1.length === 0) return true;
+		return highlightedTexts1.every((h) => (highlightConcerns[h.text] ?? []).length > 0);
+	}
+
+	/**
+	 * Check if all non-empty concerns in the pool have at least one linked highlight.
+	 */
+	function allConcernsHaveHighlights(): boolean {
+		if (highlightedTexts1.length === 0) return true;
+		const validConcerns = concernMappings.filter((c) => c.text.trim());
+		return validConcerns.every((c) =>
+			Object.values(highlightConcerns).some((ids) => ids.includes(c.id))
+		);
+	}
+
+	/**
 	 * Extract text from outermost <mark> elements in HTML (for backend data storage only)
 	 * This function extracts text content from outermost marks, ignoring nested marks
 	 */
@@ -2680,9 +2817,6 @@
 			showComparisonView,
 			attentionCheckSelected,
 			attentionCheckPassed,
-			attentionCheckStep1Passed: existingState?.attentionCheckStep1Passed || false,
-			attentionCheckStep2Passed: existingState?.attentionCheckStep2Passed || false,
-			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			markedNotApplicable,
 			customPrompt:
 				isCustomScenario && customScenarioGenerated
@@ -2694,73 +2828,24 @@
 			step1Completed,
 			step2Completed,
 			step3Completed,
-			attentionCheckStep1Passed: existingState?.attentionCheckStep1Passed || false,
-			attentionCheckStep2Passed: existingState?.attentionCheckStep2Passed || false,
-			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			concernLevel,
 			concernReason,
+			concernMappings: [...concernMappings],
+			highlightConcerns: { ...highlightConcerns },
+			concernHighlightLevels: JSON.parse(JSON.stringify(concernHighlightLevels)),
 			satisfactionLevel,
 			satisfactionReason,
 			nextAction,
 			// Assignment tracking (preserve existing values)
 			assignment_id: existingState?.assignment_id,
 			scenario_id: existingState?.scenario_id,
-			assignmentStarted: existingState?.assignmentStarted
+			assignmentStarted: existingState?.assignmentStarted,
+			attention_check_code: existingState?.attention_check_code ?? null
 		};
 		scenarioStates.set(currentIdentifier, currentState);
 		// Force reactive update by reassigning the Map
 		// This ensures the sidebar updates when scenario completion state changes
 		scenarioStates = new Map(scenarioStates);
-
-		// Save to backend for persistence across navigation
-		if (selectedChildId && typeof window !== 'undefined') {
-			try {
-				const token = localStorage.token || '';
-				if (token) {
-					const serializedStates: [string, unknown][] = [];
-					scenarioStates.forEach((state, identifier) => {
-						serializedStates.push([
-							identifier,
-							{
-								...state,
-								selectedModerations: Array.from(state.selectedModerations)
-							}
-						]);
-					});
-					// Convert timers to identifier-based format
-					const serializedTimers: [string, number][] = [];
-					scenarioTimers.forEach((seconds, index) => {
-						const identifier = getScenarioId(index);
-						serializedTimers.push([identifier, seconds]);
-					});
-
-					// Get current attempt number to store with draft
-					const attemptInfo = await getCurrentAttempt(token);
-					const currentAttemptNumber = attemptInfo?.current_attempt || 1;
-
-					const data: Record<string, unknown> = {
-						attempt_number: currentAttemptNumber, // Store attempt number so we can ignore old drafts
-						moderation_finalized: moderationFinalized, // Store if Done was clicked
-						states: serializedStates,
-						timers: serializedTimers,
-						current: currentIdentifier // Save identifier instead of index
-					};
-					// Persist scenario list so it can be restored on navigation (stable for attempt)
-					if (
-						scenariosLockedForSession &&
-						scenarioList.length > 0 &&
-						scenarioIdentifiers.length === scenarioList.length
-					) {
-						data.scenario_list = scenarioList;
-						data.scenario_identifiers = scenarioIdentifiers;
-					}
-					await saveWorkflowDraft(token, selectedChildId, 'moderation', data);
-					console.log(`Saved moderation states to backend for child: ${selectedChildId}`);
-				}
-			} catch (e) {
-				console.error('Failed to save moderation states to backend:', e);
-			}
-		}
 	}
 
 	async function loadScenario(index: number, forceReload: boolean = false) {
@@ -2809,6 +2894,11 @@
 		responseHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		promptHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		concernLevel = null;
+		concernMappings = [];
+		highlightConcerns = {};
+		newConcernInputs = {};
+		newConcernLevels = {};
+		concernHighlightLevels = {};
 		concernReason = '';
 		satisfactionLevel = null;
 		satisfactionReason = '';
@@ -2824,7 +2914,7 @@
 		showOriginal1 = false;
 		showComparisonView = false;
 		attentionCheckSelected = false;
-		attentionCheckPassed = false;
+		attentionCheckPassed = null;
 		attentionCheckProcessing = false; // Reset processing flag when loading new scenario
 		// Reset Step 3 UI state fields
 		moderationPanelExpanded = false;
@@ -2851,7 +2941,7 @@
 					(s: any) =>
 						s.scenario_index === index &&
 						s.session_number === sessionNumber &&
-						s.attempt_number === 1 &&
+						s.attempt_number === currentAttemptNumber &&
 						s.version_number === 0
 				);
 				versionSessions = sessions
@@ -2859,19 +2949,24 @@
 						(s: any) =>
 							s.scenario_index === index &&
 							s.session_number === sessionNumber &&
-							s.attempt_number === 1 &&
+							s.attempt_number === currentAttemptNumber &&
 							s.version_number > 0
 					)
 					.sort((a, b) => a.version_number - b.version_number);
 
 				// Only use backend session if it matches THIS scenario's content (not just index).
 				// Prevents old DB session at same index (e.g. from before reset) from applying skip/state to a new scenario.
+				// Normalize responses before comparing: strip any "[Attention code: ...]" suffix added by newer code
+				// so old DB sessions saved before the suffix was introduced still match.
+				const stripAttentionSuffix = (s: string) =>
+					s.replace(/\n\n\[Attention code:[^\]]*\]$/, '').trimEnd();
 				const promptForMatch = prompt;
 				const responseForMatch = response;
 				if (backendSession) {
 					const contentMatches =
 						backendSession.scenario_prompt === promptForMatch &&
-						backendSession.original_response === responseForMatch;
+						stripAttentionSuffix(backendSession.original_response ?? '') ===
+							stripAttentionSuffix(responseForMatch);
 					if (!contentMatches) {
 						backendSession = null;
 						versionSessions = [];
@@ -3034,14 +3129,89 @@
 				console.log('✅ Restored Step 2 data from backend');
 			}
 
-			// Step 3: Restore pre-moderation judgment from backend (direct columns only)
-			if (backendSession.concern_level !== null && backendSession.concern_level !== undefined) {
-				concernLevel = backendSession.concern_level;
+			// Restore concern mappings — prefer new concern_item table, fall back to session_metadata
+			let restoredFromTable = false;
+			let dbItems: any[] = [];
+			if (selectedChildId && $user?.id) {
+				try {
+					dbItems = await getConcernItems(localStorage.token, {
+						user_id: $user.id,
+						child_id: selectedChildId,
+						scenario_index: index,
+						attempt_number: currentAttemptNumber,
+						version_number: 0,
+						session_number: sessionNumber
+					});
+					if (dbItems.length > 0) {
+						concernMappings = dbItems.map((item: ConcernItemResponse) => ({
+							id: item.id,
+							text: item.text,
+							concernLevel: item.concern_level
+						}));
+						restoredFromTable = true;
+						console.log('✅ Restored concern mappings from DB table:', concernMappings.length);
+					}
+				} catch (e) {
+					console.warn('Could not load concern items from DB table (non-blocking):', e);
+				}
+			}
+			// Legacy fallback: restore from session_metadata.concern_mappings
+			if (!restoredFromTable && backendSession.session_metadata?.concern_mappings) {
+				concernMappings = (backendSession.session_metadata.concern_mappings as any[]).map(
+					(c: any) => ({
+						id: c.id ?? crypto.randomUUID(),
+						text: c.text ?? '',
+						concernLevel: c.concernLevel ?? null
+					})
+				);
+				console.log(
+					'✅ Restored concern mappings from session_metadata (legacy):',
+					concernMappings.length
+				);
+			}
+
+			// Restore highlight-concern mapping
+			if (backendSession.session_metadata?.highlight_concerns) {
+				highlightConcerns = backendSession.session_metadata.highlight_concerns as Record<
+					string,
+					string[]
+				>;
+			} else if (dbItems && dbItems.length > 0) {
+				// Derive from legacy linked_highlights on ConcernItemRows
+				const derived: Record<string, string[]> = {};
+				for (const item of dbItems) {
+					for (const hText of item.linked_highlights ?? []) {
+						derived[hText] = [...(derived[hText] ?? []), item.id];
+					}
+				}
+				highlightConcerns = derived;
+			} else if (backendSession.session_metadata?.concern_mappings) {
+				// Derive from legacy session_metadata.concern_mappings
+				const derived: Record<string, string[]> = {};
+				for (const c of backendSession.session_metadata.concern_mappings as any[]) {
+					for (const hText of c.linkedHighlights ?? []) {
+						derived[hText] = [...(derived[hText] ?? []), c.id ?? ''];
+					}
+				}
+				highlightConcerns = derived;
+			}
+
+			// Restore per-(highlight, concern) severity ratings
+			if (backendSession.session_metadata?.concern_highlight_levels) {
+				concernHighlightLevels = backendSession.session_metadata.concern_highlight_levels as Record<
+					string,
+					Record<string, number | null>
+				>;
 			}
 
 			// Step 3 completion is now determined by satisfaction check (satisfaction_level, satisfaction_reason, next_action)
 			// Note: would_show_child column was removed (migration 84b2215f7772) - it existed in DB but not in model
 			// Satisfaction data will be restored after version reconstruction (see below)
+
+			// Restore session-level concern_level (derived as MAX of per-concern levels; kept for backward compat)
+			if (backendSession.concern_level !== null && backendSession.concern_level !== undefined) {
+				concernLevel = backendSession.concern_level;
+			}
 
 			// Restore other fields from backend if available
 			if (backendSession.initial_decision === 'not_applicable') {
@@ -3160,206 +3330,58 @@
 			}
 		}
 
-		// Track what backend provided to avoid overwriting with localStorage
-		const backendProvided = new Set<string>();
-		if (backendSession) {
-			if (backendSession.highlighted_texts && backendSession.highlighted_texts.length > 0) {
-				backendProvided.add('highlightedTexts1');
-			}
-			if (backendSession.concern_reason) {
-				backendProvided.add('concernReason');
-			}
-			if (backendSession.concern_level !== null && backendSession.concern_level !== undefined) {
-				backendProvided.add('concernLevel');
-			}
-			if (
-				backendSession.satisfaction_level !== null &&
-				backendSession.satisfaction_level !== undefined
-			) {
-				backendProvided.add('satisfactionLevel');
-			}
-			if (backendSession.satisfaction_reason) {
-				backendProvided.add('satisfactionReason');
-			}
-			if (backendSession.next_action) {
-				backendProvided.add('nextAction');
-			}
-			if (backendSession.initial_decision === 'not_applicable') {
-				backendProvided.add('markedNotApplicable');
-			}
-		}
-		if (versions.length > 0) {
-			backendProvided.add('versions');
-		}
-		if (confirmedVersionIndex !== null) {
-			backendProvided.add('confirmedVersionIndex');
-		}
-		if (step1Completed || step2Completed || step3Completed) {
-			backendProvided.add('step1Completed');
-			backendProvided.add('step2Completed');
-			backendProvided.add('step3Completed');
-		}
-		if (satisfactionLevel !== null || satisfactionReason || nextAction) {
-			backendProvided.add('satisfactionLevel');
-			backendProvided.add('satisfactionReason');
-			backendProvided.add('nextAction');
-		}
-
-		// Helper function to restore from localStorage only if backend didn't provide it
-		const restoreFromLocalStorageIfMissing = (
-			savedState: ScenarioState | undefined,
-			backendProvided: Set<string>
-		) => {
-			if (!savedState) return;
-
-			// Restore HTML fields only if backend didn't provide them
-			if (!backendProvided.has('responseHighlightedHTML') && savedState.responseHighlightedHTML) {
-				console.log(
-					'🟡 Restoring responseHighlightedHTML from savedState for scenario',
-					index,
-					'- length:',
-					savedState.responseHighlightedHTML.length
-				);
-				responseHighlightedHTML = savedState.responseHighlightedHTML;
-			} else {
-				console.log(
-					'🟡 NOT restoring responseHighlightedHTML - backendProvided:',
-					backendProvided.has('responseHighlightedHTML'),
-					'savedState has HTML:',
-					!!savedState.responseHighlightedHTML
-				);
-			}
-			if (!backendProvided.has('promptHighlightedHTML') && savedState.promptHighlightedHTML) {
-				console.log(
-					'🟡 Restoring promptHighlightedHTML from savedState for scenario',
-					index,
-					'- length:',
-					savedState.promptHighlightedHTML.length
-				);
-				promptHighlightedHTML = savedState.promptHighlightedHTML;
-			} else {
-				console.log(
-					'🟡 NOT restoring promptHighlightedHTML - backendProvided:',
-					backendProvided.has('promptHighlightedHTML'),
-					'savedState has HTML:',
-					!!savedState.promptHighlightedHTML
-				);
-			}
-
-			// Extract highlighted texts from HTML if HTML was restored
-			if (
-				(responseHighlightedHTML || promptHighlightedHTML) &&
-				(!backendProvided.has('responseHighlightedHTML') ||
-					!backendProvided.has('promptHighlightedHTML'))
-			) {
-				const responseTexts = extractTextFromHighlightedHTML(responseHighlightedHTML);
-				const promptTexts = extractTextFromHighlightedHTML(promptHighlightedHTML);
-				highlightedTexts1 = [...responseTexts, ...promptTexts].map((t) => ({ text: t }));
-			} else if (
-				!backendProvided.has('highlightedTexts1') &&
-				savedState.highlightedTexts1?.length > 0
-			) {
-				// Fallback: restore from highlightedTexts1 if HTML not available
-				highlightedTexts1 = [...savedState.highlightedTexts1];
-			}
-
-			if (!backendProvided.has('versions') && savedState.versions?.length > 0) {
-				versions = [...savedState.versions];
-				currentVersionIndex = savedState.currentVersionIndex;
-			}
-
-			if (
-				!backendProvided.has('confirmedVersionIndex') &&
-				savedState.confirmedVersionIndex !== null
-			) {
-				confirmedVersionIndex = savedState.confirmedVersionIndex;
-			}
-
-			if (!backendProvided.has('markedNotApplicable')) {
-				markedNotApplicable = savedState.markedNotApplicable || false;
-			}
-
-			// Restore step completion flags only if backend didn't provide them
-			// Simplified: if backend provided any step completion, don't restore from localStorage
-			if (
-				!backendProvided.has('step1Completed') &&
-				!backendProvided.has('step2Completed') &&
-				!backendProvided.has('step3Completed')
-			) {
-				// No backend data - restore all from localStorage
+		// Restore in-memory UI state that the backend does not persist.
+		// These fields are only tracked in the scenarioStates Map for same-session navigation.
+		// When backendSession is absent, also restore completion/concern/satisfaction data from the Map.
+		if (savedState) {
+			selectedModerations = new Set(savedState.selectedModerations);
+			customInstructions = [...savedState.customInstructions];
+			showOriginal1 = savedState.showOriginal1 || showOriginal1;
+			showComparisonView = savedState.showComparisonView || showComparisonView;
+			attentionCheckSelected = savedState.attentionCheckSelected || false;
+			attentionCheckPassed = savedState.attentionCheckPassed ?? attentionCheckPassed;
+			if (!backendSession) {
+				// No backend data — restore all fields from in-memory state
 				step1Completed = savedState.step1Completed || false;
 				step2Completed = savedState.step2Completed || false;
 				step3Completed = savedState.step3Completed || false;
-			}
-
-			// Restore Step 2 data only if backend didn't provide it
-			if (!backendProvided.has('concernLevel')) {
+				markedNotApplicable = savedState.markedNotApplicable || false;
 				concernLevel = savedState.concernLevel ?? null;
-			}
-			if (!backendProvided.has('concernReason')) {
 				concernReason = savedState.concernReason || '';
-			}
-
-			// Restore Step 3 satisfaction data only if backend didn't provide it
-			if (!backendProvided.has('satisfactionLevel')) {
+				concernMappings = savedState.concernMappings || [];
+				highlightConcerns = (savedState as any).highlightConcerns || {};
+				concernHighlightLevels = (savedState as any).concernHighlightLevels || {};
 				satisfactionLevel = savedState.satisfactionLevel ?? null;
-			}
-			if (!backendProvided.has('satisfactionReason')) {
 				satisfactionReason = savedState.satisfactionReason || '';
-			}
-			if (!backendProvided.has('nextAction')) {
 				nextAction = savedState.nextAction || null;
+				if (savedState.versions?.length > 0) {
+					versions = [...savedState.versions];
+					currentVersionIndex = savedState.currentVersionIndex;
+				}
+				if (savedState.confirmedVersionIndex !== null) {
+					confirmedVersionIndex = savedState.confirmedVersionIndex;
+				}
+				if (!responseHighlightedHTML && savedState.responseHighlightedHTML) {
+					responseHighlightedHTML = savedState.responseHighlightedHTML;
+				}
+				if (!promptHighlightedHTML && savedState.promptHighlightedHTML) {
+					promptHighlightedHTML = savedState.promptHighlightedHTML;
+				}
+				if (highlightedTexts1.length === 0 && savedState.highlightedTexts1?.length > 0) {
+					highlightedTexts1 = [...savedState.highlightedTexts1];
+				}
 			}
-
-			// Always restore UI state from localStorage (these don't conflict with backend)
-			selectedModerations = new Set(savedState.selectedModerations);
-			customInstructions = [...savedState.customInstructions];
-			showOriginal1 = savedState.showOriginal1;
-			showComparisonView = savedState.showComparisonView || false;
-			attentionCheckSelected = savedState.attentionCheckSelected || false;
-			attentionCheckPassed = savedState.attentionCheckPassed || false;
-		};
-
-		// Restore from localStorage using helper function
-		if (savedState) {
-			restoreFromLocalStorageIfMissing(savedState, backendProvided);
 		}
 
-		// If versions exist and not completed, ensure we're in Step 3 to match side-by-side display
-		// BUT: Don't do this if markedNotApplicable (scenario is completed)
-		// initialDecisionStep is now derived from completion flags, so we just need to mark steps complete
+		// If versions exist and not completed, ensure we're in Step 3 (side-by-side view).
+		// Skip if markedNotApplicable (scenario already in end state).
 		if (versions.length > 0 && !step3Completed && !markedNotApplicable) {
-			// Ensure all previous steps are marked complete to allow navigation back
 			step1Completed = true;
 			step2Completed = true;
-			// Don't set step3Completed here - let user complete satisfaction check
-			showComparisonView = true; // Show comparison view
-			if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
-				// Keep the saved currentVersionIndex
-			} else {
-				currentVersionIndex = versions.length - 1; // Default to latest version
+			showComparisonView = true;
+			if (currentVersionIndex < 0 || currentVersionIndex >= versions.length) {
+				currentVersionIndex = versions.length - 1;
 			}
-		}
-
-		// If no localStorage state and no backend session, initialize to defaults
-		if (!savedState && !backendSession) {
-			// No data from either source - initialize to defaults
-			highlightedTexts1 = [];
-			step1Completed = false;
-			step2Completed = false;
-			step3Completed = false;
-			concernLevel = null;
-			versions = [];
-			currentVersionIndex = -1;
-			confirmedVersionIndex = null;
-			selectedModerations = new Set();
-			customInstructions = [];
-			showOriginal1 = false;
-			showComparisonView = false;
-			moderationPanelExpanded = false;
-			expandedGroups.clear();
-			attentionCheckSelected = false;
-			markedNotApplicable = false;
 		}
 
 		// Only override childPrompt1/originalResponse1 for custom scenarios (regular scenarios were set at start)
@@ -3454,131 +3476,6 @@
 		showResetConfirmationModal = false;
 	}
 
-	async function loadSavedStates() {
-		try {
-			// Load from backend
-			if (selectedChildId && typeof window !== 'undefined') {
-				const token = localStorage.token || '';
-				if (token) {
-					const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
-					const data = draftRes?.data as
-						| {
-								moderation_finalized?: boolean;
-								states?: [number | string, unknown][];
-								timers?: [number | string, number][];
-								current?: number | string;
-						  }
-						| undefined;
-
-					// Restore moderation_finalized flag
-					if (data?.moderation_finalized) {
-						moderationFinalized = true;
-						console.log('✅ Restored moderationFinalized = true from loadSavedStates');
-						// Notify sidebar to update the checkmark
-						window.dispatchEvent(new Event('workflow-updated'));
-					}
-
-					if (data?.states) {
-						scenarioStates.clear();
-						// Check if this is legacy format (numeric keys) or new format (string identifiers)
-						const isLegacyFormat = data.states.length > 0 && typeof data.states[0][0] === 'number';
-
-						if (isLegacyFormat) {
-							// Legacy format: map numeric indices to identifiers
-							console.log('⚠️ Loading legacy draft format, migrating to identifier-based');
-							data.states.forEach(([index, state]: [number, any]) => {
-								const identifier = getScenarioId(index);
-								scenarioStates.set(identifier, {
-									...state,
-									selectedModerations: new Set(state.selectedModerations || [])
-								});
-							});
-						} else {
-							// New format: use identifiers directly
-							data.states.forEach(([identifier, state]: [string, any]) => {
-								scenarioStates.set(identifier, {
-									...state,
-									selectedModerations: new Set(state.selectedModerations || [])
-								});
-							});
-						}
-						scenarioStates = new Map(scenarioStates);
-						console.log(`Loaded saved scenario states from backend for child: ${selectedChildId}`);
-					}
-					if (data?.timers) {
-						// Check if timers are legacy format (numeric) or new format (string identifiers)
-						const isLegacyTimers = data.timers.length > 0 && typeof data.timers[0][0] === 'number';
-
-						if (isLegacyTimers) {
-							// Legacy format: map numeric indices to identifiers
-							scenarioTimers.clear();
-							data.timers.forEach(([index, seconds]: [number, number]) => {
-								const identifier = getScenarioId(index);
-								scenarioTimers.set(identifier, seconds);
-							});
-						} else {
-							// New format: use identifiers directly
-							scenarioTimers = new Map(data.timers as [string, number][]);
-						}
-						console.log(`Loaded saved timers from backend for child: ${selectedChildId}`);
-					}
-					if (data?.current != null) {
-						let scenarioIndex: number;
-						if (typeof data.current === 'number') {
-							// Legacy format: current is an index
-							scenarioIndex = data.current;
-						} else {
-							// New format: current is an identifier, find the index
-							scenarioIndex = scenarioIdentifiers.indexOf(data.current);
-							if (scenarioIndex === -1) {
-								console.warn(
-									`⚠️ Current identifier ${data.current} not found in scenarioIdentifiers, defaulting to 0`
-								);
-								scenarioIndex = 0;
-							}
-						}
-
-						if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
-							selectedScenarioIndex = scenarioIndex;
-							const [prompt, response] = scenarioList[scenarioIndex];
-
-							// If this is a custom scenario, restore the custom prompt first
-							if (
-								prompt === CUSTOM_SCENARIO_PROMPT &&
-								response &&
-								response !== CUSTOM_SCENARIO_PLACEHOLDER
-							) {
-								const identifier = getScenarioId(scenarioIndex);
-								const state = scenarioStates.get(identifier);
-								if (state?.customPrompt) {
-									customScenarioPrompt = state.customPrompt;
-									customScenarioResponse = response;
-									customScenarioGenerated = true;
-									childPrompt1 = customScenarioPrompt; // Use the actual custom prompt
-									originalResponse1 = response;
-									console.log(
-										'Restored custom scenario with prompt:',
-										customScenarioPrompt.substring(0, 50)
-									);
-								} else {
-									// Fallback if state not loaded yet
-									childPrompt1 = prompt;
-									originalResponse1 = response;
-								}
-							} else {
-								childPrompt1 = prompt;
-								originalResponse1 = response;
-							}
-							console.log('Restored current scenario:', scenarioIndex);
-						}
-					}
-				}
-			}
-		} catch (e) {
-			console.error('Failed to load saved states from backend:', e);
-		}
-	}
-
 	async function resetConversation() {
 		// Reset current scenario state
 		highlightedTexts1 = [];
@@ -3591,7 +3488,7 @@
 		// showOriginal1 and moderationPanelVisible are now derived
 		attentionCheckSelected = false;
 		moderationFinalized = false;
-		attentionCheckPassed = false;
+		attentionCheckPassed = null;
 		attentionCheckProcessing = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
@@ -3601,6 +3498,10 @@
 		step3Completed = false;
 		// Removed step4Completed - now 3-step flow
 		concernLevel = null;
+		concernMappings = [];
+		highlightConcerns = {};
+		newConcernInputs = {};
+		newConcernLevels = {};
 		// showInitialDecisionPane is now derived
 
 		// Reset ALL scenario states
@@ -3690,7 +3591,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId || 'unknown',
 					scenario_index: selectedScenarioIndex,
-					attempt_number: 1,
+					attempt_number: currentAttemptNumber,
 					version_number: versionNumber,
 					session_number: sessionNumber,
 					scenario_id: getCurrentScenarioId(),
@@ -3716,12 +3617,14 @@
 						confirmedVersionIndex >= 0 && versions[confirmedVersionIndex]
 							? versions[confirmedVersionIndex].response
 							: undefined,
+					response_highlighted_html: responseHighlightedHTML || undefined,
+					prompt_highlighted_html: promptHighlightedHTML || undefined,
 					is_final_version: true,
 					decided_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: attentionCheckSelected,
 					attention_check_passed:
-						isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
+						isAttentionCheckScenario ? (attentionCheckPassed ?? false) : false
 				});
 				console.log('Final version confirmed and saved to backend');
 				window.dispatchEvent(new Event('workflow-updated'));
@@ -3779,22 +3682,20 @@
 			// If deselecting, just toggle
 			if (attentionCheckSelected) {
 				attentionCheckSelected = false;
-				attentionCheckPassed = false;
+				attentionCheckPassed = null;
 				attentionCheckProcessing = false;
 				// Clear step 3 tracking
 				if (isAttentionCheckScenario) {
 					const currentIdentifier = getScenarioId(selectedScenarioIndex);
 					const state = scenarioStates.get(currentIdentifier);
 					if (state) {
-						state.attentionCheckStep3Passed = false;
-						state.attentionCheckPassed = false;
+						state.attentionCheckPassed = null;
 						scenarioStates.set(currentIdentifier, state);
 					}
 				}
 				return;
 			}
 
-			// If selecting and this is an attention check scenario, handle specially
 			if (isAttentionCheckScenario) {
 				attentionCheckSelected = true;
 				attentionCheckProcessing = true; // Lock button immediately
@@ -3811,28 +3712,20 @@
 					showOriginal1: false,
 					showComparisonView: false,
 					attentionCheckSelected: false,
-					attentionCheckPassed: false,
-					attentionCheckStep1Passed: false,
-					attentionCheckStep2Passed: false,
-					attentionCheckStep3Passed: false,
+					attentionCheckPassed: null,
 					markedNotApplicable: false,
 					step1Completed: false,
 					step2Completed: false,
 					step3Completed: false,
 					concernLevel: null,
 					concernReason: '',
+					concernMappings: [],
+					highlightConcerns: {},
 					satisfactionLevel: null,
 					satisfactionReason: '',
 					nextAction: null
 				};
-				state.attentionCheckStep3Passed = true;
 
-				// Calculate overall pass/fail based on all 3 steps
-				state.attentionCheckPassed =
-					state.attentionCheckStep1Passed &&
-					state.attentionCheckStep2Passed &&
-					state.attentionCheckStep3Passed;
-				attentionCheckPassed = state.attentionCheckPassed;
 				scenarioStates.set(currentIdentifier, state);
 				console.log(
 					'[ATTENTION_CHECK] Scenario:',
@@ -3855,7 +3748,7 @@
 							user_id: $user?.id || 'unknown',
 							child_id: selectedChildId || 'unknown',
 							scenario_index: selectedScenarioIndex,
-							attempt_number: 1,
+							attempt_number: currentAttemptNumber,
 							version_number: 0,
 							session_number: sessionNumber,
 							scenario_id: getCurrentScenarioId(),
@@ -3878,6 +3771,8 @@
 								end_offset: h.endOffset
 							})),
 							refactored_response: undefined,
+							response_highlighted_html: responseHighlightedHTML || undefined,
+							prompt_highlighted_html: promptHighlightedHTML || undefined,
 							// Mark as final so the row is counted as a completed scenario
 							// (fixes: attention-check rows always having is_final_version=false).
 							is_final_version: true,
@@ -4184,7 +4079,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId || 'unknown',
 					scenario_index: selectedScenarioIndex,
-					attempt_number: 1,
+					attempt_number: currentAttemptNumber,
 					version_number: 0,
 					session_number: sessionNumber,
 					scenario_id: getCurrentScenarioId(),
@@ -4196,6 +4091,8 @@
 					custom_instructions: [],
 					highlighted_texts: [], // Empty array - highlights remain in `selection` table
 					refactored_response: undefined,
+					response_highlighted_html: responseHighlightedHTML || undefined,
+					prompt_highlighted_html: promptHighlightedHTML || undefined,
 					is_final_version: false,
 					decided_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
@@ -4222,22 +4119,20 @@
 					showOriginal1: false,
 					showComparisonView: false,
 					attentionCheckSelected: false,
-					attentionCheckPassed: false,
-					attentionCheckStep1Passed: false,
-					attentionCheckStep2Passed: false,
-					attentionCheckStep3Passed: false,
+					attentionCheckPassed: null,
 					markedNotApplicable: false,
 					step1Completed: false,
 					step2Completed: false,
 					step3Completed: false,
 					concernLevel: null,
 					concernReason: '',
+					concernMappings: [],
+					highlightConcerns: {},
 					satisfactionLevel: null,
 					satisfactionReason: '',
 					nextAction: null
 				};
 				// Track if user highlighted anything (non-blocking)
-				state.attentionCheckStep1Passed = highlightedTexts1.length > 0;
 				scenarioStates.set(currentIdentifier, state);
 			}
 
@@ -4261,7 +4156,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId || 'unknown',
 					scenario_index: selectedScenarioIndex,
-					attempt_number: 1,
+					attempt_number: currentAttemptNumber,
 					version_number: 0,
 					session_number: sessionNumber,
 					scenario_id: getCurrentScenarioId(),
@@ -4276,6 +4171,8 @@
 						end_offset: h.endOffset
 					})), // Save all highlights as JSON array to `moderation_session` table
 					refactored_response: undefined,
+					response_highlighted_html: responseHighlightedHTML || undefined,
+					prompt_highlighted_html: promptHighlightedHTML || undefined,
 					is_final_version: false,
 					highlights_saved_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
@@ -4308,10 +4205,15 @@
 	 * Marks scenario as complete and navigates to next scenario if available.
 	 */
 	async function completeStep2() {
-		// Validate concern level is selected (for regular scenarios only)
-		// Attention checks can proceed without validation (non-blocking)
-		if (!isAttentionCheckScenario && concernLevel === null) {
-			toast.error('Please select your level of concern');
+		// Validate every linked (highlight, concern) pair has a severity rating
+		if (
+			!isAttentionCheckScenario &&
+			highlightedTexts1.some((h) => {
+				const ids = highlightConcerns[h.text] ?? [];
+				return ids.some((id) => (concernHighlightLevels[h.text]?.[id] ?? null) === null);
+			})
+		) {
+			toast.error('Please rate severity for every highlight–concern pair');
 			return;
 		}
 
@@ -4328,38 +4230,47 @@
 				showOriginal1: false,
 				showComparisonView: false,
 				attentionCheckSelected: false,
-				attentionCheckPassed: false,
-				attentionCheckStep1Passed: false,
-				attentionCheckStep2Passed: false,
-				attentionCheckStep3Passed: false,
+				attentionCheckPassed: null,
 				markedNotApplicable: false,
 				step1Completed: false,
 				step2Completed: false,
 				step3Completed: false,
 				concernLevel: null,
 				concernReason: '',
+				concernMappings: [],
+				highlightConcerns: {},
 				satisfactionLevel: null,
 				satisfactionReason: '',
 				nextAction: null
 			};
-			// Track if user entered "attention check" in concern reason (case-insensitive)
-			state.attentionCheckStep2Passed = concernReason.toLowerCase().includes('attention check');
 			scenarioStates.set(currentIdentifier, state);
 		}
 
-		// Validate explanation field is filled (for regular scenarios only)
+		// Validate at least one concern with text is provided (for regular scenarios only)
 		// Attention checks can proceed without validation (non-blocking)
-		if (!isAttentionCheckScenario && !concernReason.trim()) {
-			toast.error('Please explain why this content concerns you');
+		const validConcerns = concernMappings.filter((c) => c.text.trim());
+		if (!isAttentionCheckScenario && validConcerns.length === 0) {
+			toast.error('Please add at least one specific concern');
 			return;
 		}
 
-		// Validate minimum length requirement (for regular scenarios only)
-		// Attention checks can proceed without validation (non-blocking)
-		if (!isAttentionCheckScenario && concernReason.trim().length < 10) {
-			toast.error('Please provide at least 10 characters in your explanation');
+		// Validate each concern with text has at least one linked highlight (when highlights exist)
+		if (!isAttentionCheckScenario && highlightedTexts1.length > 0 && !allConcernsHaveHighlights()) {
+			toast.error('Please link each concern to at least one highlight');
 			return;
 		}
+
+		// Validate ALL highlights are matched to at least one concern (when highlights exist)
+		if (!isAttentionCheckScenario && highlightedTexts1.length > 0 && !allHighlightsMatched()) {
+			const unmatched = getUnmatchedHighlights();
+			toast.error(
+				`Please add a concern for each highlight (${unmatched.length} highlight${unmatched.length > 1 ? 's' : ''} remaining)`
+			);
+			return;
+		}
+
+		// Derive concernReason from mappings for backward compatibility
+		concernReason = deriveConcernReason(concernMappings);
 
 		// For attention checks: Calculate overall pass/fail after step 2
 		if (isAttentionCheckScenario) {
@@ -4368,17 +4279,8 @@
 			if (state) {
 				// Step 3 may have been tracked already if user selected "I read the instructions"
 				// If not, it will be tracked when user selects it
-				// Calculate overall pass/fail based on all tracked steps
-				state.attentionCheckPassed =
-					state.attentionCheckStep1Passed &&
-					state.attentionCheckStep2Passed &&
-					state.attentionCheckStep3Passed;
-				attentionCheckPassed = state.attentionCheckPassed;
 				scenarioStates.set(currentIdentifier, state);
 				console.log('Attention check tracking:', {
-					step1: state.attentionCheckStep1Passed,
-					step2: state.attentionCheckStep2Passed,
-					step3: state.attentionCheckStep3Passed,
 					overall: state.attentionCheckPassed
 				});
 			}
@@ -4402,8 +4304,10 @@
 		const state = scenarioStates.get(currentIdentifier);
 		if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
 			try {
+				const durationSeconds = scenarioTimers.get(currentIdentifier) ?? undefined;
 				const completeResponse = await completeScenario(localStorage.token, {
-					assignment_id: state.assignment_id
+					assignment_id: state.assignment_id,
+					duration_seconds: durationSeconds
 				});
 				console.log(
 					'✅ Called /complete endpoint for assignment:',
@@ -4421,19 +4325,40 @@
 		// Use try-catch to ensure errors don't prevent step completion
 		try {
 			const sessionId = `scenario_${selectedScenarioIndex}`;
+			const userId = $user?.id || 'unknown';
+			const childId = selectedChildId || 'unknown';
+
+			// Derive session-level concern_level as MAX of all per-(highlight, concern) severity ratings
+			const allSeverityLevels = Object.values(concernHighlightLevels)
+				.flatMap((perHighlight) => Object.values(perHighlight))
+				.filter((v): v is number => v !== null && v !== undefined);
+			const derivedConcernLevel = allSeverityLevels.length > 0 ? Math.max(...allSeverityLevels) : null;
+
+			// Fall back to scenarioStates if the module-level HTML vars are empty.
+			// This guards against cases where loadScenario cleared the vars (e.g. after
+			// page reload or navigation) but the state was saved in scenarioStates.
+			const savedStateForHtml = scenarioStates.get(getScenarioId(selectedScenarioIndex));
+			const effectiveResponseHTML =
+				responseHighlightedHTML || savedStateForHtml?.responseHighlightedHTML || undefined;
+			const effectivePromptHTML =
+				promptHighlightedHTML || savedStateForHtml?.promptHighlightedHTML || undefined;
+
+			// Persist concern items to their own table (non-blocking)
+			await persistConcernItems();
+
 			await saveModerationSession(localStorage.token, {
 				session_id: sessionId,
-				user_id: $user?.id || 'unknown',
-				child_id: selectedChildId || 'unknown',
+				user_id: userId,
+				child_id: childId,
 				scenario_index: selectedScenarioIndex,
-				attempt_number: 1,
+				attempt_number: currentAttemptNumber,
 				version_number: 0,
 				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
-				concern_level: concernLevel ?? undefined,
+				concern_level: derivedConcernLevel ?? undefined,
 				concern_reason: concernReason.trim(),
 				decided_at: Date.now(),
 				strategies: [],
@@ -4444,12 +4369,18 @@
 					end_offset: h.endOffset
 				})),
 				refactored_response: undefined,
+				response_highlighted_html: effectiveResponseHTML,
+				prompt_highlighted_html: effectivePromptHTML,
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: isAttentionCheckScenario
 					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
-					: false
+					: false,
+				session_metadata: {
+					highlight_concerns: highlightConcerns,
+					concern_highlight_levels: concernHighlightLevels
+				}
 			});
 			console.log('✅ Identification complete - scenario marked as final');
 			window.dispatchEvent(new Event('workflow-updated'));
@@ -4508,7 +4439,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId || 'unknown',
 				scenario_index: selectedScenarioIndex,
-				attempt_number: 1,
+				attempt_number: currentAttemptNumber,
 				version_number: versionNumber,
 				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId(),
@@ -4538,6 +4469,8 @@
 					currentVersionIndex >= 0 && versions[currentVersionIndex]
 						? versions[currentVersionIndex].response
 						: undefined,
+						response_highlighted_html: responseHighlightedHTML || undefined,
+						prompt_highlighted_html: promptHighlightedHTML || undefined,
 				is_final_version: action === 'move_on', // Mark as final if moving on
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -4641,7 +4574,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId || 'unknown',
 				scenario_index: selectedScenarioIndex,
-				attempt_number: 1,
+				attempt_number: currentAttemptNumber,
 				version_number: 0,
 				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId(),
@@ -4653,6 +4586,8 @@
 				custom_instructions: [],
 				highlighted_texts: [],
 				refactored_response: undefined,
+				response_highlighted_html: responseHighlightedHTML || undefined,
+				prompt_highlighted_html: promptHighlightedHTML || undefined,
 				is_final_version: false,
 				decided_at: Date.now(),
 				is_attention_check: isAttentionCheckScenario,
@@ -4838,7 +4773,7 @@
 						user_id: $user?.id || 'unknown',
 						child_id: selectedChildId || 'unknown',
 						scenario_index: selectedScenarioIndex,
-						attempt_number: 1,
+						attempt_number: currentAttemptNumber,
 						version_number: currentVersionIndex + 1,
 						session_number: sessionNumber,
 						scenario_id: getCurrentScenarioId(),
@@ -4854,6 +4789,8 @@
 							end_offset: h.endOffset
 						})),
 						refactored_response: result.refactored_response,
+						response_highlighted_html: responseHighlightedHTML || undefined,
+						prompt_highlighted_html: promptHighlightedHTML || undefined,
 						is_final_version: false,
 						decided_at: Date.now(),
 						is_attention_check: isAttentionCheckScenario,
@@ -4904,12 +4841,23 @@
 	}
 
 	async function proceedToNextStep() {
-		// Set flag to enable Next Task button (persisted in draft)
+		// Set flag to enable Next Task button
 		moderationFinalized = true;
 		showConfirmationModal = false; // Close modal
 
-		// Save the finalized flag to draft before navigating - AWAIT to ensure it completes
-		await saveCurrentScenarioState();
+		// Persist just the finalized flag to draft so getWorkflowState can read it back on reload
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					await saveWorkflowDraft(token, selectedChildId, 'moderation', {
+						moderation_finalized: true
+					});
+				}
+			} catch (e) {
+				console.error('Failed to persist moderation_finalized flag:', e);
+			}
+		}
 
 		// Ask backend to mark latest per-scenario submission as final for this child/session
 		try {
@@ -5042,6 +4990,10 @@
 			if (token) {
 				const state = await getWorkflowState(token);
 				workflowStateForModeration = state;
+				// Restore moderationFinalized from persisted draft flag (via workflow state)
+				if (state?.progress_by_section?.moderation_finalized) {
+					moderationFinalized = true;
+				}
 			}
 		} catch (e) {
 			console.warn('Failed to fetch workflow state for moderation:', e);
@@ -5054,15 +5006,27 @@
 		fetchWorkflowStateForModeration();
 	}
 	function onWorkflowResetHandler() {
-		// Clear all scenario state immediately when workflow is reset
-		// This prevents auto-save from persisting old scenarios with new attempt number
-		console.log('🔄 Workflow reset detected, clearing scenario state');
-		scenarioList = [];
-		scenarioIdentifiers = [];
-		scenarioStates.clear();
-		scenarioTimers.clear();
-		selectedScenarioIndex = 0;
-		moderationFinalized = false;
+		// Clear ALL scenario state immediately when workflow is reset.
+		// Use the comprehensive resetAllScenarioStates() helper so nothing is left behind
+		// (notably scenariosLockedForSession, step1/2/3Completed, highlightConcerns, etc.).
+		// If any of those remain set during the 400 ms window before navigation, the onDestroy
+		// saveCurrentScenarioState() call could write a partial draft — or the $: reactive block
+		// could fire saveCurrentScenarioState() — and pollute the new attempt's draft.
+		console.log('🔄 Workflow reset detected, clearing all scenario state');
+		resetAllScenarioStates(); // clears scenariosLockedForSession, steps, concerns, timers, etc.
+		scenarioList = []; // resetAllScenarioStates does not clear scenarioList itself
+
+		// Proactively delete the backend draft so that even if onDestroy's async save races
+		// against the navigation it cannot leave a draft with stale data under the new attempt.
+		if (selectedChildId && typeof window !== 'undefined') {
+			const token =
+				(typeof window !== 'undefined' && localStorage.token) ||
+				localStorage.getItem('token') ||
+				'';
+			if (token) {
+				deleteWorkflowDraft(token, selectedChildId, 'moderation').catch(() => {});
+			}
+		}
 	}
 	function onResizeHandler() {
 		const shouldOpen = window.innerWidth >= 768;
@@ -5148,7 +5112,6 @@
 		window.addEventListener('child-profiles-updated', handleProfileUpdate);
 
 		// Load child profiles for personality-based scenario generation
-		// (loadSavedStates will be called after scenarios are loaded in loadRandomScenarios)
 		await loadChildProfiles();
 		// Resolve session number after child profiles are loaded
 		resolveSessionNumber();
@@ -5210,79 +5173,16 @@
 		if (childProfiles.length > 0) {
 			let haveScenariosForAttempt = false;
 
-			// 1) Try to restore scenario list from draft first (stable across navigation for same attempt)
+			// 1) Fetch current attempt number (needed for subsequent assignment/session queries)
 			if (selectedChildId && typeof window !== 'undefined') {
 				try {
 					const token = localStorage.token || '';
 					if (token) {
-						// Get current attempt number
 						const attemptInfo = await getCurrentAttempt(token);
-						const currentAttemptNumber = attemptInfo?.current_attempt || 1;
-
-						const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
-						const data = draftRes?.data as
-							| {
-									attempt_number?: number;
-									moderation_finalized?: boolean;
-									scenario_list?: [string, string][];
-									scenario_identifiers?: string[];
-							  }
-							| undefined;
-
-						// Check if draft is from current attempt
-						const draftAttemptNumber = data?.attempt_number || 1;
-						const draftIsFinalized = !!data?.moderation_finalized;
-						if (draftAttemptNumber !== currentAttemptNumber && !draftIsFinalized) {
-							// Only discard stale drafts that were NOT finalized.  A finalized draft
-							// means the user already completed the survey on that attempt and is
-							// navigating back to review — preserve the scenario list so they see
-							// the same questions rather than a freshly-generated smaller set.
-							console.log(
-								`🔄 Ignoring draft from attempt ${draftAttemptNumber}, current attempt is ${currentAttemptNumber}`
-							);
-							// Clear the old draft
-							await deleteWorkflowDraft(token, selectedChildId, 'moderation');
-						} else {
-							// Restore moderation_finalized flag from draft
-							if (draftIsFinalized) {
-								moderationFinalized = true;
-								console.log(
-									`✅ Restored moderationFinalized = true from draft (attempt ${draftAttemptNumber}${draftAttemptNumber !== currentAttemptNumber ? `, reviewing vs current attempt ${currentAttemptNumber}` : ''})`
-								);
-								// Notify sidebar to update the checkmark
-								window.dispatchEvent(new Event('workflow-updated'));
-							}
-
-							const list = data?.scenario_list;
-							const identifiers = data?.scenario_identifiers;
-							if (
-								Array.isArray(list) &&
-								Array.isArray(identifiers) &&
-								list.length > 0 &&
-								identifiers.length === list.length
-							) {
-								scenarioList = list;
-								scenarioIdentifiers = identifiers;
-								scenariosLockedForSession = true;
-								haveScenariosForAttempt = true;
-								console.log(
-									'✅ Restored scenario list from draft for stable navigation, length:',
-									scenarioList.length,
-									'attempt:',
-									currentAttemptNumber
-								);
-								await loadSavedStates();
-								const idx =
-									selectedScenarioIndex >= 0 && selectedScenarioIndex < scenarioList.length
-										? selectedScenarioIndex
-										: 0;
-								selectedScenarioIndex = idx;
-								await loadScenario(idx, true);
-							}
-						}
+						currentAttemptNumber = attemptInfo?.current_attempt || 1;
 					}
 				} catch (e) {
-					console.warn('Failed to restore scenario list from draft', e);
+					console.warn('Failed to get current attempt number', e);
 				}
 			}
 
@@ -5296,10 +5196,12 @@
 							existingAssignments.sort(
 								(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
 							);
-							const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
-								a.prompt_text,
-								a.response_text
-							]);
+						const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
+							a.prompt_text,
+							a.attention_check_code
+								? a.response_text + `\n\n[Attention code: ${a.attention_check_code}]`
+								: a.response_text
+						]);
 							const baseIdentifiers: string[] = existingAssignments.map((a) => a.assignment_id);
 							const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
 							scenarioList = list;
@@ -5317,23 +5219,23 @@
 										showOriginal1: false,
 										showComparisonView: false,
 										attentionCheckSelected: false,
-										attentionCheckPassed: false,
-										attentionCheckStep1Passed: false,
-										attentionCheckStep2Passed: false,
-										attentionCheckStep3Passed: false,
+										attentionCheckPassed: null,
 										markedNotApplicable: false,
 										step1Completed: false,
 										step2Completed: false,
 										step3Completed: false,
 										concernLevel: null,
 										concernReason: '',
+										concernMappings: [],
+										highlightConcerns: {},
 										satisfactionLevel: null,
 										satisfactionReason: '',
 										nextAction: null
 									};
-									existingState.assignment_id = assignment.assignment_id;
-									existingState.scenario_id = assignment.scenario_id;
-									scenarioStates.set(identifier, existingState);
+								existingState.assignment_id = assignment.assignment_id;
+								existingState.scenario_id = assignment.scenario_id;
+								existingState.attention_check_code = assignment.attention_check_code ?? null;
+								scenarioStates.set(identifier, existingState);
 								}
 							});
 							if (scenarioList.length > 0) {
@@ -5343,13 +5245,8 @@
 									'✅ Using existing assignments from backend (no draft), scenarioList length:',
 									scenarioList.length
 								);
-								await loadSavedStates();
-								const idx =
-									selectedScenarioIndex >= 0 && selectedScenarioIndex < scenarioList.length
-										? selectedScenarioIndex
-										: 0;
-								selectedScenarioIndex = idx;
-								await loadScenario(idx, true);
+								selectedScenarioIndex = 0;
+								await loadScenario(0, true);
 							}
 						}
 					}
@@ -5538,55 +5435,6 @@
 			console.log('No child profiles found, using default scenarios');
 		}
 
-		// Load the current scenario state if it exists
-		const currentIdentifier = getScenarioId(selectedScenarioIndex);
-		const savedState = scenarioStates.get(currentIdentifier);
-		if (savedState) {
-			versions = [...savedState.versions];
-			currentVersionIndex = savedState.currentVersionIndex;
-			confirmedVersionIndex = savedState.confirmedVersionIndex;
-			highlightedTexts1 = [...savedState.highlightedTexts1];
-			selectedModerations = new Set(savedState.selectedModerations);
-			customInstructions = [...savedState.customInstructions];
-			showComparisonView = savedState.showComparisonView || false;
-			attentionCheckSelected = savedState.attentionCheckSelected || false;
-			attentionCheckPassed = savedState.attentionCheckPassed || false;
-			markedNotApplicable = savedState.markedNotApplicable || false;
-
-			// Restore unified initial decision flow state
-			// Step is now derived from completion flags, restore those instead
-			step1Completed = savedState.step1Completed || false;
-			step2Completed = savedState.step2Completed || false;
-			step3Completed = savedState.step3Completed || false;
-
-			// Restore Step 2 data
-			concernLevel = savedState.concernLevel ?? null;
-			concernReason = savedState.concernReason || '';
-
-			// Restore Step 3 data
-			satisfactionLevel = savedState.satisfactionLevel ?? null;
-			satisfactionReason = savedState.satisfactionReason || '';
-			nextAction = savedState.nextAction || null;
-
-			// If versions exist and not completed, ensure all steps are complete
-			if (versions.length > 0 && !step3Completed) {
-				step1Completed = true;
-				step2Completed = true;
-				// Keep step3Completed false so user can still interact with Step 3
-				showComparisonView = true; // Show comparison view
-				if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
-					// Keep the saved currentVersionIndex
-				} else {
-					currentVersionIndex = versions.length - 1; // Default to latest version
-				}
-			}
-
-			// UI visibility is now derived via reactive statements, no need to set here
-		}
-		// FIX: Removed extra closing brace that was causing syntax error "Expected ')' but found 'if'"
-		// The onMount callback properly closes at line 3704 with });
-		// This extra brace was prematurely closing the onMount callback, causing parser errors.
-
 		// Warmup visibility is now handled synchronously via reactive statement
 		// Only start timer if warmup is completed (bootstrap save removed to avoid NULL initial_decision)
 		if (warmupCompleted && !showWarmup) {
@@ -5616,19 +5464,6 @@
 		window.removeEventListener('resize', onResizeHandler);
 		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
 	});
-
-	// Reactive statements to save state when changes occur
-	$: if (
-		highlightedTexts1.length > 0 ||
-		selectedModerations.size > 0 ||
-		customInstructions.length > 0 ||
-		markedNotApplicable ||
-		step1Completed ||
-		step2Completed ||
-		step3Completed
-	) {
-		saveCurrentScenarioState();
-	}
 
 	// Warm-up tutorial functions
 	async function completeWarmup() {
@@ -6285,7 +6120,6 @@
 												class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 											>
 												Child's Question or Prompt
-											</label>
 											<textarea
 												bind:value={customScenarioPrompt}
 												placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
@@ -6358,7 +6192,24 @@
 								</div>
 							</div>
 						{:else if !isCustomScenario || customScenarioGenerated}
-							<!-- Child Prompt Bubble -->
+							<!-- Attention check bar above prompt -->
+						<AttentionCheckBar
+							code={scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attention_check_code ?? null}
+							passed={
+								scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ?? null
+							}
+							on:submit={(e) => {
+								const entry: string = e.detail;
+								const state = scenarioStates.get(getScenarioId(selectedScenarioIndex));
+								if (state) {
+									state.attentionCheckPassed = entry === state.attention_check_code;
+									scenarioStates.set(getScenarioId(selectedScenarioIndex), state);
+									attentionCheckPassed = state.attentionCheckPassed;
+									saveCurrentScenarioState();
+								}
+							}}
+						/>
+						<!-- Child Prompt Bubble -->
 							<div class="flex justify-end">
 								<!-- 
 						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
@@ -6387,10 +6238,6 @@
 									<!-- Auto-highlight enabled: No button needed -->
 								</div>
 							</div>
-						{/if}
-
-						<!-- AI Response Bubble (hidden for custom scenario before generation) -->
-						{#if !isCustomScenario || customScenarioGenerated}
 							<!-- Side-by-Side Comparison View -->
 							{#if showComparisonView && versions.length > 0 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
@@ -6567,50 +6414,6 @@
 													>
 														Undo
 													</button>
-												</div>
-											</div>
-										{/if}
-
-										{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable && initialDecisionStep > 1}
-											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-												<div class="flex items-center justify-between mb-1">
-													<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
-														Highlighted Concerns ({highlightedTexts1.length}):
-													</p>
-													{#if moderationPanelVisible}
-														<button
-															on:click={returnToHighlighting}
-															class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-														>
-															Change/Add Highlighted Text
-														</button>
-													{/if}
-												</div>
-												<div class="flex flex-wrap gap-1">
-													{#each highlightedTexts1 as highlight}
-														<button
-															class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-															on:click={() => removeHighlight(highlight)}
-															title="Click to remove"
-														>
-															{highlight.text.length > 30
-																? highlight.text.substring(0, 30) + '...'
-																: highlight.text}
-															<svg
-																class="w-3 h-3 ml-1"
-																fill="none"
-																stroke="currentColor"
-																viewBox="0 0 24 24"
-															>
-																<path
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																	stroke-width="2"
-																	d="M6 18L18 6M6 6l12 12"
-																></path>
-															</svg>
-														</button>
-													{/each}
 												</div>
 											</div>
 										{/if}
@@ -6805,95 +6608,223 @@
 										<!-- Step 2: Assess -->
 										{#if initialDecisionStep === 2}
 											<div class="space-y-4">
-												<div>
-													<div class="flex items-center justify-between mb-2">
-														<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-															Step 2: Explain why this content concerns you
-														</h3>
-														<button
-															on:click={() => navigateToStep(1)}
-															class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+												<div class="flex items-center justify-between mb-2">
+													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+														Step 2: Add Concerns for Each Highlight
+													</h3>
+													<button
+														on:click={() => navigateToStep(1)}
+														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+													>
+														<svg
+															class="w-3 h-3 flex-shrink-0"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
 														>
-															<svg
-																class="w-3 h-3 flex-shrink-0"
-																fill="none"
-																stroke="currentColor"
-																viewBox="0 0 24 24"
-															>
-																<path
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																	stroke-width="2"
-																	d="M10 19l-7-7m0 0l7-7m-7 7h18"
-																></path>
-															</svg>
-															<span>Back</span>
-														</button>
-													</div>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M10 19l-7-7m0 0l7-7m-7 7h18"
+															></path>
+														</svg>
+														<span>Back</span>
+													</button>
 												</div>
 
-												<!-- Concern Rating Likert Scale (before explain why) -->
-												<div class="space-y-4">
-													<div>
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															To what extent, if any, are you concerned about this interaction? <span
-																class="text-red-500">*</span
-															>
-														</label>
-														<div class="space-y-2">
-															{#each [{ value: 1, label: 'Not concerned at all' }, { value: 2, label: 'Somewhat unconcerned' }, { value: 3, label: 'Neutral' }, { value: 4, label: 'Somewhat concerned' }, { value: 5, label: 'Concerned' }] as option}
-																<label
-																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {concernLevel ===
-																	option.value
-																		? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-																		: ''}"
+												<p class="text-base text-gray-600 dark:text-gray-400 mb-4">
+													For each highlighted passage, describe what concerns you about it. You can
+													reuse a concern across multiple highlights. <strong>Note:</strong> Please rate your
+													concern level separately for each highlighted passage.
+												</p>
+
+												{#if highlightedTexts1.length === 0}
+													<div
+														class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+													>
+														<p class="text-sm text-yellow-800 dark:text-yellow-200">
+															⚠️ No highlights found from Step 1. Go back and highlight text that
+															concerns you.
+														</p>
+													</div>
+												{:else}
+													<!-- Progress bar -->
+													{@const matchedCount = highlightedTexts1.filter((h) => {
+														const ids = highlightConcerns[h.text] ?? [];
+														return (
+															ids.length > 0 &&
+															ids.every((id) => (concernMappings.find((c) => c.id === id)?.concernLevel ?? null) !== null)
+														);
+													}).length}
+													<div class="mb-2">
+														<div class="flex items-center justify-between mb-1">
+															<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+																{matchedCount} of {highlightedTexts1.length} highlight{highlightedTexts1.length !==
+																1
+																	? 's'
+																	: ''} addressed
+															</span>
+															{#if matchedCount === highlightedTexts1.length}
+																<span class="text-sm font-medium text-green-600 dark:text-green-400"
+																	>All addressed!</span
 																>
-																	<input
-																		type="radio"
-																		name="concernLevel"
-																		value={option.value}
-																		bind:group={concernLevel}
-																		class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-																	/>
-																	<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
-																		{option.label}
-																	</span>
-																</label>
-															{/each}
+															{:else}
+																<span class="text-sm font-medium text-amber-600 dark:text-amber-400"
+																	>{highlightedTexts1.length - matchedCount} remaining</span
+																>
+															{/if}
+														</div>
+														<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+															<div
+																class="h-2 rounded-full transition-all duration-300 {matchedCount ===
+																highlightedTexts1.length
+																	? 'bg-green-500'
+																	: 'bg-blue-500'}"
+																style="width: {highlightedTexts1.length > 0
+																	? (matchedCount / highlightedTexts1.length) * 100
+																	: 0}%"
+															></div>
 														</div>
 													</div>
 
-													<!-- Explanation field -->
-													<div>
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															Explain why this content concerns you <span class="text-red-500"
-																>*</span
+													<!-- Per-highlight concern assignment -->
+													<div class="space-y-4">
+														{#each highlightedTexts1 as highlight, hIdx (highlight.text)}
+															{@const linkedIds = highlightConcerns[highlight.text] ?? []}
+															{@const isAddressed =
+																linkedIds.length > 0 &&
+																linkedIds.every(
+																	(id) => (concernHighlightLevels[highlight.text]?.[id] ?? null) !== null
+																)}
+															<div
+																class="p-3 border rounded-lg transition-colors {isAddressed
+																	? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10'
+																	: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}"
 															>
-														</label>
-														<textarea
-															bind:value={concernReason}
-															placeholder="Explain why this content concerns you... (minimum 10 characters)"
-															rows="5"
-															minlength="10"
-															class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
-														></textarea>
-													</div>
-												</div>
+																<!-- Highlight label -->
+																<div class="flex items-start space-x-2 mb-2">
+																	<span
+																		class="inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-bold flex-shrink-0 mt-0.5 {isAddressed
+																			? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
+																			: 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}"
+																	>
+																		{hIdx + 1}
+																	</span>
+																	<span
+																		class="text-base text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed"
+																	>
+																		"{highlight.text}"
+																	</span>
+																</div>
 
+																<div class="mt-2 space-y-2">
+																{#if concernMappings.filter((c) => c.text.trim()).length > 0}
+																	{#each concernMappings.filter((c) => c.text.trim()) as concern (concern.id)}
+																		<div class="flex flex-col gap-1">
+																			<!-- Top row: checkbox + concern text + remove button -->
+																			<div class="flex items-center gap-2">
+																				<input
+																					type="checkbox"
+																					checked={linkedIds.includes(concern.id)}
+																					on:change={(e) =>
+																						toggleConcernLink(
+																							highlight.text,
+																							concern.id,
+																							e.currentTarget.checked
+																						)}
+																					class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
+																				/>
+																				<span class="flex-1 text-base text-gray-800 dark:text-gray-200">{concern.text}</span>
+																				<button
+																					type="button"
+																					on:click={() => handleRemoveConcern(concern.id)}
+																					class="text-red-400 hover:text-red-600 flex-shrink-0"
+																					title="Remove"
+																				>
+																					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																					</svg>
+																				</button>
+																			</div>
+																			<!-- Severity row: only shown when this concern is linked to this highlight -->
+																			{#if linkedIds.includes(concern.id)}
+																				<div class="ml-7 flex flex-col gap-1.5">
+																					<span class="text-sm font-medium text-gray-600 dark:text-gray-400">How severe is this concern for this passage?</span>
+																					<div class="flex flex-wrap gap-1.5">
+																						{#each [{ v: 1, l: 'Not concerning' }, { v: 2, l: 'Slightly concerning' }, { v: 3, l: 'Moderately concerning' }, { v: 4, l: 'Very concerning' }, { v: 5, l: 'Extremely concerning' }] as opt}
+																							<button
+																								type="button"
+																								on:click={() => {
+																									concernHighlightLevels = {
+																										...concernHighlightLevels,
+																										[highlight.text]: {
+																											...(concernHighlightLevels[highlight.text] ?? {}),
+																											[concern.id]: opt.v
+																										}
+																									};
+																								}}
+																								class="px-3 py-1.5 text-sm rounded border transition-colors {(concernHighlightLevels[highlight.text]?.[concern.id] ?? null) === opt.v
+																									? 'bg-blue-500 border-blue-500 text-white font-semibold'
+																									: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400'}"
+																							>
+																								{opt.v}. {opt.l}
+																							</button>
+																						{/each}
+																					</div>
+																				</div>
+																			{/if}
+																		</div>
+																	{/each}
+																	<hr class="border-gray-200 dark:border-gray-600" />
+																{/if}
+																<input
+																	type="text"
+																	value={newConcernInputs[highlight.text] ?? ''}
+																	on:input={(e) => {
+																		newConcernInputs = {
+																			...newConcernInputs,
+																			[highlight.text]: e.currentTarget.value
+																		};
+																	}}
+																	on:keydown={(e) => {
+																		if (e.key === 'Enter') {
+																			e.preventDefault();
+																			addConcernForHighlight(highlight.text);
+																		}
+																	}}
+																	placeholder="Describe a concern…"
+																	class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+																/>
+																<button
+																	type="button"
+																	on:click={() => addConcernForHighlight(highlight.text)}
+																	disabled={!(newConcernInputs[highlight.text] ?? '').trim()}
+																	class="w-full px-3 py-2 text-base font-medium bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+																>
+																	+ Add concern
+																</button>
+															</div>
+															</div>
+														{/each}
+													</div>
+												{/if}
+
+												<!-- Submit button -->
 												<div>
 													<button
 														on:click={completeStep2}
-														disabled={concernLevel === null ||
-															!concernReason.trim() ||
-															concernReason.trim().length < 10}
+														disabled={!canSubmit && !isAttentionCheckScenario}
 														class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 													>
 														Submit
 													</button>
+													{#if !canSubmit && highlightedTexts1.length > 0}
+														<p class="text-sm text-amber-600 dark:text-amber-400 mt-1 text-center">
+															Add at least one concern for each highlight and rate every concern
+															before submitting
+														</p>
+													{/if}
 												</div>
 											</div>
 										{/if}
@@ -6960,6 +6891,17 @@
 															>
 																Satisfaction Level <span class="text-red-500">*</span>
 															</label>
+																<button
+																	type="button"
+																	on:click={() => handleRemoveConcern(concern.id)}
+																	class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																	aria-label="Remove concern"
+																	title="Remove this concern"
+																>
+																	<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																	</svg>
+																</button>
 															{#each [1, 2, 3, 4, 5] as level}
 																<label
 																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {satisfactionLevel ===
@@ -6986,6 +6928,17 @@
 																						: '5 - Very Satisfied'}
 																	</span>
 																</label>
+																	<button
+																		type="button"
+																		on:click={() => handleRemoveConcern(concern.id)}
+																		class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																		aria-label="Remove concern"
+																		title="Remove this concern"
+																	>
+																		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																		</svg>
+																	</button>
 															{/each}
 														</div>
 
@@ -6996,6 +6949,17 @@
 															>
 																Why? <span class="text-red-500">*</span>
 															</label>
+																<button
+																	type="button"
+																	on:click={() => handleRemoveConcern(concern.id)}
+																	class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																	aria-label="Remove concern"
+																	title="Remove this concern"
+																>
+																	<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																	</svg>
+																</button>
 															<textarea
 																bind:value={satisfactionReason}
 																placeholder="Explain your satisfaction level... (minimum 10 characters)"
@@ -7278,6 +7242,17 @@
 																			>
 																				Enter custom moderation instruction:
 																			</label>
+																				<button
+																					type="button"
+																					on:click={() => handleRemoveConcern(concern.id)}
+																					class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																					aria-label="Remove concern"
+																					title="Remove this concern"
+																				>
+																					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																					</svg>
+																				</button>
 																			<textarea
 																				bind:value={customInstructionInput}
 																				rows="2"
@@ -7735,6 +7710,17 @@
 														>
 															Enter custom moderation instruction:
 														</label>
+															<button
+																type="button"
+																on:click={() => handleRemoveConcern(concern.id)}
+																class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																aria-label="Remove concern"
+																title="Remove this concern"
+															>
+																<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																</svg>
+															</button>
 														<textarea
 															bind:value={customInstructionInput}
 															rows="3"

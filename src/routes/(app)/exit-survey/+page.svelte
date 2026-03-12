@@ -10,8 +10,8 @@
 	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
 	import { personalityTraits } from '$lib/data/personalityTraits';
 
-	// Survey responses
-	let surveyResponses: any = {
+	// Survey responses (template and current state)
+	const EMPTY_SURVEY_RESPONSES = {
 		parentGender: '',
 		parentAge: '',
 		areaOfResidency: '',
@@ -35,8 +35,10 @@
 		childAdditionalInfo: ''
 	};
 
+	let surveyResponses: any = { ...EMPTY_SURVEY_RESPONSES };
+
 	// API
-	import { createExitQuiz, listExitQuiz } from '$lib/apis/exit-quiz';
+	import { createExitQuiz, listExitQuiz, resetExitQuiz } from '$lib/apis/exit-quiz';
 	import { getChildProfiles as apiGetChildProfiles } from '$lib/apis/child-profiles';
 	import {
 		getCurrentAttempt,
@@ -48,6 +50,10 @@
 	// Save/Edit pattern state
 	let isSaved: boolean = false;
 	let showConfirmationModal: boolean = false;
+	// Prevents autosave from firing before initial data is hydrated
+	let isLoaded: boolean = false;
+	// Controls the reset-survey confirmation dialog
+	let showResetSurveyModal: boolean = false;
 
 	// Attempt and child context (populated in onMount from backend)
 	let attemptNumber: number = 1;
@@ -58,6 +64,7 @@
 	$: sessionNumber = $user?.session_number || 1;
 
 	// Debounce helper
+
 	function debounce(fn: (...args: any[]) => void, delay = 400) {
 		let t: any;
 		return (...args: any[]) => {
@@ -188,7 +195,7 @@
 		// Rehydrate from backend: only use responses for the current attempt (after reset, this returns [] so form stays empty)
 		if (token) {
 			try {
-				const rows = await listExitQuiz(token, childId || undefined, true);
+				const rows = await listExitQuiz(token, childId || undefined, false);
 				if (rows && Array.isArray(rows) && rows.length > 0) {
 					const latest = [...rows].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0];
 					const ans: Record<string, unknown> = (latest?.answers as Record<string, unknown>) || {};
@@ -222,12 +229,16 @@
 			showSidebar.set(true);
 		}
 		await loadSavedResponses();
+		// hydration complete
+		isLoaded = true;
 	});
 
 	// Repopulate when navigating back to exit survey (e.g. from completion) so the form shows saved data for the session
 	afterNavigate(async ({ to }) => {
 		if (to?.pathname && to.pathname.startsWith('/exit-survey')) {
+			isLoaded = false;
 			await loadSavedResponses();
+			isLoaded = true;
 		}
 	});
 
@@ -353,7 +364,13 @@
 		}
 	}, 500);
 
-	$: saveDraft();
+	// autosave reactive statement - runs whenever surveyResponses changes
+	$: if (isLoaded) {
+		// reference surveyResponses to make it a dependency
+		surveyResponses;
+		saveDraft();
+	}
+
 
 	function startEditing() {
 		isSaved = false;
@@ -378,6 +395,27 @@
 
 	function goBack() {
 		goto('/moderation-scenario');
+	}
+
+	async function resetExitSurvey() {
+		const token = localStorage.token || '';
+		if (!token) return;
+		const child_id = await resolveChildId(token);
+		if (!child_id) return;
+		try {
+			await resetExitQuiz(token, child_id);
+			try {
+				await deleteWorkflowDraft(token, child_id, 'exit_survey');
+			} catch {}
+			surveyResponses = { ...EMPTY_SURVEY_RESPONSES };
+			isSaved = false;
+			showResetSurveyModal = false;
+			window.dispatchEvent(new Event('workflow-updated'));
+			toast.success('Exit survey cleared. You may fill it out again.');
+		} catch (e) {
+			console.error('Failed to reset survey', e);
+			toast.error('Could not reset survey.');
+		}
 	}
 </script>
 
@@ -468,13 +506,22 @@
 						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">
 							Exit Survey Responses
 						</h3>
-						<button
-							type="button"
-							on:click={startEditing}
-							class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition"
-						>
-							Edit
-						</button>
+						<div class="flex items-center gap-3">
+							<button
+								type="button"
+								on:click={startEditing}
+								class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition"
+							>
+								Edit
+							</button>
+							<button
+								type="button"
+								on:click={() => (showResetSurveyModal = true)}
+								class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 underline text-sm font-medium"
+							>
+								Reset survey
+							</button>
+						</div>
 					</div>
 					<div class="space-y-4">
 						<div>
@@ -1640,6 +1687,46 @@
 						class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 					>
 						No, Continue Editing
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if showResetSurveyModal}
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+		<div
+			class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			on:click={() => (showResetSurveyModal = false)}
+			on:keydown={(e) => e.key === 'Escape' && (showResetSurveyModal = false)}
+			role="dialog"
+			aria-modal="true"
+		>
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<!-- svelte-ignore a11y-no-static-element-interactions -->
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl"
+				on:click|stopPropagation
+			>
+				<h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Reset exit survey?</h3>
+				<p class="mb-6 text-gray-700 dark:text-gray-300">
+					This will permanently delete your current responses and allow you to start over. Your
+					child profile and moderation progress are not affected.
+				</p>
+				<div class="flex justify-end space-x-4">
+					<button
+						class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+						on:click={() => (showResetSurveyModal = false)}
+					>
+						Cancel
+					</button>
+					<button
+						class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+						on:click={resetExitSurvey}
+					>
+						Yes, reset
 					</button>
 				</div>
 			</div>

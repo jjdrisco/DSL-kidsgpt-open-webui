@@ -5,11 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-02-24
+
+### Added (Research)
+
+- 🔗 **Two-sub-step highlight-to-concern matching**: Step 2 of the moderation scenario survey is now split into two sub-steps. Step 2a ("Rate & Create Concerns") collects the Likert rating and lets parents create named concerns. Step 2b ("Match Highlights to Concerns") presents a highlight-centric interface where every highlight from Step 1 must be matched to at least one concern before submitting. This replaces the previous concern-centric checkbox approach where highlights could remain unmatched. A progress bar shows matched vs. remaining highlights. New helpers: `getUnmatchedHighlights()`, `allHighlightsMatched()`, `allConcernsHaveHighlights()`. `step2SubStep` state variable controls sub-step navigation within Step 2. Updated `docs/CONCERN_MAPPING_FEATURE.md` with revised workflow and validation rules.
+
 ## [Unreleased] - 2026-02-22
 
 ### Added (Research)
 
 - 📊 **Cross-reference attention check**: The child profile form now includes a required "How often does this child use the Internet?" question (8-point scale, displayed in reversed order 8→1). The same question appears in the exit survey in forward order (1→8), enabling post-hoc comparison of responses to detect inattentive participants. Stored as `child_internet_use_frequency` (string '1'–'8') on the `child_profile` table (migration `t1u2v3w4x5y6`).
+
+### Fixed
+
+- 🔒 **Study-specific UI gated behind `isStudyMode` prop**: The "Note: Please provide information about one child…" instructional banner and the internet use frequency question now only appear on `/kids/profile` (study workflow). They no longer bleed into `/parent` or `/parent/child-profile`. The `ChildProfileForm` component accepts `isStudyMode` (default `false`); only `kids/profile/+page.svelte` passes `isStudyMode={true}`.
 
 ## [0.7.2] - 2026-01-10
 

@@ -54,8 +54,8 @@ export interface ModerationSessionPayload {
 	strategies?: string[];
 	custom_instructions?: string[]; // Simplified from {id, text}[] to string[]
 	highlighted_texts?: Array<{ text: string; start_offset?: number; end_offset?: number }>;
-	responseHighlightedHTML?: string; // HTML with <mark> elements for response
-	promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
+	response_highlighted_html?: string; // HTML with <mark> elements for response
+	prompt_highlighted_html?: string; // HTML with <mark> elements for prompt
 	refactored_response?: string;
 	is_final_version?: boolean;
 	session_metadata?: Record<string, any>;
@@ -84,8 +84,8 @@ export interface ModerationSessionResponse {
 	strategies?: string[];
 	custom_instructions?: string[];
 	highlighted_texts?: Array<{ text: string; start_offset?: number; end_offset?: number }>;
-	responseHighlightedHTML?: string; // HTML with <mark> elements for response
-	promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
+	response_highlighted_html?: string; // HTML with <mark> elements for response
+	prompt_highlighted_html?: string; // HTML with <mark> elements for prompt
 	refactored_response?: string;
 	session_metadata?: Record<string, any>;
 	is_attention_check: boolean;
@@ -206,6 +206,103 @@ export const deleteModerationSession = async (token: string, session_id: string)
 	if (!res.ok) throw await res.json();
 };
 
+// ---- Concern Items API ----
+
+export interface ConcernItemPayload {
+	id: string;
+	position: number;
+	text: string;
+	concern_level: number | null;
+	linked_highlights: string[] | null;
+}
+
+export interface ConcernItemBatchPayload {
+	session_id: string;
+	user_id: string;
+	child_id: string;
+	scenario_index: number;
+	attempt_number: number;
+	version_number: number;
+	session_number: number;
+	scenario_id?: string;
+	items: ConcernItemPayload[];
+}
+
+export interface ConcernItemResponse {
+	id: string;
+	session_id: string;
+	user_id: string;
+	child_id: string;
+	scenario_index: number;
+	attempt_number: number;
+	version_number: number;
+	session_number: number;
+	scenario_id: string | null;
+	position: number;
+	text: string;
+	concern_level: number | null;
+	linked_highlights: string[] | null;
+	created_at: number;
+	updated_at: number;
+}
+
+export const saveConcernItemsBatch = async (
+	token: string,
+	payload: ConcernItemBatchPayload
+): Promise<ConcernItemResponse[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/concern-items/batch`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const getConcernItems = async (
+	token: string,
+	params: {
+		user_id: string;
+		child_id: string;
+		scenario_index: number;
+		attempt_number: number;
+		version_number: number;
+		session_number: number;
+	}
+): Promise<ConcernItemResponse[]> => {
+	let base = WEBUI_API_BASE_URL || '';
+	let url: URL;
+	try {
+		if (base.startsWith('http://') || base.startsWith('https://')) {
+			url = new URL(`${base.replace(/\/+$/, '')}/moderation/concern-items`);
+		} else {
+			const prefix = window.location.origin;
+			url = new URL(`${prefix}${base.replace(/\/+$/, '')}/moderation/concern-items`);
+		}
+	} catch {
+		url = new URL('/moderation/concern-items', window.location.origin);
+	}
+	url.searchParams.set('user_id', params.user_id);
+	url.searchParams.set('child_id', params.child_id);
+	url.searchParams.set('scenario_index', String(params.scenario_index));
+	url.searchParams.set('attempt_number', String(params.attempt_number));
+	url.searchParams.set('version_number', String(params.version_number));
+	url.searchParams.set('session_number', String(params.session_number));
+
+	const res = await fetch(url.toString(), {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 // Keep the existing moderation apply function for generating responses
 export const applyModeration = async (
 	token: string,
@@ -303,6 +400,8 @@ export interface ScenarioAssignResponse {
 		weight: number;
 		sampling_prob: number;
 	};
+	/** code displayed for attention-check scenario, if any */
+	attention_check_code?: string | null;
 }
 
 export interface ScenarioStatusUpdateRequest {
@@ -454,6 +553,10 @@ export const abandonScenario = async (
 	return res.json();
 };
 
+// attention-check API functions have been deprecated in favour of
+// assignment-level code logic.  The server no longer exposes
+// /moderation/attention-checks/random; callers should ignore these types.
+
 export interface AttentionCheckResponse {
 	scenario_id: string;
 	prompt_text: string;
@@ -463,24 +566,7 @@ export interface AttentionCheckResponse {
 	sentiment?: string;
 }
 
-export const getRandomAttentionCheck = async (
-	token: string
-): Promise<AttentionCheckResponse | null> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/attention-checks/random`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	});
-	if (!res.ok) {
-		if (res.status === 404) {
-			return null; // No attention checks available
-		}
-		throw await res.json();
-	}
-	return res.json();
-};
+// NOTE: getRandomAttentionCheck removed.  See new attention-check plan.
 
 // Highlights API functions
 
@@ -524,6 +610,7 @@ export interface AssignmentWithScenario {
 	status: string;
 	assigned_at: number;
 	started_at?: number;
+	attention_check_code?: string | null;
 }
 
 export const getAssignmentsForChild = async (

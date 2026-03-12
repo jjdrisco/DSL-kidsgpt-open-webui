@@ -6,7 +6,11 @@ This plan covers updates to attention check flow, child profile, scenario review
 
 ---
 
-## 1. Attention Check Flow Update
+## 1. Attention Check Flow Update ✅ IMPLEMENTED
+
+> **Status (Feb 2026):** Implemented. Attention checks are non-blocking (tracking only). `attentionCheckStep1Passed`, `attentionCheckStep2Passed`, `attentionCheckStep3Passed` fields added to `ScenarioState`. The overall `attentionCheckPassed` is calculated for analytics. Users can proceed regardless of completion.
+>
+> **Note:** The step references below (Step 2 `concernReason`, Step 3) are from the original plan. The moderation flow has since been simplified to 2 active steps (Highlight → Assess). See `docs/MODERATION_SURVEY_FLOW.md` for current state.
 
 ### Current State
 
@@ -77,7 +81,13 @@ This plan covers updates to attention check flow, child profile, scenario review
 
 ---
 
-## 2. Child Profile Updates
+## 2. Child Profile Updates ✅ PARTIALLY IMPLEMENTED
+
+> **Status (Feb 2026):**
+>
+> - ✅ 2.1 Instructional message added (gated behind `isStudyMode` prop)
+> - ✅ 2.2 MVP fields identified; personality traits, research fields, and internet use frequency are conditionally shown via `showPersonalityTraits`, `showResearchFields`, and `isStudyMode` props
+> - ⬜ 2.3 Move remaining fields to exit survey — not yet implemented
 
 ### 2.1 Add Message to Child Profile Page
 
@@ -128,7 +138,9 @@ This plan covers updates to attention check flow, child profile, scenario review
 
 ---
 
-## 3. Scenario Review - Likert Scale Concern Rating
+## 3. Scenario Review - Likert Scale Concern Rating ✅ IMPLEMENTED
+
+> **Status (Feb 2026):** Implemented. `concernLevel` (1-5 Likert scale) is now the primary data collected in Step 2 (Assess). The moderation/decision step has been disabled — the simplified flow is identification-only.
 
 ### Current State
 
@@ -167,7 +179,7 @@ This plan covers updates to attention check flow, child profile, scenario review
 
 ---
 
-## 4. Exit Survey - Parenting Style Multi-Select
+## 4. Exit Survey - Parenting Style Multi-Select ⬜ NOT YET IMPLEMENTED
 
 ### Current State
 

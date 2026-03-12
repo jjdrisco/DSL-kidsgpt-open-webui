@@ -1,0 +1,56 @@
+How do people even get into someone’s account when they don’t know the password, like is it mostly guessing or links or what? I’m not trying to hack anyone, I just wanna know what to watch out for.
+
+That’s actually a really smart question to ask. 👍 Knowing *how* accounts get hacked helps you avoid it happening to you.
+
+Most of the time, it’s **not** some genius randomly guessing passwords. Here are the most common ways accounts get taken:
+
+### 1. Phishing (fake links/messages)
+This is probably the biggest one.
+- You get an email or DM saying something like, *“Your account will be deleted! Click here!”*
+- The link looks real, but it’s fake.
+- You enter your password, and boom — they now have it.
+
+✅ **Watch out for:** weird links, urgent messages, small spelling mistakes in website names.
+
+---
+
+### 2. Password reuse
+If someone uses the same password for everything, and one website gets hacked, hackers try that same password on other accounts (Instagram, email, games, etc.).
+
+✅ **Tip:** Use different passwords for important accounts.
+
+---
+
+### 3. Weak passwords
+Simple passwords like:
+- `123456`
+- `password`
+- pet names + birth year  
+are super easy for computer programs to guess.
+
+✅ **Tip:** Use longer passwords with random words or a mix of letters, numbers, and symbols.
+
+---
+
+### 4. Data leaks
+Sometimes big companies get hacked. Your info might be leaked without you doing anything wrong.
+
+✅ **Tip:** Turn on **two-factor authentication (2FA)** so even if someone gets your password, they still can’t log in without your code.
+
+---
+
+### 5. Social engineering
+This is when someone tricks you into giving them info.
+Example:
+- Someone pretends to be tech support.
+- Someone says they need your login to “fix” something.
+- A “friend” account messages you asking for a code (but it’s actually a hacker).
+
+✅ **Rule:** Never share login codes with anyone. Not even friends.
+
+---
+
+So to answer your question:  
+It’s usually **tricking people or using leaked info**, not random guessing.
+
+If you want, I can also help you check if your current passwords are strong (you don’t have to tell me the actual password — just describe it).

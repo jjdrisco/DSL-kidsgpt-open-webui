@@ -18,11 +18,15 @@ from open_webui.models.moderation import (
     ModerationSessionActivities,
     ModerationSessionActivityForm,
     ModerationSessionActivityModel,
+    ConcernItems,
+    ConcernItemBatchForm,
+    ConcernItemModel,
 )
 from open_webui.models.child_profiles import ChildProfiles
 from open_webui.models.scenarios import (
     Scenarios,
     ScenarioAssignments,
+    ScenarioAssignment,
     ScenarioAssignmentForm,
     ScenarioAssignmentModel,
     ScenarioModel,
@@ -64,6 +68,8 @@ class ModerationSessionPayload(BaseModel):
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
+    response_highlighted_html: Optional[str] = None
+    prompt_highlighted_html: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
     # Attention check tracking
@@ -106,6 +112,8 @@ async def create_or_update_session(
             custom_instructions=form_data.custom_instructions,
             highlighted_texts=form_data.highlighted_texts,
             refactored_response=form_data.refactored_response,
+            response_highlighted_html=form_data.response_highlighted_html,
+            prompt_highlighted_html=form_data.prompt_highlighted_html,
             is_final_version=form_data.is_final_version,
             session_metadata=form_data.session_metadata,
             is_attention_check=form_data.is_attention_check,
@@ -119,6 +127,56 @@ async def create_or_update_session(
         raise
     except Exception as e:
         log.error(f"Error upserting moderation session: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/moderation/concern-items/batch", response_model=list[ConcernItemModel])
+async def batch_upsert_concern_items(
+    form_data: ConcernItemBatchForm,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Batch upsert concern items for a session context.
+
+    Replaces all existing concern items for the given session context with
+    the supplied list, deleting any items not present in the new batch.
+    """
+    try:
+        if user.id != form_data.user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return ConcernItems.batch_upsert(form_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error batch upserting concern items: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/moderation/concern-items", response_model=list[ConcernItemModel])
+async def get_concern_items(
+    user_id: str,
+    child_id: str,
+    scenario_index: int,
+    attempt_number: int,
+    version_number: int,
+    session_number: int = 1,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Return all concern items for a session context, ordered by position."""
+    try:
+        if user.id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return ConcernItems.get_by_session_context(
+            user_id=user_id,
+            child_id=child_id,
+            scenario_index=scenario_index,
+            attempt_number=attempt_number,
+            version_number=version_number,
+            session_number=session_number,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error fetching concern items: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -139,6 +197,8 @@ class ScenarioAssignResponse(BaseModel):
     response_text: str
     assignment_position: Optional[int] = None
     sampling_audit: Optional[dict] = None
+    # attention vérification code, if assigned to this row
+    attention_check_code: Optional[str] = None
 
 
 @router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
@@ -186,6 +246,7 @@ async def assign_scenario(
 
             db.commit()
 
+        # include attention_check_code in response if already present (should be null here)
         return ScenarioAssignResponse(
             assignment_id=assignment.assignment_id,
             scenario_id=selected_scenario.scenario_id,
@@ -193,6 +254,7 @@ async def assign_scenario(
             response_text=selected_scenario.response_text,
             assignment_position=assignment.assignment_position,
             sampling_audit=sampling_audit,
+            attention_check_code=getattr(assignment, 'attention_check_code', None),
         )
     except HTTPException:
         raise
@@ -629,6 +691,8 @@ class AssignmentWithScenario(BaseModel):
     status: str
     assigned_at: int
     started_at: Optional[int] = None
+    # code associated to this assignment (client shows it if present)
+    attention_check_code: Optional[str] = None
 
 
 @router.get(
@@ -686,6 +750,7 @@ async def get_assignments_for_child(
                         status=assignment.status,
                         assigned_at=assignment.assigned_at,
                         started_at=assignment.started_at,
+                        attention_check_code=assignment.attention_check_code,
                     )
                 )
 
@@ -695,6 +760,56 @@ async def get_assignments_for_child(
     except Exception as e:
         log.error(f"Error getting assignments for child {child_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ---------------------------------------------------------------------------
+# Attention-code utilities
+# ---------------------------------------------------------------------------
+
+import secrets
+import string
+
+
+def _generate_attention_code(length: int = 5) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
+@router.patch(
+    "/moderation/scenarios/assignments/{assignment_id}/attention-code",
+    response_model=dict,
+)
+async def patch_assignment_attention_code(
+    assignment_id: str, user: UserModel = Depends(get_verified_user)
+):
+    """Ensure an assignment has a short attention check code.
+
+    If the row already contains a code it is returned unchanged. Otherwise a new
+    code is generated, persisted, and returned. Only the owning participant may
+    call this route.
+    """
+    try:
+        with get_db() as db:
+            assignment = (
+                db.query(ScenarioAssignment)
+                .filter(ScenarioAssignment.assignment_id == assignment_id)
+                .first()
+            )
+            if not assignment or assignment.participant_id != user.id:
+                raise HTTPException(status_code=404, detail="Assignment not found")
+            code = assignment.attention_check_code
+            if not code:
+                code = _generate_attention_code()
+                assignment.attention_check_code = code
+                db.commit()
+        return {"assignment_id": assignment_id, "attention_check_code": code}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error patching attention code for {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# ========== ADMIN ENDPOINTS ==========
 
 
 # ========== ADMIN ENDPOINTS ==========

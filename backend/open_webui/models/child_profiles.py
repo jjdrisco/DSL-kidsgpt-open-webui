@@ -69,6 +69,14 @@ class ChildProfile(Base):
     # Child account email (stored for display; account created via /users/child)
     child_email = Column(String, nullable=True)
 
+    # Whitelist / feature control (set by parent during profile creation)
+    selected_features = Column(
+        JSONField, nullable=True
+    )  # list[str] of enabled feature IDs
+    selected_interface_modes = Column(
+        JSONField, nullable=True
+    )  # list[str] of enabled mode IDs
+
     # Indexes for efficient querying
     __table_args__ = (
         Index("idx_child_profile_user_id", "user_id"),
@@ -110,6 +118,8 @@ class ChildProfileModel(BaseModel):
     created_at: int
     updated_at: int
     child_email: Optional[str] = None
+    selected_features: Optional[list[str]] = None
+    selected_interface_modes: Optional[list[str]] = None
 
 
 class ChildProfileForm(BaseModel):
@@ -131,6 +141,14 @@ class ChildProfileForm(BaseModel):
     parent_llm_monitoring_other: Optional[str] = None
     session_number: Optional[int] = None  # If None, defaults to 1 in insert function
     child_email: Optional[str] = None
+    selected_features: Optional[list[str]] = None
+    selected_interface_modes: Optional[list[str]] = None
+
+
+class WhitelistUpdateForm(BaseModel):
+    """Minimal form used by the PATCH /child-profiles/{id}/whitelist endpoint."""
+
+    whitelist_items: list[str]
 
 
 class ChildProfileTable:
@@ -164,6 +182,10 @@ class ChildProfileTable:
                     "child_email": getattr(form_data, "child_email", None),
                     "child_internet_use_frequency": getattr(
                         form_data, "child_internet_use_frequency", None
+                    ),
+                    "selected_features": getattr(form_data, "selected_features", None),
+                    "selected_interface_modes": getattr(
+                        form_data, "selected_interface_modes", None
                     ),
                     "attempt_number": attempt_number,
                     "is_current": True,
@@ -268,6 +290,10 @@ class ChildProfileTable:
                 profile.child_internet_use_frequency = getattr(
                     updated, "child_internet_use_frequency", None
                 )
+                profile.selected_features = getattr(updated, "selected_features", None)
+                profile.selected_interface_modes = getattr(
+                    updated, "selected_interface_modes", None
+                )
                 profile.updated_at = ts
 
                 db.commit()
@@ -357,6 +383,10 @@ class ChildProfileTable:
                 child_ai_use_contexts_other=current.child_ai_use_contexts_other,
                 parent_llm_monitoring_other=current.parent_llm_monitoring_other,
                 child_email=getattr(current, "child_email", None),
+                selected_features=getattr(current, "selected_features", None),
+                selected_interface_modes=getattr(
+                    current, "selected_interface_modes", None
+                ),
                 attempt_number=current.attempt_number,
                 is_current=True,
                 session_number=new_session_number,
@@ -369,6 +399,50 @@ class ChildProfileTable:
             db.commit()
             db.refresh(new_row)
             return ChildProfileModel.model_validate(new_row)
+
+    def get_child_profile_by_child_email(
+        self, parent_id: str, child_email: str
+    ) -> Optional[ChildProfileModel]:
+        """Look up the current child profile for a given parent where child_email matches.
+
+        Used at chat-time to load the whitelist for a child user account.
+        """
+        with get_db() as db:
+            profile = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.user_id == parent_id,
+                    ChildProfile.child_email == child_email,
+                    ChildProfile.is_current == True,
+                )
+                .order_by(ChildProfile.updated_at.desc())
+                .first()
+            )
+            return ChildProfileModel.model_validate(profile) if profile else None
+
+    def update_selected_features(
+        self, profile_id: str, user_id: str, whitelist_items: list[str]
+    ) -> Optional[ChildProfileModel]:
+        """Overwrite selected_features (whitelist) for an existing profile.
+
+        Ownership is verified via user_id.
+        """
+        with get_db() as db:
+            profile = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.id == profile_id,
+                    ChildProfile.user_id == user_id,
+                )
+                .first()
+            )
+            if profile:
+                profile.selected_features = whitelist_items
+                profile.updated_at = int(time.time_ns())
+                db.commit()
+                db.refresh(profile)
+                return ChildProfileModel.model_validate(profile)
+            return None
 
 
 # Global instance

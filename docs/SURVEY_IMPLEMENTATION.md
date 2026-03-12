@@ -4,6 +4,8 @@
 
 The webapp has two survey types: **Initial Survey** (pre-assignment) and **Exit Survey** (post-assignment, Task 3). Both are integrated into the assignment workflow and track completion state.
 
+> **Note:** The assignment instructions page (`/assignment-instructions`) was recently streamlined. Task descriptions are now presented as a single summary sentence, the old scroll‑indicator timer was removed, and ancillary notices (help video, attention‑check warning, and ready modal) remain but have been kept visually compact. An explicit reminder about the moderation task – “if a scenario raises no concerns, click Skip” – has also been added so participants know they don’t need to respond to every question.
+
 ## Survey Types
 
 ### 1. Initial Survey (`/initial-survey`)
@@ -215,20 +217,75 @@ Completion is tracked both in localStorage (for UI state) and backend (for data 
 
 ---
 
+## Child Profile: Study-Specific Fields
+
+### `isStudyMode` Prop
+
+The `ChildProfileForm.svelte` component accepts an `isStudyMode` boolean prop (default `false`) that controls whether study-specific UI elements are rendered:
+
+- **`isStudyMode={true}`** (passed only from `/kids/profile`):
+  - Shows the "Note: Please provide information about one child you have in mind for this survey." instructional banner
+  - Shows the "How often does this child use the Internet?" question (required)
+  - Validation enforces internet use frequency selection
+- **`isStudyMode={false}`** (default, used by `/parent` and `/parent/child-profile`):
+  - Hides the instructional banner and internet use frequency question
+  - No validation on `child_internet_use_frequency`
+
+### Cross-Reference Attention Check: Internet Use Frequency
+
+The `child_internet_use_frequency` field serves as a cross-reference attention check between the child profile and exit survey:
+
+| Location      | Route           | Scale Order    | Purpose                    |
+| ------------- | --------------- | -------------- | -------------------------- |
+| Child Profile | `/kids/profile` | Reversed (8→1) | Asked early in study flow  |
+| Exit Survey   | `/exit-survey`  | Forward (1→8)  | Asked at end of study flow |
+
+**Design rationale:** Participants answer the same question twice with reversed scale ordering. Post-hoc comparison of responses detects inattentive participants (inconsistent answers suggest careless responding).
+
+**Database:**
+
+- Column: `child_internet_use_frequency` (VARCHAR, nullable) on `child_profile` table
+- Migration: `t1u2v3w4x5y6`
+- Values: String `'1'` through `'8'`
+- Profiles created from `/parent` will have `NULL` (field not shown)
+
+**Scale labels (child profile, 8→1):**
+
+1. 8 = Several times per day
+2. 7 = About once per day
+3. 6 = Several times per week
+4. 5 = About once per week
+5. 4 = Several times per month
+6. 3 = About once per month
+7. 2 = Less than once per month
+8. 1 = Never
+
+---
+
 ## Related Files
 
 **Frontend:**
 
 - `src/routes/(app)/exit-survey/+page.svelte` - Exit survey component
 - `src/routes/(app)/initial-survey/+page.svelte` - Initial survey component
+- `src/routes/(app)/kids/profile/+page.svelte` - Study child profile page (passes `isStudyMode={true}`)
+- `src/lib/components/profile/ChildProfileForm.svelte` - Child profile form (accepts `isStudyMode` prop)
 - `src/lib/apis/exit-quiz/index.ts` - Exit quiz API client
+- `src/lib/apis/child-profiles/index.ts` - Child profiles API client (TypeScript interfaces)
 
 **Backend:**
 
-- `backend/open_webui/models/exit_quiz.py` - Database model
-- `backend/open_webui/routers/exit_quiz.py` - API routes
+- `backend/open_webui/models/exit_quiz.py` - Exit quiz database model
+- `backend/open_webui/models/child_profiles.py` - Child profile model (includes `child_internet_use_frequency`)
+- `backend/open_webui/routers/exit_quiz.py` - Exit quiz API routes
+- `backend/open_webui/routers/child_profiles.py` - Child profile API routes
 - `backend/open_webui/routers/workflow.py` - Workflow state management
 - `backend/open_webui/migrations/versions/r44s55t66u77_*.py` - Question key nullable fix
+- `backend/open_webui/migrations/versions/t1u2v3w4x5y6_*.py` - `child_internet_use_frequency` column
+
+**Data Export:**
+
+- `scripts/export_study_data.py` - Includes `child_internet_use_frequency` in both `child_query` and `exit_query`
 
 **Services:**
 

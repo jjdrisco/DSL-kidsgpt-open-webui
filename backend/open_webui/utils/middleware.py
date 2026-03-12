@@ -2,6 +2,7 @@ import time
 import logging
 import sys
 import os
+import traceback
 import base64
 import textwrap
 
@@ -1414,6 +1415,154 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )  # Required to handle system prompt variables
         except:
             pass
+
+    # ── Child whitelist enforcement ──────────────────────────────────────────
+    # When a child user sends a chat:
+    # Child whitelist enforcement pipeline:
+    # 1. Load parent's whitelist from child profile (by child_email, or fall
+    #    back to the parent's current is_current profile).
+    # 2. Inject the whitelist as the system prompt.
+    # 3. Lock the model to gpt-5.2-chat-latest.
+    # 4. Run a Step-1 (rewrite/block) LLM call – same two-step pipeline as the
+    #    whitelist sandbox.  If the prompt is off-topic, set metadata so
+    #    main.py can short-circuit before calling the main model.
+    if (
+        user
+        and getattr(user, "role", None) == "child"
+        and getattr(user, "parent_id", None)
+    ):
+        try:
+            from open_webui.models.child_profiles import ChildProfiles as _ChildProfiles
+
+            # Primary: match by child_email; fallback: parent's current profile
+            child_profile = _ChildProfiles.get_child_profile_by_child_email(
+                user.parent_id, user.email
+            )
+            if not child_profile:
+                child_profile = _ChildProfiles.get_current_child_profile(user.parent_id)
+
+            if child_profile and child_profile.selected_features:
+                bullet_list = "\n".join(
+                    f"• {f}" for f in child_profile.selected_features
+                )
+                print(
+                    f"[Child whitelist] Enforcing for user {getattr(user, 'email', '?')} "
+                    f"(profile: {getattr(child_profile, 'name', '?')}) — "
+                    f"{len(child_profile.selected_features)} whitelist items"
+                )
+
+                # ── Step 0: inject whitelist system prompt ────────────────────
+                child_system_prompt = (
+                    "You are a safe and helpful AI assistant for a child. "
+                    "You are ONLY allowed to assist with the following approved topics and activities:\n\n"
+                    f"{bullet_list}\n\n"
+                    "For any topic, question, or request that is NOT on this approved list, "
+                    "politely decline and suggest the child speaks with a trusted adult or parent. "
+                    "Do not help with anything outside this whitelist under any circumstances. "
+                    "Keep all responses age-appropriate, positive, and encouraging."
+                )
+                form_data = apply_system_prompt_to_body(
+                    child_system_prompt, form_data, metadata, user, replace=True
+                )
+
+                # ── Lock model ────────────────────────────────────────────────
+                form_data["model"] = "gpt-5.2-chat-latest"
+
+                # ── Step 1: rewrite / block check ─────────────────────────────
+                age_clause = (
+                    f"The child is {child_profile.child_age} years old. "
+                    if getattr(child_profile, "child_age", None)
+                    else ""
+                )
+                prompt_rewrite_system = (
+                    "You are a strict content-routing assistant for a children's AI. "
+                    + age_clause
+                    + "Your job is to rewrite the child's message so it only addresses topics from "
+                    "the approved whitelist below, and so that the phrasing and vocabulary are "
+                    "appropriate for a child of that age. "
+                    "If the message is already on-topic, return it unchanged or lightly reworded for clarity. "
+                    "If the message cannot be redirected to any approved topic, respond with "
+                    "exactly: [BLOCKED]\n\n"
+                    f"Approved whitelist:\n{bullet_list}\n\n"
+                    "Return ONLY the rewritten message (or [BLOCKED]). Do not add explanations."
+                )
+                last_user_msg = get_last_user_message(form_data.get("messages", []))
+                if last_user_msg:
+                    print(
+                        f"[Child whitelist] Step-1 original prompt: {last_user_msg!r}"
+                    )
+                    try:
+                        rewrite_payload = {
+                            "model": "gpt-5.2-chat-latest",
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": prompt_rewrite_system,
+                                },
+                                {"role": "user", "content": last_user_msg},
+                            ],
+                            "stream": False,
+                        }
+                        rewrite_res = await generate_chat_completion(
+                            request,
+                            rewrite_payload,
+                            user,
+                            bypass_filter=True,
+                            bypass_system_prompt=True,
+                        )
+                        rewritten = (
+                            rewrite_res.get("choices", [{}])[0]
+                            .get("message", {})
+                            .get("content", "")
+                            .strip()
+                        )
+                        if rewritten.upper() == "[BLOCKED]":
+                            print(
+                                "[Child whitelist] Step-1 result: BLOCKED — short-circuiting"
+                            )
+                            metadata["child_blocked"] = True
+                            metadata["child_blocked_message"] = (
+                                "I'm only able to help with the topics on your approved list. "
+                                "This question falls outside of the topics I can help with \u2014 please speak with "
+                                "a trusted adult or parent for help with this one!"
+                            )
+                        else:
+                            print(
+                                f"[Child whitelist] Step-1 rewritten prompt: {rewritten!r}"
+                            )
+                            # Replace the last user message with the rewritten prompt
+                            msgs = form_data.get("messages", [])
+                            for i in range(len(msgs) - 1, -1, -1):
+                                if msgs[i].get("role") == "user":
+                                    if isinstance(msgs[i].get("content"), str):
+                                        msgs[i]["content"] = rewritten
+                                    elif isinstance(msgs[i].get("content"), list):
+                                        for part in msgs[i]["content"]:
+                                            if (
+                                                isinstance(part, dict)
+                                                and part.get("type") == "text"
+                                            ):
+                                                part["text"] = rewritten
+                                                break
+                                    break
+                            form_data["messages"] = msgs
+                    except Exception as _step1_e:
+                        log.warning(
+                            f"[Child whitelist] Step-1 rewrite failed for user "
+                            f"{getattr(user, 'id', '?')}, proceeding without rewrite: {_step1_e}\n"
+                            + traceback.format_exc()
+                        )
+            else:
+                print(
+                    f"[Child whitelist] No whitelist found for user "
+                    f"{getattr(user, 'email', '?')} — skipping enforcement"
+                )
+        except Exception as _e:
+            log.warning(
+                f"[Child whitelist] Could not load child profile for user "
+                f"{getattr(user, 'id', '?')}: {_e}"
+            )
+    # ────────────────────────────────────────────────────────────────────────
 
     form_data = await convert_url_images_to_base64(form_data)
 
