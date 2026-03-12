@@ -157,7 +157,9 @@ RUN pip3 install --no-cache-dir \
     "redis" \
     "starlette-compress==1.6.1" \
     "starsessions[redis]==2.2.1" \
-    "cryptography"
+    "cryptography" \
+    "Markdown==3.10" \
+    "beautifulsoup4"
 
 # Install torch separately (CPU version for Heroku) - skip if it fails
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
