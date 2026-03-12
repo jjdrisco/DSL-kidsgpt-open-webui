@@ -371,7 +371,6 @@
 		saveDraft();
 	}
 
-
 	function startEditing() {
 		isSaved = false;
 	}

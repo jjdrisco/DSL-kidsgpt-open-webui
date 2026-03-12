@@ -254,7 +254,7 @@ async def assign_scenario(
             response_text=selected_scenario.response_text,
             assignment_position=assignment.assignment_position,
             sampling_audit=sampling_audit,
-            attention_check_code=getattr(assignment, 'attention_check_code', None),
+            attention_check_code=getattr(assignment, "attention_check_code", None),
         )
     except HTTPException:
         raise
@@ -772,7 +772,7 @@ import string
 
 def _generate_attention_code(length: int = 5) -> str:
     alphabet = string.ascii_uppercase + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 @router.patch(
@@ -808,6 +808,7 @@ async def patch_assignment_attention_code(
     except Exception as e:
         log.error(f"Error patching attention code for {assignment_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 # ========== ADMIN ENDPOINTS ==========
 

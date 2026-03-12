@@ -58,8 +58,12 @@ class ModerationSession(Base):
     custom_instructions = Column(JSONField, nullable=True)  # Array of strings
     highlighted_texts = Column(JSONField, nullable=True)  # Array of strings
     refactored_response = Column(Text, nullable=True)  # Final moderated response
-    response_highlighted_html = Column(Text, nullable=True)  # HTML with <mark> elements for response
-    prompt_highlighted_html = Column(Text, nullable=True)  # HTML with <mark> elements for prompt
+    response_highlighted_html = Column(
+        Text, nullable=True
+    )  # HTML with <mark> elements for response
+    prompt_highlighted_html = Column(
+        Text, nullable=True
+    )  # HTML with <mark> elements for prompt
     session_metadata = Column(
         JSONField, nullable=True
     )  # Any additional data (answers, etc.)

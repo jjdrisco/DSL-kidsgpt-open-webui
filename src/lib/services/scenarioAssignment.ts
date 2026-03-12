@@ -53,13 +53,16 @@ export async function assignScenariosForChild(
 		if (assignments.length > 0) {
 			const winner = assignments[Math.floor(Math.random() * assignments.length)];
 			try {
-				const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winner.assignment_id}/attention-code`, {
-					method: 'PATCH',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`
+				const res = await fetch(
+					`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winner.assignment_id}/attention-code`,
+					{
+						method: 'PATCH',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${token}`
+						}
 					}
-				});
+				);
 				if (res.ok) {
 					const body = await res.json();
 					winner.attention_check_code = body.attention_check_code;
