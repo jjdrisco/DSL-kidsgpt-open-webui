@@ -177,15 +177,13 @@ async def get_workflow_state(
                     f"Failed to check moderation finalized status for user {user.id}: {e}"
                 )
 
-            # Exit survey completion (filter by current attempt number)
+            # Exit survey completion — any submission counts (same pattern as has_child_profile).
+            # Explicit reset (Reset Survey button) deletes rows; full workflow reset leaves rows
+            # but the user can re-submit or use the reset button.
             try:
-                current_attempt = get_current_attempt_number(user.id)
                 latest_exit = (
                     db.query(ExitQuizResponse)
-                    .filter(
-                        ExitQuizResponse.user_id == user.id,
-                        ExitQuizResponse.attempt_number == current_attempt,
-                    )
+                    .filter(ExitQuizResponse.user_id == user.id)
                     .order_by(ExitQuizResponse.created_at.desc())
                     .first()
                 )

@@ -274,19 +274,11 @@ async def submit_consent(
     Prolific IDs are now written at auth time, so this endpoint only needs to
     set consent_given and handle session bookkeeping.
     """
-    # Require IDs when consenting (used for audit record and session update)
-    if form_data.consented:
-        if (
-            not form_data.prolific_pid
-            or not form_data.study_id
-            or not form_data.session_id
-        ):
-            raise HTTPException(400, detail="Prolific IDs are required when consenting")
-
     update_data = {"consent_given": form_data.consented, "updated_at": int(time.time())}
 
-    if form_data.consented:
-        # Ensure prolific fields are present (defensive — should already be set at auth)
+    if form_data.consented and form_data.prolific_pid:
+        # Prolific-specific field updates (IDs are already stored at auth time;
+        # this is a defensive fallback for edge cases)
         if not user.prolific_pid:
             role = (
                 "interviewee" if is_interviewee_user(form_data.study_id) else "prolific"
