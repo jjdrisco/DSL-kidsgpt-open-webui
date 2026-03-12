@@ -1,0 +1,1155 @@
+<script lang="ts">
+	import { onMount, getContext } from 'svelte';
+	import { user } from '$lib/stores';
+	import { get } from 'svelte/store';
+	import { childProfileSync } from '$lib/services/childProfileSync';
+	import type { ChildProfile } from '$lib/apis/child-profiles';
+	import { getChildProfiles } from '$lib/apis/child-profiles';
+	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
+	import {
+		personalityTraits,
+		type PersonalityTrait,
+		type SubCharacteristic
+	} from '$lib/data/personalityTraits';
+	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
+
+	const i18n = getContext('i18n');
+
+	// Props
+	export let showResearchFields: boolean = false;
+	export let requireResearchFields: boolean = false;
+	export let showPersonalityTraits: boolean = true;
+	export let initialSelectedIndex: number = -1;
+
+	// Callbacks
+	export let onProfileSaved: ((profile: ChildProfile) => void | Promise<void>) | undefined =
+		undefined;
+	export let onProfileCreated: ((profile: ChildProfile) => void | Promise<void>) | undefined =
+		undefined;
+	export let onProfileUpdated: ((profile: ChildProfile) => void | Promise<void>) | undefined =
+		undefined;
+	export let onProfileDeleted: ((profileId: string) => void | Promise<void>) | undefined =
+		undefined;
+	export let onChildSelected:
+		| ((profile: ChildProfile, index: number) => void | Promise<void>)
+		| undefined = undefined;
+
+	// Child profile data
+	let childName: string = '';
+	let childAge: string = '';
+	let childGender: string = '';
+	let childCharacteristics: string = '';
+
+	// Child quiz research fields (conditional)
+	let isOnlyChild: string = '';
+	let childHasAIUse: string = '';
+	let childAIUseContexts: string[] = [];
+	let parentLLMMonitoringLevel: string = '';
+	let childInternetUseFrequency: string = '';
+
+	// "Other" text fields for additional information
+	let childGenderOther: string = '';
+	let childAIUseContextsOther: string = '';
+	let parentLLMMonitoringOther: string = '';
+
+	// Personality traits system (selectedSubCharacteristics bound to ChildPersonalitySection)
+	let selectedSubCharacteristics: string[] = [];
+
+	// Multi-child support
+	let childProfiles: ChildProfile[] = [];
+	let selectedChildIndex: number = initialSelectedIndex;
+	let showForm: boolean = false;
+	let isEditing: boolean = false;
+	let isProfileCompleted: boolean = false;
+
+	// Main page container for scrolling
+	let mainPageContainer: HTMLElement;
+
+	function getChildGridTemplate(): string {
+		const cols = Math.max(1, Math.min((childProfiles?.length || 0) + 1, 5));
+		return `repeat(${cols}, minmax(120px, 1fr))`;
+	}
+
+	// Personality trait helper functions
+	function getSelectedSubCharacteristics(): SubCharacteristic[] {
+		const selected: SubCharacteristic[] = [];
+		for (const trait of personalityTraits) {
+			const matchingChars = trait.subCharacteristics.filter((sub) =>
+				selectedSubCharacteristics.includes(sub.id)
+			);
+			selected.push(...matchingChars);
+		}
+		return selected;
+	}
+
+	function getSelectedSubCharacteristicNames(): string[] {
+		return getSelectedSubCharacteristics().map((sub) => sub.name);
+	}
+
+	function getPersonalityDescription(): string {
+		const subChars = getSelectedSubCharacteristics();
+		if (subChars.length === 0) return '';
+
+		const traitGroups = new Map<string, string[]>();
+		for (const subChar of subChars) {
+			const trait = personalityTraits.find((t) =>
+				t.subCharacteristics.some((sc) => sc.id === subChar.id)
+			);
+			if (trait) {
+				if (!traitGroups.has(trait.name)) {
+					traitGroups.set(trait.name, []);
+				}
+				traitGroups.get(trait.name)!.push(subChar.name);
+			}
+		}
+
+		const descriptions: string[] = [];
+		for (const [traitName, chars] of traitGroups.entries()) {
+			descriptions.push(`${traitName}: ${chars.join(', ')}`);
+		}
+		return descriptions.join('\n');
+	}
+
+	function ensureAtLeastOneChild() {
+		// No-op: allow empty list of children per user request
+	}
+
+	function hydrateFormFromSelectedChild() {
+		ensureAtLeastOneChild();
+		const sel = childProfiles[selectedChildIndex];
+		if (!sel) return;
+
+		childName = sel?.name || '';
+		childAge = sel?.child_age || '';
+
+		const genderValue = sel?.child_gender || '';
+		if (genderValue.startsWith('Other: ')) {
+			childGender = 'Other';
+			childGenderOther = genderValue.substring('Other: '.length);
+		} else if (genderValue === 'Other') {
+			childGender = 'Other';
+			childGenderOther = (sel as any)?.child_gender_other || '';
+		} else {
+			childGender = genderValue;
+			childGenderOther = (sel as any)?.child_gender_other || '';
+		}
+
+		// Research fields (only if showResearchFields is true)
+		if (showResearchFields) {
+			if (typeof (sel as any)?.is_only_child === 'boolean') {
+				isOnlyChild = (sel as any).is_only_child ? 'yes' : 'no';
+			} else {
+				isOnlyChild = '';
+			}
+			childHasAIUse = (sel as any)?.child_has_ai_use || '';
+			const contexts = (sel as any)?.child_ai_use_contexts;
+			if (Array.isArray(contexts)) {
+				childAIUseContexts = contexts;
+			} else {
+				childAIUseContexts = [];
+			}
+			const monitoringValue = (sel as any)?.parent_llm_monitoring_level;
+			parentLLMMonitoringLevel = monitoringValue || '';
+			childAIUseContextsOther = (sel as any)?.child_ai_use_contexts_other || '';
+			parentLLMMonitoringOther = (sel as any)?.parent_llm_monitoring_other || '';
+		}
+
+		childInternetUseFrequency = (sel as any)?.child_internet_use_frequency || '';
+
+		// Parse personality traits from stored characteristics
+		if (sel?.child_characteristics) {
+			const characteristics = sel.child_characteristics;
+			if (characteristics.includes('Additional characteristics:')) {
+				const additionalStart = characteristics.indexOf('Additional characteristics:');
+				if (additionalStart !== -1) {
+					childCharacteristics = characteristics
+						.substring(additionalStart + 'Additional characteristics:'.length)
+						.trim();
+					const personalityPart = characteristics.substring(0, additionalStart).trim();
+					if (personalityPart) {
+						const traitLines = personalityPart.split('\n');
+						const restoredIds: string[] = [];
+						for (const line of traitLines) {
+							const match = line.match(/^([^:]+):\s*(.+)$/);
+							if (match) {
+								const traitName = match[1].trim();
+								const charNames = match[2]
+									.split(',')
+									.map((c) => c.trim())
+									.filter((c) => c);
+								const trait = personalityTraits.find((t) => t.name === traitName);
+								if (trait) {
+									for (const charName of charNames) {
+										const subChar = trait.subCharacteristics.find((sc) => sc.name === charName);
+										if (subChar) {
+											restoredIds.push(subChar.id);
+										}
+									}
+								}
+							}
+						}
+						selectedSubCharacteristics = restoredIds;
+					} else {
+						selectedSubCharacteristics = [];
+					}
+				} else {
+					childCharacteristics = characteristics;
+					selectedSubCharacteristics = [];
+				}
+			} else {
+				childCharacteristics = characteristics;
+				selectedSubCharacteristics = [];
+			}
+		} else {
+			childCharacteristics = '';
+			selectedSubCharacteristics = [];
+		}
+	}
+
+	function applyFormToSelectedChild() {
+		ensureAtLeastOneChild();
+		const sel = childProfiles[selectedChildIndex];
+		if (!sel) return;
+		sel.name = childName;
+		sel.child_age = childAge;
+		sel.child_gender = childGender;
+		const personalityDesc = getPersonalityDescription();
+		const combinedCharacteristics = personalityDesc
+			? childCharacteristics.trim()
+				? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+				: personalityDesc
+			: childCharacteristics;
+		sel.child_characteristics = combinedCharacteristics;
+
+		if (showResearchFields) {
+			(sel as any).is_only_child = isOnlyChild === 'yes';
+			(sel as any).child_has_ai_use = childHasAIUse || null;
+			(sel as any).child_ai_use_contexts = childAIUseContexts || [];
+			(sel as any).parent_llm_monitoring_level = parentLLMMonitoringLevel || null;
+			(sel as any).child_gender_other = childGenderOther || null;
+			(sel as any).child_ai_use_contexts_other = childAIUseContextsOther || null;
+			(sel as any).parent_llm_monitoring_other = parentLLMMonitoringOther || null;
+		}
+		(sel as any).child_internet_use_frequency = childInternetUseFrequency || null;
+	}
+
+	async function deleteChild(index: number) {
+		const childToDelete = childProfiles[index];
+		if (!childToDelete) return;
+
+		try {
+			await childProfileSync.deleteChildProfile(childToDelete.id);
+			childProfiles = childProfiles.filter((_, i) => i !== index);
+
+			if (childProfiles.length === 0) {
+				selectedChildIndex = -1;
+				childName = '';
+				childAge = '';
+				childGender = '';
+				childCharacteristics = '';
+			} else {
+				if (selectedChildIndex >= childProfiles.length) {
+					selectedChildIndex = childProfiles.length - 1;
+				}
+				hydrateFormFromSelectedChild();
+			}
+
+			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
+
+			if (onProfileDeleted) {
+				await onProfileDeleted(childToDelete.id);
+			}
+
+			toast.success('Child profile deleted successfully!');
+		} catch (error) {
+			console.error('Failed to delete child profile:', error);
+			toast.error('Failed to delete child profile');
+		}
+	}
+
+	function validateForm(): string | null {
+		if (!childName.trim()) {
+			return 'Please enter a name for the child';
+		}
+		if (!childAge) {
+			return 'Please select an age';
+		}
+		if (!childGender) {
+			return 'Please select a gender';
+		}
+		if (showPersonalityTraits && !childCharacteristics.trim()) {
+			return 'Please enter additional characteristics & interests';
+		}
+		if (showPersonalityTraits && selectedSubCharacteristics.length === 0) {
+			return 'Please select at least one personality trait';
+		}
+		if (!childInternetUseFrequency) {
+			return 'Please indicate how often this child uses the Internet';
+		}
+		if (showResearchFields && requireResearchFields) {
+			if (!isOnlyChild) {
+				return 'Please indicate if this child is an only child';
+			}
+			if (!childHasAIUse) {
+				return 'Please answer whether this child has used ChatGPT or similar AI tools';
+			}
+			if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
+				return 'Please select at least one context of AI use';
+			}
+			if (
+				childHasAIUse === 'yes' &&
+				childAIUseContexts.includes('other') &&
+				!childAIUseContextsOther.trim()
+			) {
+				return 'Please specify the context of AI use';
+			}
+			if (!parentLLMMonitoringLevel) {
+				return "Please indicate how you've monitored or adjusted this child's AI use";
+			}
+			if (parentLLMMonitoringLevel === 'other' && !parentLLMMonitoringOther.trim()) {
+				return "Please specify how you have monitored or adjusted your child's AI use";
+			}
+		}
+
+		return null;
+	}
+
+	async function saveNewProfile() {
+		const validationError = validateForm();
+		if (validationError) {
+			toast.error(validationError);
+			return;
+		}
+
+		try {
+			const personalityDesc = getPersonalityDescription();
+			const combinedCharacteristics = personalityDesc
+				? childCharacteristics.trim()
+					? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+					: personalityDesc
+				: childCharacteristics;
+
+			const profileData: any = {
+				name: childName,
+				child_age: childAge,
+				child_gender: childGender === 'Other' ? 'Other' : childGender,
+				child_characteristics: combinedCharacteristics
+			};
+
+			profileData.child_internet_use_frequency = childInternetUseFrequency || null;
+			if (showResearchFields) {
+				profileData.is_only_child = isOnlyChild === 'yes';
+				profileData.child_has_ai_use = childHasAIUse;
+				profileData.child_ai_use_contexts = childAIUseContexts;
+				profileData.parent_llm_monitoring_level = parentLLMMonitoringLevel;
+				if (childGenderOther) profileData.child_gender_other = childGenderOther;
+				if (childAIUseContextsOther)
+					profileData.child_ai_use_contexts_other = childAIUseContextsOther;
+				if (parentLLMMonitoringOther)
+					profileData.parent_llm_monitoring_other = parentLLMMonitoringOther;
+			}
+
+			const newChild = await childProfileSync.createChildProfile(profileData);
+
+			childProfiles = [...childProfiles, newChild];
+			selectedChildIndex = childProfiles.length - 1;
+			showForm = true;
+
+			await childProfileSync.setCurrentChildId(newChild.id);
+			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
+
+			if (onProfileCreated) {
+				await onProfileCreated(newChild);
+			}
+
+			toast.success('Child profile created successfully!');
+		} catch (error) {
+			console.error('Failed to create child profile:', error);
+			let errorMessage = 'Failed to create child profile';
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (error && typeof error === 'object' && 'detail' in error) {
+				const detail = (error as any).detail;
+				errorMessage = typeof detail === 'string' ? detail : errorMessage;
+			}
+			toast.error(errorMessage);
+		}
+	}
+
+	function cancelAddProfile() {
+		if (childProfiles.length > 0) {
+			showForm = false;
+			isEditing = false;
+			hydrateFormFromSelectedChild();
+		} else {
+			showForm = false;
+			isEditing = false;
+			childName = '';
+			childAge = '';
+			childGender = '';
+			childCharacteristics = '';
+			selectedSubCharacteristics = [];
+		}
+	}
+
+	async function selectChild(index: number) {
+		selectedChildIndex = index;
+		hydrateFormFromSelectedChild();
+		showForm = false;
+		isEditing = false;
+
+		const childId = childProfiles[index]?.id;
+		if (childId) {
+			await childProfileSync.setCurrentChildId(childId);
+			if (onChildSelected && childProfiles[index]) {
+				await onChildSelected(childProfiles[index], index);
+			}
+		}
+	}
+
+	async function loadChildProfile() {
+		try {
+			childProfiles = await childProfileSync.syncFromBackend();
+			if (!childProfiles || !Array.isArray(childProfiles)) {
+				childProfiles = [];
+			}
+
+			if (childProfiles.length > 0) {
+				const currentChildId = childProfileSync.getCurrentChildId();
+				if (currentChildId) {
+					const index = childProfiles.findIndex((c) => c.id === currentChildId);
+					if (index !== -1) {
+						selectedChildIndex = index;
+					} else {
+						selectedChildIndex = 0;
+					}
+				} else {
+					selectedChildIndex = 0;
+				}
+				hydrateFormFromSelectedChild();
+				showForm = false;
+				isProfileCompleted = true;
+			} else {
+				// No profiles: go directly to the child survey form (single child)
+				selectedChildIndex = -1;
+				showForm = true;
+				isEditing = true;
+				isProfileCompleted = false;
+			}
+		} catch (error) {
+			console.error('Failed to load child profiles:', error);
+			childProfiles = [];
+			selectedChildIndex = -1;
+			showForm = true;
+			isEditing = true;
+		}
+	}
+
+	async function saveChildProfile() {
+		const validationError = validateForm();
+		if (validationError) {
+			toast.error(validationError);
+			return;
+		}
+
+		try {
+			const isEditingExisting = childProfiles.length > 0 && selectedChildIndex >= 0;
+
+			if (childProfiles.length === 0 || selectedChildIndex === -1) {
+				const personalityDesc = getPersonalityDescription();
+				const combinedCharacteristics = personalityDesc
+					? childCharacteristics.trim()
+						? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+						: personalityDesc
+					: childCharacteristics;
+
+				const profileData: any = {
+					name: childName,
+					child_age: childAge,
+					child_gender: childGender === 'Other' ? 'Other' : childGender,
+					child_characteristics: combinedCharacteristics
+				};
+
+				profileData.child_internet_use_frequency = childInternetUseFrequency || null;
+				if (showResearchFields) {
+					profileData.is_only_child = isOnlyChild === 'yes';
+					profileData.child_has_ai_use = childHasAIUse;
+					profileData.child_ai_use_contexts = childAIUseContexts;
+					profileData.parent_llm_monitoring_level = parentLLMMonitoringLevel;
+					if (childGenderOther) profileData.child_gender_other = childGenderOther;
+					if (childAIUseContextsOther)
+						profileData.child_ai_use_contexts_other = childAIUseContextsOther;
+					if (parentLLMMonitoringOther)
+						profileData.parent_llm_monitoring_other = parentLLMMonitoringOther;
+				}
+
+				const newChild = await childProfileSync.createChildProfile(profileData);
+
+				if (childProfiles.length === 0) {
+					childProfiles = [newChild];
+					selectedChildIndex = 0;
+				} else {
+					childProfiles = [...childProfiles, newChild];
+					selectedChildIndex = childProfiles.length - 1;
+				}
+
+				await childProfileSync.setCurrentChildId(newChild.id);
+				window.dispatchEvent(new CustomEvent('child-profiles-updated'));
+
+				if (onProfileCreated) {
+					await onProfileCreated(newChild);
+				}
+			} else {
+				applyFormToSelectedChild();
+				const selectedChild = childProfiles[selectedChildIndex];
+				if (selectedChild) {
+					const personalityDesc = getPersonalityDescription();
+					const combinedCharacteristics = personalityDesc
+						? childCharacteristics.trim()
+							? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+							: personalityDesc
+						: childCharacteristics;
+
+					const updateData: any = {
+						name: childName,
+						child_age: childAge,
+						child_gender: childGender,
+						child_characteristics: combinedCharacteristics
+					};
+
+					updateData.child_internet_use_frequency = childInternetUseFrequency || null;
+					if (showResearchFields) {
+						updateData.is_only_child = isOnlyChild === 'yes';
+						updateData.child_has_ai_use = childHasAIUse;
+						updateData.child_ai_use_contexts = childAIUseContexts;
+						updateData.parent_llm_monitoring_level = parentLLMMonitoringLevel;
+						if (childGenderOther) updateData.child_gender_other = childGenderOther;
+						if (childAIUseContextsOther)
+							updateData.child_ai_use_contexts_other = childAIUseContextsOther;
+						if (parentLLMMonitoringOther)
+							updateData.parent_llm_monitoring_other = parentLLMMonitoringOther;
+					}
+
+					const updatedChild = await childProfileSync.updateChildProfile(
+						selectedChild.id,
+						updateData
+					);
+					childProfiles[selectedChildIndex] = updatedChild;
+					await childProfileSync.setCurrentChildId(selectedChild.id);
+
+					if (onProfileUpdated) {
+						await onProfileUpdated(updatedChild);
+					}
+				}
+			}
+
+			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
+
+			if (onProfileSaved) {
+				const profile = childProfiles[selectedChildIndex];
+				if (profile) {
+					await onProfileSaved(profile);
+				}
+			}
+
+			if (isEditingExisting) {
+				toast.success('Profile updated!');
+			} else {
+				toast.success('Child profile saved successfully!');
+			}
+
+			if (mainPageContainer) {
+				mainPageContainer.scrollTo({ top: 0, behavior: 'smooth' });
+			}
+
+			isEditing = false;
+			showForm = false;
+			isProfileCompleted = true;
+		} catch (error) {
+			console.error('Failed to save child profile:', error);
+			let errorMessage = 'Failed to save child profile';
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (error && typeof error === 'object' && 'detail' in error) {
+				const detail = (error as any).detail;
+				errorMessage = typeof detail === 'string' ? detail : errorMessage;
+			}
+			toast.error(errorMessage);
+		}
+	}
+
+	function startEditing() {
+		if (selectedChildIndex >= 0 && selectedChildIndex < childProfiles.length) {
+			hydrateFormFromSelectedChild();
+			isEditing = true;
+			showForm = true;
+		} else {
+			console.warn('Cannot start editing: no valid child selected');
+		}
+	}
+
+	function joinContextsForDisplay(): string {
+		const contexts: string[] =
+			childProfiles &&
+			selectedChildIndex >= 0 &&
+			childProfiles[selectedChildIndex]?.child_ai_use_contexts
+				? (childProfiles[selectedChildIndex].child_ai_use_contexts as unknown as string[])
+				: [];
+		return contexts.length > 0 ? contexts.join(', ') : 'Not specified';
+	}
+
+	onMount(async () => {
+		const waitForUser = () => {
+			return new Promise<void>((resolve) => {
+				const currentUser = get(user);
+				if (currentUser && currentUser.id) {
+					resolve();
+					return;
+				}
+				const unsubscribe = user.subscribe((userData) => {
+					if (userData && userData.id) {
+						unsubscribe();
+						resolve();
+					}
+				});
+			});
+		};
+		await waitForUser();
+		await loadChildProfile();
+	});
+</script>
+
+<div
+	class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900"
+	bind:this={mainPageContainer}
+>
+	<div class="max-w-4xl mx-auto px-4 py-8">
+		<!-- Instructional Message -->
+		<div
+			class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+		>
+			<p class="text-sm text-blue-900 dark:text-blue-200">
+				<strong>Note:</strong> Please provide information about one child you have in mind for this
+				survey.
+			</p>
+		</div>
+
+		<!-- Child Selection -->
+		{#if childProfiles && childProfiles.length > 0}
+			<div class="mb-8">
+				<div
+					class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+				>
+					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+						Select Your Profile
+					</h2>
+					<div class="grid gap-3" style={`grid-template-columns: ${getChildGridTemplate()}`}>
+						{#each childProfiles as c, i}
+							<div class="relative group flex flex-col">
+								<button
+									type="button"
+									class={`w-full px-6 py-4 rounded-md transition-all duration-200 ${i === selectedChildIndex ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50' : 'bg-gray-700 text-white ring-1 ring-gray-500/30 hover:bg-gray-600 hover:ring-gray-400/50'}`}
+									on:click={() => selectChild(i)}
+								>
+									<span class="font-medium">{c.name || `Child ${i + 1}`}</span>
+								</button>
+
+								<button
+									type="button"
+									class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-20"
+									on:click|stopPropagation={() => deleteChild(i)}
+									title="Delete child"
+								>
+									&times;
+								</button>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Profile Display (Read-only when not editing) -->
+		{#if childProfiles.length > 0 && selectedChildIndex >= 0 && !showForm}
+			<div
+				class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8"
+			>
+				<div class="flex justify-between items-start mb-6">
+					<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Information</h3>
+					<button
+						type="button"
+						on:click={startEditing}
+						class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition"
+					>
+						Edit
+					</button>
+				</div>
+				<div class="space-y-4">
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</div>
+						<p class="text-gray-900 dark:text-white">
+							{childProfiles[selectedChildIndex]?.name || 'Not specified'}
+						</p>
+					</div>
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Age</div>
+						<p class="text-gray-900 dark:text-white">
+							{childProfiles[selectedChildIndex]?.child_age || 'Not specified'}
+						</p>
+					</div>
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+							Gender
+						</div>
+						<p class="text-gray-900 dark:text-white">
+							{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}
+						</p>
+					</div>
+					{#if showPersonalityTraits}
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Characteristics & Interests
+							</div>
+							<p class="text-gray-900 dark:text-white whitespace-pre-wrap">
+								{childProfiles[selectedChildIndex]?.child_characteristics || 'Not specified'}
+							</p>
+						</div>
+					{/if}
+					{#if showResearchFields}
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Only Child
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{childProfiles[selectedChildIndex]?.is_only_child === true
+									? 'Yes'
+									: childProfiles[selectedChildIndex]?.is_only_child === false
+										? 'No'
+										: 'Not specified'}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Child Has Used AI Tools
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{childProfiles[selectedChildIndex]?.child_has_ai_use || 'Not specified'}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Contexts of AI Use
+							</div>
+							<p class="text-gray-900 dark:text-white">{joinContextsForDisplay()}</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Parent LLM Monitoring Level
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{childProfiles[selectedChildIndex]?.parent_llm_monitoring_level || 'Not specified'}
+							</p>
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Profile Form -->
+		{#if showForm && isEditing}
+			<div
+				class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8"
+			>
+				<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
+					<div class="space-y-6">
+						<h3 class="text-base font-medium text-gray-900 dark:text-white">Child Information</h3>
+						<p class="text-sm text-gray-600 dark:text-gray-400 -mt-2 mb-2">
+							This survey asks you to describe your child. This information will not be used to
+							customize the scenarios you will be shown and will only be used in the context of
+							academic research.
+						</p>
+
+						<div>
+							<label
+								for="childName"
+								class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+							>
+								Name <span class="text-red-500">*</span>
+							</label>
+							<input
+								type="text"
+								id="childName"
+								bind:value={childName}
+								placeholder="Enter child's name"
+								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+							/>
+						</div>
+
+						<div>
+							<label
+								for="childAge"
+								class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+							>
+								Age <span class="text-red-500">*</span>
+							</label>
+							<select
+								id="childAge"
+								bind:value={childAge}
+								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+							>
+								<option value="">Select age</option>
+								<option value="9 years old">9 years old</option>
+								<option value="10 years old">10 years old</option>
+								<option value="11 years old">11 years old</option>
+								<option value="12 years old">12 years old</option>
+								<option value="13 years old">13 years old</option>
+								<option value="14 years old">14 years old</option>
+								<option value="15 years old">15 years old</option>
+								<option value="16 years old">16 years old</option>
+								<option value="17 years old">17 years old</option>
+								<option value="18 years old">18 years old</option>
+							</select>
+						</div>
+
+						<div>
+							<label
+								for="childGender"
+								class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+							>
+								Gender <span class="text-red-500">*</span>
+							</label>
+							<select
+								id="childGender"
+								bind:value={childGender}
+								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+							>
+								<option value="">Select gender</option>
+								<option value="Male">Male</option>
+								<option value="Female">Female</option>
+								<option value="Non-binary">Non-binary</option>
+								<option value="Other">Other</option>
+								<option value="Prefer not to say">Prefer not to say</option>
+							</select>
+							{#if childGender === 'Other'}
+								<input
+									type="text"
+									bind:value={childGenderOther}
+									placeholder="Please specify the gender"
+									class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+									required
+								/>
+							{/if}
+						</div>
+
+						<!-- Personality Traits Selection (hidden when showPersonalityTraits is false) -->
+						{#if showPersonalityTraits}
+							<ChildPersonalitySection
+								bind:selectedSubCharacteristics
+								bind:additionalInfo={childCharacteristics}
+								required={true}
+							/>
+						{/if}
+
+						<div class="mb-4">
+							<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+								How often does this child use the Internet? <span class="text-red-500">*</span>
+							</div>
+							<div class="space-y-2">
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="8"
+										class="mr-3"
+									/>8. Several times per day</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="7"
+										class="mr-3"
+									/>7. About once per day</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="6"
+										class="mr-3"
+									/>6. Several times per week</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="5"
+										class="mr-3"
+									/>5. About once per week</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="4"
+										class="mr-3"
+									/>4. Several times per month</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="3"
+										class="mr-3"
+									/>3. About once per month</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="2"
+										class="mr-3"
+									/>2. Less than once per month</label
+								>
+								<label class="flex items-center"
+									><input
+										type="radio"
+										bind:group={childInternetUseFrequency}
+										value="1"
+										class="mr-3"
+									/>1. Never</label
+								>
+							</div>
+						</div>
+
+						<!-- Research Fields (Conditional) -->
+						{#if showResearchFields}
+							<div class="pt-2">
+								<div class="mb-4">
+									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										Is this child an only child? <span class="text-red-500">*</span>
+									</div>
+									<div class="space-y-2">
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={isOnlyChild}
+												value="yes"
+												class="mr-3"
+											/>Yes</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={isOnlyChild}
+												value="no"
+												class="mr-3"
+											/>No</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={isOnlyChild}
+												value="prefer_not_to_say"
+												class="mr-3"
+											/>Prefer not to say</label
+										>
+									</div>
+								</div>
+
+								<div class="mb-4">
+									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										Has this child used ChatGPT or similar AI tools? <span class="text-red-500"
+											>*</span
+										>
+									</div>
+									<div class="space-y-2">
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childHasAIUse}
+												value="yes"
+												class="mr-3"
+											/>Yes</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childHasAIUse}
+												value="no"
+												class="mr-3"
+											/>No</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childHasAIUse}
+												value="unsure"
+												class="mr-3"
+											/>Not sure</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={childHasAIUse}
+												value="prefer_not_to_say"
+												class="mr-3"
+											/>Prefer not to say</label
+										>
+									</div>
+								</div>
+
+								{#if childHasAIUse === 'yes'}
+									<div class="mb-4">
+										<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											In what contexts has this child used these tools? <span class="text-red-500"
+												>*</span
+											>
+										</div>
+										<div class="space-y-2">
+											<label class="flex items-center"
+												><input
+													type="checkbox"
+													bind:group={childAIUseContexts}
+													value="school_homework"
+													class="mr-3"
+												/>For school or homework</label
+											>
+											<label class="flex items-center"
+												><input
+													type="checkbox"
+													bind:group={childAIUseContexts}
+													value="general_knowledge"
+													class="mr-3"
+												/>For general knowledge or casual questions</label
+											>
+											<label class="flex items-center"
+												><input
+													type="checkbox"
+													bind:group={childAIUseContexts}
+													value="games_chatting"
+													class="mr-3"
+												/>For playing games or chatting with the AI</label
+											>
+											<label class="flex items-center"
+												><input
+													type="checkbox"
+													bind:group={childAIUseContexts}
+													value="personal_advice"
+													class="mr-3"
+												/>For advice on personal or social issues</label
+											>
+											<label class="flex items-center"
+												><input
+													type="checkbox"
+													bind:group={childAIUseContexts}
+													value="other"
+													class="mr-3"
+												/>Other</label
+											>
+										</div>
+										{#if childAIUseContexts.includes('other')}
+											<input
+												type="text"
+												bind:value={childAIUseContextsOther}
+												placeholder="Please specify the context"
+												class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+												required
+											/>
+										{/if}
+									</div>
+								{/if}
+
+								<div class="mb-2">
+									<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										Have you monitored or adjusted your child's use of Large Language Models like
+										ChatGPT? <span class="text-red-500">*</span>
+									</div>
+									<div class="space-y-2">
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={parentLLMMonitoringLevel}
+												value="active_rules"
+												class="mr-3"
+											/>Yes — I actively monitor and set rules/limits</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={parentLLMMonitoringLevel}
+												value="occasional_guidance"
+												class="mr-3"
+											/>Yes — occasional reminders or guidance</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={parentLLMMonitoringLevel}
+												value="plan_to"
+												class="mr-3"
+											/>Not yet, but I plan to</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={parentLLMMonitoringLevel}
+												value="no_monitoring"
+												class="mr-3"
+											/>No — I have not monitored or adjusted</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={parentLLMMonitoringLevel}
+												value="other"
+												class="mr-3"
+											/>Other</label
+										>
+										<label class="flex items-center"
+											><input
+												type="radio"
+												bind:group={parentLLMMonitoringLevel}
+												value="prefer_not_to_say"
+												class="mr-3"
+											/>Prefer not to say</label
+										>
+									</div>
+									{#if parentLLMMonitoringLevel === 'other'}
+										<input
+											type="text"
+											bind:value={parentLLMMonitoringOther}
+											placeholder="Please specify how you have monitored or adjusted your child's AI use"
+											class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+											required
+										/>
+									{/if}
+								</div>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Save Button -->
+					<div class="flex justify-end space-x-3 pt-6">
+						{#if childProfiles.length > 0}
+							<button
+								type="button"
+								on:click={cancelAddProfile}
+								class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
+							>
+								Cancel
+							</button>
+						{/if}
+						<button
+							type="submit"
+							class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
+						>
+							Save Profile
+						</button>
+					</div>
+				</form>
+			</div>
+		{/if}
+	</div>
+</div>

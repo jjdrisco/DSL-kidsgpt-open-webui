@@ -10,7 +10,7 @@
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { assignScenariosForChild } from '$lib/services/scenarioAssignment';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
-	import ChildProfileForm from '$lib/components/profile/ChildProfileForm.svelte';
+	import SurveyChildProfileForm from '$lib/components/profile/SurveyChildProfileForm.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -224,9 +224,8 @@
 		</div>
 	</nav>
 
-	<!-- Child Profile Form Component (MVP fields only - no research fields, no personality traits) -->
-	<ChildProfileForm
-		isStudyMode={true}
+	<!-- Survey Child Profile Form (child info only - no account creation) -->
+	<SurveyChildProfileForm
 		showResearchFields={false}
 		requireResearchFields={false}
 		showPersonalityTraits={false}

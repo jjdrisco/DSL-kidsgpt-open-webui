@@ -94,9 +94,14 @@ export function canAccessStep(step: number, workflowState: WorkflowStateResponse
 		return next_route === '/exit-survey' || next_route === '/completion';
 	}
 
-	// Step 4: Completion - accessible if exit survey is completed
+	// Step 4: Completion - accessible only when all prior steps are done
 	if (step === 4) {
-		return !!progress.exit_survey_completed || next_route === '/completion';
+		const allDone =
+			!!progress.instructions_completed &&
+			!!progress.has_child_profile &&
+			!!(progress as any).moderation_finalized &&
+			!!progress.exit_survey_completed;
+		return allDone || next_route === '/completion';
 	}
 
 	return false;
@@ -140,8 +145,16 @@ export function isStepCompleted(step: number, workflowState: WorkflowStateRespon
 		// Step 2 is completed when the user has clicked "Done" (moderation_finalized)
 		return !!(progress as any).moderation_finalized;
 	}
-	if (step === 3 || step === 4) {
+	if (step === 3) {
 		return !!progress.exit_survey_completed;
+	}
+	if (step === 4) {
+		return (
+			!!progress.instructions_completed &&
+			!!progress.has_child_profile &&
+			!!(progress as any).moderation_finalized &&
+			!!progress.exit_survey_completed
+		);
 	}
 	return false;
 }

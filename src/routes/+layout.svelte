@@ -746,9 +746,9 @@
 					value.consent_given === false ||
 					value.consent_given === undefined;
 
-				if (hasProlificPid && needsConsent) {
+				if (needsConsent) {
 					// Ensure Prolific IDs are in localStorage for consent submission
-					if (urlProlificPid && !localStorage.getItem('prolificPid')) {
+					if (hasProlificPid && urlProlificPid && !localStorage.getItem('prolificPid')) {
 						localStorage.setItem('prolificPid', urlProlificPid);
 						const urlParams = new URL(window.location.href).searchParams;
 						const studyId = urlParams.get('STUDY_ID');
@@ -757,7 +757,7 @@
 						if (sessionId) localStorage.setItem('prolificSessionId', sessionId);
 					}
 					showConsentModal = true;
-				} else if (hasProlificPid && value.consent_given === true) {
+				} else {
 					showConsentModal = false;
 				}
 
@@ -843,9 +843,9 @@
 							sessionUser.consent_given === false ||
 							sessionUser.consent_given === undefined;
 
-						if (hasProlificPid && needsConsent) {
+						if (needsConsent) {
 							// Ensure Prolific IDs are in localStorage for consent submission
-							if (urlProlificPid && !localStorage.getItem('prolificPid')) {
+							if (hasProlificPid && urlProlificPid && !localStorage.getItem('prolificPid')) {
 								localStorage.setItem('prolificPid', urlProlificPid);
 								const studyId = $page.url.searchParams.get('STUDY_ID');
 								const sessionId = $page.url.searchParams.get('SESSION_ID');
@@ -920,26 +920,31 @@
 			return;
 		}
 
-		// Get Prolific IDs - check URL first, then user object, then localStorage
+		// Get Prolific IDs - only use localStorage fallback if user is actually in a Prolific flow
 		const urlProlificPid =
 			typeof window !== 'undefined'
 				? new URL(window.location.href).searchParams.get('PROLIFIC_PID')
 				: null;
-		const prolificPid =
-			urlProlificPid || $user?.prolific_pid || localStorage.getItem('prolificPid');
+		const isProlificFlow = urlProlificPid || $user?.prolific_pid;
+		const prolificPid = isProlificFlow
+			? (urlProlificPid || $user?.prolific_pid || localStorage.getItem('prolificPid'))
+			: null;
 
 		const urlStudyId =
 			typeof window !== 'undefined'
 				? new URL(window.location.href).searchParams.get('STUDY_ID')
 				: null;
-		const studyId = urlStudyId || $user?.study_id || localStorage.getItem('prolificStudyId');
+		const studyId = isProlificFlow
+			? (urlStudyId || $user?.study_id || localStorage.getItem('prolificStudyId'))
+			: null;
 
 		const urlSessionId =
 			typeof window !== 'undefined'
 				? new URL(window.location.href).searchParams.get('SESSION_ID')
 				: null;
-		const sessionId =
-			urlSessionId || $user?.current_session_id || localStorage.getItem('prolificSessionId');
+		const sessionId = isProlificFlow
+			? (urlSessionId || $user?.current_session_id || localStorage.getItem('prolificSessionId'))
+			: null;
 
 		console.log('[CONSENT] Submitting consent with IDs:', {
 			prolificPid,
