@@ -141,7 +141,6 @@
 			'Only select this if you saw attention check instructions embedded in the scenario text. If you did not see any special instructions in the scenario, do not select this option.'
 	};
 
-
 	// Custom scenario constant - always appears last
 	const CUSTOM_SCENARIO_PROMPT = '[Create Your Own Scenario]';
 	const CUSTOM_SCENARIO_PLACEHOLDER = 'Enter your custom child prompt here...';
@@ -484,7 +483,6 @@
 	): Promise<{ list: Array<[string, string]>; identifiers: string[] }> {
 		let list: Array<[string, string]> = basePairs.slice();
 		let identifiers: string[] = baseIdentifiers.slice();
-
 
 		// disable custom scenario
 		// Ensure custom scenario is last
@@ -855,22 +853,22 @@
 					(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
 				);
 
-                for (const assignment of existingAssignments) {
-                    let prompt = assignment.prompt_text;
-                    const existingResponseText = assignment.attention_check_code
-                        ? assignment.response_text + `\n\n[Attention code: ${assignment.attention_check_code}]`
-                        : assignment.response_text;
-                    basePairs.push([prompt, existingResponseText]);
-                    const position = assignment.assignment_position || 0;
-                    baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
-                    assignmentMap.set(position, {
-                        assignment_id: assignment.assignment_id,
-                        scenario_id: assignment.scenario_id,
-                        attention_check_code: assignment.attention_check_code ?? null
-                    });
-                }
-                const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
-                scenarioList = list;
+				for (const assignment of existingAssignments) {
+					let prompt = assignment.prompt_text;
+					const existingResponseText = assignment.attention_check_code
+						? assignment.response_text + `\n\n[Attention code: ${assignment.attention_check_code}]`
+						: assignment.response_text;
+					basePairs.push([prompt, existingResponseText]);
+					const position = assignment.assignment_position || 0;
+					baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
+					assignmentMap.set(position, {
+						assignment_id: assignment.assignment_id,
+						scenario_id: assignment.scenario_id,
+						attention_check_code: assignment.attention_check_code ?? null
+					});
+				}
+				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+				scenarioList = list;
 				scenarioIdentifiers = identifiers;
 
 				// Store assignment IDs in scenario states (keyed by identifier)
@@ -927,8 +925,10 @@
 				// Assign scenarios one by one using weighted sampling
 				const basePairs: Array<[string, string]> = [];
 				const baseIdentifiers: string[] = [];
-				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string; attention_check_code?: string | null }> =
-					new Map();
+				const assignmentMap: Map<
+					number,
+					{ assignment_id: string; scenario_id: string; attention_check_code?: string | null }
+				> = new Map();
 
 				for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
 					try {
@@ -939,11 +939,12 @@
 							alpha: 1.0 // Default alpha for weighted sampling
 						});
 
-                            let prompt = assignResponse.prompt_text;
-                            const newResponseText = assignResponse.attention_check_code
-                                ? assignResponse.response_text + `\n\n[Attention code: ${assignResponse.attention_check_code}]`
-                                : assignResponse.response_text;
-                            basePairs.push([prompt, newResponseText]);
+						let prompt = assignResponse.prompt_text;
+						const newResponseText = assignResponse.attention_check_code
+							? assignResponse.response_text +
+								`\n\n[Attention code: ${assignResponse.attention_check_code}]`
+							: assignResponse.response_text;
+						basePairs.push([prompt, newResponseText]);
 						baseIdentifiers.push(assignResponse.assignment_id); // Use assignment_id as identifier
 						assignmentMap.set(i, {
 							assignment_id: assignResponse.assignment_id,
@@ -980,15 +981,19 @@
 				// Pick one assignment at random to receive an attention check code
 				const allAssignments = Array.from(assignmentMap.entries()); // [[position, {assignment_id,...}], ...]
 				if (allAssignments.length > 0) {
-					const [winnerPosition, winnerAssignment] = allAssignments[Math.floor(Math.random() * allAssignments.length)];
+					const [winnerPosition, winnerAssignment] =
+						allAssignments[Math.floor(Math.random() * allAssignments.length)];
 					try {
-						const acRes = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winnerAssignment.assignment_id}/attention-code`, {
-							method: 'PATCH',
-							headers: {
-								'Content-Type': 'application/json',
-								Authorization: `Bearer ${token}`
+						const acRes = await fetch(
+							`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winnerAssignment.assignment_id}/attention-code`,
+							{
+								method: 'PATCH',
+								headers: {
+									'Content-Type': 'application/json',
+									Authorization: `Bearer ${token}`
+								}
 							}
-						});
+						);
 						if (acRes.ok) {
 							const acBody = await acRes.json();
 							const code: string = acBody.attention_check_code;
@@ -1002,7 +1007,9 @@
 									basePairs[pairIndex][1] + `\n\n[Attention code: ${code}]`
 								];
 							}
-							console.log(`🔐 Assigned attention code ${code} to assignment ${winnerAssignment.assignment_id}`);
+							console.log(
+								`🔐 Assigned attention code ${code} to assignment ${winnerAssignment.assignment_id}`
+							);
 						} else {
 							console.warn('⚠️ Failed to assign attention check code:', await acRes.text());
 						}
@@ -1236,9 +1243,7 @@
 		// Check current scenario
 		if (index === selectedScenarioIndex) {
 			// For attention checks: completed if selected AND result is known (passed or failed)
-			if (
-				isAttentionCheck && attentionCheckSelected
-			) {
+			if (isAttentionCheck && attentionCheckSelected) {
 				return true;
 			}
 			// For current scenario, check if they've made a decision
@@ -2316,7 +2321,7 @@
 				[highlightText]: [...current.filter((id) => id !== concernId), concernId]
 			};
 			// Init per-pair level to null if not already set
-			if ((concernHighlightLevels[highlightText]?.[concernId]) === undefined) {
+			if (concernHighlightLevels[highlightText]?.[concernId] === undefined) {
 				concernHighlightLevels = {
 					...concernHighlightLevels,
 					[highlightText]: { ...(concernHighlightLevels[highlightText] ?? {}), [concernId]: null }
@@ -3623,8 +3628,7 @@
 					decided_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: attentionCheckSelected,
-					attention_check_passed:
-						isAttentionCheckScenario ? (attentionCheckPassed ?? false) : false
+					attention_check_passed: isAttentionCheckScenario ? (attentionCheckPassed ?? false) : false
 				});
 				console.log('Final version confirmed and saved to backend');
 				window.dispatchEvent(new Event('workflow-updated'));
@@ -4332,7 +4336,8 @@
 			const allSeverityLevels = Object.values(concernHighlightLevels)
 				.flatMap((perHighlight) => Object.values(perHighlight))
 				.filter((v): v is number => v !== null && v !== undefined);
-			const derivedConcernLevel = allSeverityLevels.length > 0 ? Math.max(...allSeverityLevels) : null;
+			const derivedConcernLevel =
+				allSeverityLevels.length > 0 ? Math.max(...allSeverityLevels) : null;
 
 			// Fall back to scenarioStates if the module-level HTML vars are empty.
 			// This guards against cases where loadScenario cleared the vars (e.g. after
@@ -4469,8 +4474,8 @@
 					currentVersionIndex >= 0 && versions[currentVersionIndex]
 						? versions[currentVersionIndex].response
 						: undefined,
-						response_highlighted_html: responseHighlightedHTML || undefined,
-						prompt_highlighted_html: promptHighlightedHTML || undefined,
+				response_highlighted_html: responseHighlightedHTML || undefined,
+				prompt_highlighted_html: promptHighlightedHTML || undefined,
 				is_final_version: action === 'move_on', // Mark as final if moving on
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -5196,12 +5201,12 @@
 							existingAssignments.sort(
 								(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
 							);
-						const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
-							a.prompt_text,
-							a.attention_check_code
-								? a.response_text + `\n\n[Attention code: ${a.attention_check_code}]`
-								: a.response_text
-						]);
+							const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
+								a.prompt_text,
+								a.attention_check_code
+									? a.response_text + `\n\n[Attention code: ${a.attention_check_code}]`
+									: a.response_text
+							]);
 							const baseIdentifiers: string[] = existingAssignments.map((a) => a.assignment_id);
 							const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
 							scenarioList = list;
@@ -5232,10 +5237,10 @@
 										satisfactionReason: '',
 										nextAction: null
 									};
-								existingState.assignment_id = assignment.assignment_id;
-								existingState.scenario_id = assignment.scenario_id;
-								existingState.attention_check_code = assignment.attention_check_code ?? null;
-								scenarioStates.set(identifier, existingState);
+									existingState.assignment_id = assignment.assignment_id;
+									existingState.scenario_id = assignment.scenario_id;
+									existingState.attention_check_code = assignment.attention_check_code ?? null;
+									scenarioStates.set(identifier, existingState);
 								}
 							});
 							if (scenarioList.length > 0) {
@@ -6120,17 +6125,18 @@
 												class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 											>
 												Child's Question or Prompt
-											<textarea
-												bind:value={customScenarioPrompt}
-												placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
-												rows="6"
-												minlength="10"
-												class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
-											></textarea>
-											<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-												💡 Tip: Write this from the perspective of a child asking a question or
-												making a statement.
-											</p>
+												<textarea
+													bind:value={customScenarioPrompt}
+													placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
+													rows="6"
+													minlength="10"
+													class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
+												></textarea>
+												<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+													💡 Tip: Write this from the perspective of a child asking a question or
+													making a statement.
+												</p>
+											</label>
 										</div>
 
 										<Tooltip
@@ -6193,23 +6199,23 @@
 							</div>
 						{:else if !isCustomScenario || customScenarioGenerated}
 							<!-- Attention check bar above prompt -->
-						<AttentionCheckBar
-							code={scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attention_check_code ?? null}
-							passed={
-								scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ?? null
-							}
-							on:submit={(e) => {
-								const entry: string = e.detail;
-								const state = scenarioStates.get(getScenarioId(selectedScenarioIndex));
-								if (state) {
-									state.attentionCheckPassed = entry === state.attention_check_code;
-									scenarioStates.set(getScenarioId(selectedScenarioIndex), state);
-									attentionCheckPassed = state.attentionCheckPassed;
-									saveCurrentScenarioState();
-								}
-							}}
-						/>
-						<!-- Child Prompt Bubble -->
+							<AttentionCheckBar
+								code={scenarioStates.get(getScenarioId(selectedScenarioIndex))
+									?.attention_check_code ?? null}
+								passed={scenarioStates.get(getScenarioId(selectedScenarioIndex))
+									?.attentionCheckPassed ?? null}
+								on:submit={(e) => {
+									const entry: string = e.detail;
+									const state = scenarioStates.get(getScenarioId(selectedScenarioIndex));
+									if (state) {
+										state.attentionCheckPassed = entry === state.attention_check_code;
+										scenarioStates.set(getScenarioId(selectedScenarioIndex), state);
+										attentionCheckPassed = state.attentionCheckPassed;
+										saveCurrentScenarioState();
+									}
+								}}
+							/>
+							<!-- Child Prompt Bubble -->
 							<div class="flex justify-end">
 								<!-- 
 						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
@@ -6635,8 +6641,8 @@
 
 												<p class="text-base text-gray-600 dark:text-gray-400 mb-4">
 													For each highlighted passage, describe what concerns you about it. You can
-													reuse a concern across multiple highlights. <strong>Note:</strong> Please rate your
-													concern level separately for each highlighted passage.
+													reuse a concern across multiple highlights. <strong>Note:</strong> Please rate
+													your concern level separately for each highlighted passage.
 												</p>
 
 												{#if highlightedTexts1.length === 0}
@@ -6654,7 +6660,11 @@
 														const ids = highlightConcerns[h.text] ?? [];
 														return (
 															ids.length > 0 &&
-															ids.every((id) => (concernMappings.find((c) => c.id === id)?.concernLevel ?? null) !== null)
+															ids.every(
+																(id) =>
+																	(concernMappings.find((c) => c.id === id)?.concernLevel ??
+																		null) !== null
+															)
 														);
 													}).length}
 													<div class="mb-2">
@@ -6695,7 +6705,8 @@
 															{@const isAddressed =
 																linkedIds.length > 0 &&
 																linkedIds.every(
-																	(id) => (concernHighlightLevels[highlight.text]?.[id] ?? null) !== null
+																	(id) =>
+																		(concernHighlightLevels[highlight.text]?.[id] ?? null) !== null
 																)}
 															<div
 																class="p-3 border rounded-lg transition-colors {isAddressed
@@ -6719,92 +6730,112 @@
 																</div>
 
 																<div class="mt-2 space-y-2">
-																{#if concernMappings.filter((c) => c.text.trim()).length > 0}
-																	{#each concernMappings.filter((c) => c.text.trim()) as concern (concern.id)}
-																		<div class="flex flex-col gap-1">
-																			<!-- Top row: checkbox + concern text + remove button -->
-																			<div class="flex items-center gap-2">
-																				<input
-																					type="checkbox"
-																					checked={linkedIds.includes(concern.id)}
-																					on:change={(e) =>
-																						toggleConcernLink(
-																							highlight.text,
-																							concern.id,
-																							e.currentTarget.checked
-																						)}
-																					class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
-																				/>
-																				<span class="flex-1 text-base text-gray-800 dark:text-gray-200">{concern.text}</span>
-																				<button
-																					type="button"
-																					on:click={() => handleRemoveConcern(concern.id)}
-																					class="text-red-400 hover:text-red-600 flex-shrink-0"
-																					title="Remove"
-																				>
-																					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-																					</svg>
-																				</button>
-																			</div>
-																			<!-- Severity row: only shown when this concern is linked to this highlight -->
-																			{#if linkedIds.includes(concern.id)}
-																				<div class="ml-7 flex flex-col gap-1.5">
-																					<span class="text-sm font-medium text-gray-600 dark:text-gray-400">How severe is this concern for this passage?</span>
-																					<div class="flex flex-wrap gap-1.5">
-																						{#each [{ v: 1, l: 'Not concerning' }, { v: 2, l: 'Slightly concerning' }, { v: 3, l: 'Moderately concerning' }, { v: 4, l: 'Very concerning' }, { v: 5, l: 'Extremely concerning' }] as opt}
-																							<button
-																								type="button"
-																								on:click={() => {
-																									concernHighlightLevels = {
-																										...concernHighlightLevels,
-																										[highlight.text]: {
-																											...(concernHighlightLevels[highlight.text] ?? {}),
-																											[concern.id]: opt.v
-																										}
-																									};
-																								}}
-																								class="px-3 py-1.5 text-sm rounded border transition-colors {(concernHighlightLevels[highlight.text]?.[concern.id] ?? null) === opt.v
-																									? 'bg-blue-500 border-blue-500 text-white font-semibold'
-																									: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400'}"
-																							>
-																								{opt.v}. {opt.l}
-																							</button>
-																						{/each}
-																					</div>
+																	{#if concernMappings.filter((c) => c.text.trim()).length > 0}
+																		{#each concernMappings.filter( (c) => c.text.trim() ) as concern (concern.id)}
+																			<div class="flex flex-col gap-1">
+																				<!-- Top row: checkbox + concern text + remove button -->
+																				<div class="flex items-center gap-2">
+																					<input
+																						type="checkbox"
+																						checked={linkedIds.includes(concern.id)}
+																						on:change={(e) =>
+																							toggleConcernLink(
+																								highlight.text,
+																								concern.id,
+																								e.currentTarget.checked
+																							)}
+																						class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
+																					/>
+																					<span
+																						class="flex-1 text-base text-gray-800 dark:text-gray-200"
+																						>{concern.text}</span
+																					>
+																					<button
+																						type="button"
+																						on:click={() => handleRemoveConcern(concern.id)}
+																						class="text-red-400 hover:text-red-600 flex-shrink-0"
+																						title="Remove"
+																					>
+																						<svg
+																							class="w-4 h-4"
+																							fill="none"
+																							stroke="currentColor"
+																							viewBox="0 0 24 24"
+																						>
+																							<path
+																								stroke-linecap="round"
+																								stroke-linejoin="round"
+																								stroke-width="2"
+																								d="M6 18L18 6M6 6l12 12"
+																							/>
+																						</svg>
+																					</button>
 																				</div>
-																			{/if}
-																		</div>
-																	{/each}
-																	<hr class="border-gray-200 dark:border-gray-600" />
-																{/if}
-																<input
-																	type="text"
-																	value={newConcernInputs[highlight.text] ?? ''}
-																	on:input={(e) => {
-																		newConcernInputs = {
-																			...newConcernInputs,
-																			[highlight.text]: e.currentTarget.value
-																		};
-																	}}
-																	on:keydown={(e) => {
-																		if (e.key === 'Enter') {
-																			e.preventDefault();
-																			addConcernForHighlight(highlight.text);
-																		}
-																	}}
-																	placeholder="Describe a concern…"
-																	class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-																/>
-																<button
-																	type="button"
-																	on:click={() => addConcernForHighlight(highlight.text)}
-																	disabled={!(newConcernInputs[highlight.text] ?? '').trim()}
-																	class="w-full px-3 py-2 text-base font-medium bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-																>
-																	+ Add concern
-																</button>
-															</div>
+																				<!-- Severity row: only shown when this concern is linked to this highlight -->
+																				{#if linkedIds.includes(concern.id)}
+																					<div class="ml-7 flex flex-col gap-1.5">
+																						<span
+																							class="text-sm font-medium text-gray-600 dark:text-gray-400"
+																							>How severe is this concern for this passage?</span
+																						>
+																						<div class="flex flex-wrap gap-1.5">
+																							{#each [{ v: 1, l: 'Not concerning' }, { v: 2, l: 'Slightly concerning' }, { v: 3, l: 'Moderately concerning' }, { v: 4, l: 'Very concerning' }, { v: 5, l: 'Extremely concerning' }] as opt}
+																								<button
+																									type="button"
+																									on:click={() => {
+																										concernHighlightLevels = {
+																											...concernHighlightLevels,
+																											[highlight.text]: {
+																												...(concernHighlightLevels[
+																													highlight.text
+																												] ?? {}),
+																												[concern.id]: opt.v
+																											}
+																										};
+																									}}
+																									class="px-3 py-1.5 text-sm rounded border transition-colors {(concernHighlightLevels[
+																										highlight.text
+																									]?.[concern.id] ?? null) === opt.v
+																										? 'bg-blue-500 border-blue-500 text-white font-semibold'
+																										: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400'}"
+																								>
+																									{opt.v}. {opt.l}
+																								</button>
+																							{/each}
+																						</div>
+																					</div>
+																				{/if}
+																			</div>
+																		{/each}
+																		<hr class="border-gray-200 dark:border-gray-600" />
+																	{/if}
+																	<input
+																		type="text"
+																		value={newConcernInputs[highlight.text] ?? ''}
+																		on:input={(e) => {
+																			newConcernInputs = {
+																				...newConcernInputs,
+																				[highlight.text]: e.currentTarget.value
+																			};
+																		}}
+																		on:keydown={(e) => {
+																			if (e.key === 'Enter') {
+																				e.preventDefault();
+																				addConcernForHighlight(highlight.text);
+																			}
+																		}}
+																		placeholder="Describe a concern…"
+																		class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+																	/>
+																	<button
+																		type="button"
+																		on:click={() => addConcernForHighlight(highlight.text)}
+																		disabled={!(newConcernInputs[highlight.text] ?? '').trim()}
+																		class="w-full px-3 py-2 text-base font-medium bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+																	>
+																		+ Add concern
+																	</button>
+																</div>
 															</div>
 														{/each}
 													</div>
@@ -6891,17 +6922,27 @@
 															>
 																Satisfaction Level <span class="text-red-500">*</span>
 															</label>
-																<button
-																	type="button"
-																	on:click={() => handleRemoveConcern(concern.id)}
-																	class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
-																	aria-label="Remove concern"
-																	title="Remove this concern"
+															<button
+																type="button"
+																on:click={() => handleRemoveConcern(concern.id)}
+																class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																aria-label="Remove concern"
+																title="Remove this concern"
+															>
+																<svg
+																	class="w-3.5 h-3.5"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
 																>
-																	<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-																	</svg>
-																</button>
+																	<path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="2"
+																		d="M6 18L18 6M6 6l12 12"
+																	/>
+																</svg>
+															</button>
 															{#each [1, 2, 3, 4, 5] as level}
 																<label
 																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {satisfactionLevel ===
@@ -6928,17 +6969,27 @@
 																						: '5 - Very Satisfied'}
 																	</span>
 																</label>
-																	<button
-																		type="button"
-																		on:click={() => handleRemoveConcern(concern.id)}
-																		class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
-																		aria-label="Remove concern"
-																		title="Remove this concern"
+																<button
+																	type="button"
+																	on:click={() => handleRemoveConcern(concern.id)}
+																	class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																	aria-label="Remove concern"
+																	title="Remove this concern"
+																>
+																	<svg
+																		class="w-3.5 h-3.5"
+																		fill="none"
+																		stroke="currentColor"
+																		viewBox="0 0 24 24"
 																	>
-																		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-																		</svg>
-																	</button>
+																		<path
+																			stroke-linecap="round"
+																			stroke-linejoin="round"
+																			stroke-width="2"
+																			d="M6 18L18 6M6 6l12 12"
+																		/>
+																	</svg>
+																</button>
 															{/each}
 														</div>
 
@@ -6949,17 +7000,27 @@
 															>
 																Why? <span class="text-red-500">*</span>
 															</label>
-																<button
-																	type="button"
-																	on:click={() => handleRemoveConcern(concern.id)}
-																	class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
-																	aria-label="Remove concern"
-																	title="Remove this concern"
+															<button
+																type="button"
+																on:click={() => handleRemoveConcern(concern.id)}
+																class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																aria-label="Remove concern"
+																title="Remove this concern"
+															>
+																<svg
+																	class="w-3.5 h-3.5"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
 																>
-																	<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-																	</svg>
-																</button>
+																	<path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="2"
+																		d="M6 18L18 6M6 6l12 12"
+																	/>
+																</svg>
+															</button>
 															<textarea
 																bind:value={satisfactionReason}
 																placeholder="Explain your satisfaction level... (minimum 10 characters)"
@@ -7242,17 +7303,27 @@
 																			>
 																				Enter custom moderation instruction:
 																			</label>
-																				<button
-																					type="button"
-																					on:click={() => handleRemoveConcern(concern.id)}
-																					class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
-																					aria-label="Remove concern"
-																					title="Remove this concern"
+																			<button
+																				type="button"
+																				on:click={() => handleRemoveConcern(concern.id)}
+																				class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+																				aria-label="Remove concern"
+																				title="Remove this concern"
+																			>
+																				<svg
+																					class="w-3.5 h-3.5"
+																					fill="none"
+																					stroke="currentColor"
+																					viewBox="0 0 24 24"
 																				>
-																					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-																					</svg>
-																				</button>
+																					<path
+																						stroke-linecap="round"
+																						stroke-linejoin="round"
+																						stroke-width="2"
+																						d="M6 18L18 6M6 6l12 12"
+																					/>
+																				</svg>
+																			</button>
 																			<textarea
 																				bind:value={customInstructionInput}
 																				rows="2"
@@ -7710,17 +7781,27 @@
 														>
 															Enter custom moderation instruction:
 														</label>
-															<button
-																type="button"
-																on:click={() => handleRemoveConcern(concern.id)}
-																class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
-																aria-label="Remove concern"
-																title="Remove this concern"
+														<button
+															type="button"
+															on:click={() => handleRemoveConcern(concern.id)}
+															class="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded transition-colors"
+															aria-label="Remove concern"
+															title="Remove this concern"
+														>
+															<svg
+																class="w-3.5 h-3.5"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
 															>
-																<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-																</svg>
-															</button>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M6 18L18 6M6 6l12 12"
+																/>
+															</svg>
+														</button>
 														<textarea
 															bind:value={customInstructionInput}
 															rows="3"

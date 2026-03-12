@@ -405,7 +405,13 @@ async def reset_user_workflow(
             # after a reset (scenario_assignments are not deleted on reset; they're filtered
             # by attempt_number which must not match any leftover rows).
             new_attempt_number = (
-                max(max_moderation_attempt, max_child_attempt, max_exit_attempt, max_assignment_attempt) + 1
+                max(
+                    max_moderation_attempt,
+                    max_child_attempt,
+                    max_exit_attempt,
+                    max_assignment_attempt,
+                )
+                + 1
             )
 
             # Child profiles persist across attempts - do NOT set is_current=False.

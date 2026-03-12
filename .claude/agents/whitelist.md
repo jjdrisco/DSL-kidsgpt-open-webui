@@ -29,11 +29,13 @@ model: sonnet
 ## Child Profile Lookup Pattern
 
 Children own no `child_profile` rows — profiles are owned by the parent (`user_id = parent.id`). Always look up via:
+
 ```python
 profile = ChildProfiles.get_child_profile_by_child_email(user.parent_id, user.email)
 if not profile:
     profile = ChildProfiles.get_current_child_profile(user.parent_id)
 ```
+
 Never query by `user_id == child.id` — it returns nothing.
 
 ## Important Rules

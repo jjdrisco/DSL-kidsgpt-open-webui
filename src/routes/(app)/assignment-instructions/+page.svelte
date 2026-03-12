@@ -49,7 +49,6 @@
 			}
 		} catch (e) {}
 
-	
 		return () => {
 			window.removeEventListener('workflow-updated', handleWorkflowUpdate);
 		};
@@ -148,26 +147,29 @@
 				</p>
 			</div>
 
-<!-- Task Steps (condensed) -->
-		<p class="text-gray-600 dark:text-gray-300 mb-4">
-			This study has three consecutive tasks: create a child profile, review and moderate
-			example AI responses, and finally complete a short exit survey. When moderating,
-			you don’t need to answer every question; if a scenario raises no concerns, simply
-			click <em>Skip</em> and move on.
-		</p>
-
-<!-- Help Videos Notice (trimmed) -->
-		<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-8">
-			<p class="text-blue-700 dark:text-blue-300">
-				📹 Tutorial videos are available via the help button on task pages.
+			<!-- Task Steps (condensed) -->
+			<p class="text-gray-600 dark:text-gray-300 mb-4">
+				This study has three consecutive tasks: create a child profile, review and moderate example
+				AI responses, and finally complete a short exit survey. When moderating, you don’t need to
+				answer every question; if a scenario raises no concerns, simply click <em>Skip</em> and move on.
 			</p>
+
+			<!-- Help Videos Notice (trimmed) -->
+			<div
+				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-8"
+			>
+				<p class="text-blue-700 dark:text-blue-300">
+					📹 Tutorial videos are available via the help button on task pages.
+				</p>
 			</div>
 
-<!-- Important Notes (brief) -->
-		<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-8">
-			<p class="text-yellow-700 dark:text-yellow-300">
-				⚠️ This survey contains attention‑check questions; please read everything carefully.
-			</p>
+			<!-- Important Notes (brief) -->
+			<div
+				class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-8"
+			>
+				<p class="text-yellow-700 dark:text-yellow-300">
+					⚠️ This survey contains attention‑check questions; please read everything carefully.
+				</p>
 			</div>
 
 			<!-- Done Button -->

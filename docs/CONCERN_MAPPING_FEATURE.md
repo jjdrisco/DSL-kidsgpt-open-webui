@@ -134,7 +134,7 @@ modification.
 | `addConcernForHighlight`    | `(highlightText: string) => void`                                      | Creates a new concern from `newConcernInputs[highlightText]`, adds it to the pool, and links it to the highlight |
 | `addConcernItem`            | `() => void`                                                           | Appends a blank `ConcernItem` to the pool (used internally)                                                      |
 | `removeConcernItem`         | `(id: string) => void`                                                 | Removes a concern from the pool and all highlight links                                                          |
-| `handleRemoveConcern`        | `(id: string) => Promise<void>`                                        | Wrapper that also syncs the updated pool to the backend (called by the UI delete button) |
+| `handleRemoveConcern`       | `(id: string) => Promise<void>`                                        | Wrapper that also syncs the updated pool to the backend (called by the UI delete button)                         |
 | `toggleConcernLink`         | `(highlightText: string, concernId: string, checked: boolean) => void` | Adds or removes a concern ID from `highlightConcerns[highlightText]`                                             |
 | `deriveConcernReason`       | `(mappings: ConcernItem[]) => string`                                  | Produces the backward-compatible `concern_reason` string                                                         |
 | `getUnmatchedHighlights`    | `() => HighlightInfo[]`                                                | Returns highlights not yet linked to any concern                                                                 |

@@ -81,7 +81,7 @@ export const listExitQuiz = async (
 export const resetExitQuiz = async (
 	token: string,
 	child_id: string
-): Promise<{deleted: number}> => {
+): Promise<{ deleted: number }> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/exit-quiz/reset`, {
 		method: 'POST',
 		headers: {

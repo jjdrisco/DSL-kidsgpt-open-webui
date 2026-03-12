@@ -927,7 +927,7 @@
 				: null;
 		const isProlificFlow = urlProlificPid || $user?.prolific_pid;
 		const prolificPid = isProlificFlow
-			? (urlProlificPid || $user?.prolific_pid || localStorage.getItem('prolificPid'))
+			? urlProlificPid || $user?.prolific_pid || localStorage.getItem('prolificPid')
 			: null;
 
 		const urlStudyId =
@@ -935,7 +935,7 @@
 				? new URL(window.location.href).searchParams.get('STUDY_ID')
 				: null;
 		const studyId = isProlificFlow
-			? (urlStudyId || $user?.study_id || localStorage.getItem('prolificStudyId'))
+			? urlStudyId || $user?.study_id || localStorage.getItem('prolificStudyId')
 			: null;
 
 		const urlSessionId =
@@ -943,7 +943,7 @@
 				? new URL(window.location.href).searchParams.get('SESSION_ID')
 				: null;
 		const sessionId = isProlificFlow
-			? (urlSessionId || $user?.current_session_id || localStorage.getItem('prolificSessionId'))
+			? urlSessionId || $user?.current_session_id || localStorage.getItem('prolificSessionId')
 			: null;
 
 		console.log('[CONSENT] Submitting consent with IDs:', {
