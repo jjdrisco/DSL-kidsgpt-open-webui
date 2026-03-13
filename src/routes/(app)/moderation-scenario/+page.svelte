@@ -907,6 +907,8 @@
 						scenarioStates.set(identifier, existingState);
 					}
 				});
+				// Force Svelte to see the Map mutations so reactive statements re-evaluate
+				scenarioStates = new Map(scenarioStates);
 
 				if (scenarioList.length > 0) {
 					scenariosLockedForSession = true;
@@ -1059,6 +1061,8 @@
 						scenarioStates.set(identifier, existingState);
 					}
 				});
+				// Force Svelte to see the Map mutations so reactive statements re-evaluate
+				scenarioStates = new Map(scenarioStates);
 
 				if (scenarioList.length > 0) {
 					scenariosLockedForSession = true;
@@ -1094,7 +1098,10 @@
 	}
 
 	// Reactive convenience variable for the currently selected scenario
-	$: isAttentionCheckScenario = isAttentionCheckByIndex(selectedScenarioIndex);
+	$: isAttentionCheckScenario = (() => {
+		const _ = scenarioStatesUpdateTrigger;
+		return isAttentionCheckByIndex(selectedScenarioIndex);
+	})();
 	$: canSubmit =
 		highlightedTexts1.length > 0 &&
 		highlightedTexts1.every((h) => {
