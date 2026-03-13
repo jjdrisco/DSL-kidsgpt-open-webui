@@ -13,8 +13,8 @@
 
 	// True once submitted locally or once the parent has recorded a correct result
 	$: displaySubmitted = localSubmitted || passed === true;
-	// Reset local state when switching scenarios or after a wrong attempt
-	$: if (passed !== true) {
+	// Reset local state when switching to a fresh scenario
+	$: if (passed === null) {
 		localSubmitted = false;
 	}
 
@@ -27,7 +27,11 @@
 		dispatch('submit', value);
 		setTimeout(() => {
 			submitting = false;
-		}, 100);
+			// Re-enable for retry if the code was wrong
+			if (passed !== true) {
+				localSubmitted = false;
+			}
+		}, 300);
 	}
 </script>
 

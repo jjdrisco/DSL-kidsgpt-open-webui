@@ -3790,7 +3790,7 @@
 							decided_at: Date.now(),
 							is_attention_check: true,
 							attention_check_selected: true,
-							attention_check_passed: true
+							attention_check_passed: attentionCheckPassed === true
 						});
 
 						// Show success message
@@ -4108,7 +4108,7 @@
 					decided_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: false,
-					attention_check_passed: false
+					attention_check_passed: attentionCheckPassed ?? false
 				});
 				window.dispatchEvent(new Event('workflow-updated'));
 			} catch (e) {
@@ -4188,7 +4188,7 @@
 					highlights_saved_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: attentionCheckSelected,
-					attention_check_passed: false
+					attention_check_passed: attentionCheckPassed ?? false
 				});
 				console.log('Highlights saved to moderation_session table successfully');
 			} catch (e) {
@@ -4387,7 +4387,8 @@
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: isAttentionCheckScenario
-					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
+					? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ??
+						false)
 					: false,
 				session_metadata: {
 					highlight_concerns: highlightConcerns,
@@ -4487,7 +4488,8 @@
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: isAttentionCheckScenario
-					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
+					? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ??
+						false)
 					: false
 			});
 
@@ -4605,7 +4607,8 @@
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: isAttentionCheckScenario
-					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
+					? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ??
+						false)
 					: false
 			});
 			window.dispatchEvent(new Event('workflow-updated'));
@@ -4807,10 +4810,7 @@
 						decided_at: Date.now(),
 						is_attention_check: isAttentionCheckScenario,
 						attention_check_selected: attentionSelectedSnapshot,
-						attention_check_passed:
-							isAttentionCheckScenario &&
-							attentionSelectedSnapshot &&
-							(standardStrategies.length > 0 || customTexts.length > 0)
+						attention_check_passed: attentionCheckPassed ?? false
 					});
 				} catch (e) {
 					console.error('Failed to save moderation session', e);
@@ -5250,6 +5250,8 @@
 									scenarioStates.set(identifier, existingState);
 								}
 							});
+							// Force Svelte to see the Map mutations so reactive statements re-evaluate
+							scenarioStates = new Map(scenarioStates);
 							if (scenarioList.length > 0) {
 								scenariosLockedForSession = true;
 								haveScenariosForAttempt = true;
