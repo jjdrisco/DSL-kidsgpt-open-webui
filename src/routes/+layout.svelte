@@ -1042,6 +1042,7 @@
 			month: 'long',
 			day: 'numeric'
 		})}
+		studyId={$page.url.searchParams.get('STUDY_ID') || localStorage.getItem('prolificStudyId') || $user?.study_id || null}
 	/>
 {/if}
 

@@ -1,6 +1,8 @@
 import logging
+import os
 import time
 import uuid
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
@@ -354,3 +356,30 @@ async def get_session_info(user_id: str = None):
         "current_session_id": user.current_session_id,
         "session_number": user.session_number,
     }
+
+
+CONSENT_TEXTS_DIR = Path(__file__).resolve().parent.parent.parent / "consent_texts"
+
+
+@router.get("/consent-text")
+async def get_consent_text(study_id: Optional[str] = None):
+    """
+    Return consent body HTML for the given study_id.
+    Reads .html files from backend/consent_texts/. Each file's first line
+    is a comma-separated list of study IDs; the rest is HTML content.
+    """
+    if not CONSENT_TEXTS_DIR.is_dir():
+        return {"content": "", "matched": False}
+
+    for html_file in CONSENT_TEXTS_DIR.glob("*.html"):
+        try:
+            text = html_file.read_text(encoding="utf-8")
+            first_newline = text.index("\n")
+            ids_line = text[:first_newline].strip()
+            study_ids = [sid.strip() for sid in ids_line.split(",")]
+            if study_id and study_id in study_ids:
+                return {"content": text[first_newline + 1 :], "matched": True}
+        except (ValueError, OSError):
+            continue
+
+    return {"content": "", "matched": False}
