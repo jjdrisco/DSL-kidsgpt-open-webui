@@ -5,11 +5,14 @@ data-exports/<YYYYMMDD_HHMMSS>/ folder, then copy the latest analysis
 notebook into the same folder (renamed with the new timestamp) so it
 is ready to run immediately.
 
+Produces the same CSV filenames and column layout as export_heroku_data.py
+so the analysis notebook works identically with either data source.
+
 Usage:
     python scripts/export_local_data.py [--db-path PATH] [--output-dir PATH]
 
 Defaults:
-    --db-path     backend/open_webui/data/webui.db  (relative to repo root)
+    --db-path     backend/data/webui.db  (relative to repo root)
     --output-dir  data-exports/<timestamp>
 
 Requirements:
@@ -118,6 +121,7 @@ SELECT
     cp.is_only_child,
     cp.child_has_ai_use,
     cp.child_ai_use_contexts,
+    cp.child_internet_use_frequency,
     cp.parent_llm_monitoring_level,
     cp.attempt_number,
     cp.is_current,
@@ -160,6 +164,8 @@ SELECT
     ms.strategies,
     ms.custom_instructions,
     ms.highlighted_texts,
+    ms.response_highlighted_html,
+    ms.prompt_highlighted_html,
     ms.refactored_response,
     ms.session_metadata,
     ms.is_attention_check,
@@ -249,6 +255,63 @@ SELECT
 FROM assignment_session_activity ata
 LEFT JOIN "user" u ON ata.user_id = u.id
 ORDER BY ata.user_id, ata.session_number, ata.created_at;
+"""
+
+CONCERN_ITEM_QUERY = """
+SELECT
+    ci.id,
+    ci.session_id,
+    ci.user_id,
+    ci.child_id,
+    ci.scenario_id,
+    ci.scenario_index,
+    ci.attempt_number,
+    ci.version_number,
+    ci.session_number,
+    ci.position,
+    ci.text,
+    ci.concern_level,
+    ci.linked_highlights,
+    ci.highlight_levels,
+    ci.created_at,
+    ci.updated_at,
+    u.name             AS user_name,
+    u.email            AS user_email,
+    u.role             AS user_role,
+    u.prolific_pid,
+    cp.child_age,
+    cp.child_gender
+FROM concern_item ci
+LEFT JOIN "user"        u  ON ci.user_id  = u.id
+LEFT JOIN child_profile cp ON ci.child_id = cp.id
+ORDER BY ci.user_id, ci.scenario_index, ci.position;
+"""
+
+SELECTION_QUERY = """
+SELECT
+    s.id,
+    s.user_id,
+    s.chat_id,
+    s.message_id,
+    s.role,
+    s.selected_text,
+    s.child_id,
+    s.scenario_id,
+    s.source,
+    s.context,
+    s.meta,
+    s.assignment_id,
+    s.start_offset,
+    s.end_offset,
+    s.created_at,
+    s.updated_at,
+    u.name             AS user_name,
+    u.email            AS user_email,
+    u.role             AS user_role,
+    u.prolific_pid
+FROM selection s
+LEFT JOIN "user" u ON s.user_id = u.id
+ORDER BY s.user_id, s.scenario_id, s.created_at;
 """
 
 
@@ -351,6 +414,8 @@ def main() -> None:
         "exit_quiz_response",
         "scenarios",
         "assignment_session_activity",
+        "concern_item",
+        "selection",
     }
     missing = required_tables - existing_tables
     if missing:
@@ -365,9 +430,11 @@ def main() -> None:
         ("users",               USER_QUERY,            "users_export",               "user"),
         ("child_profiles",      CHILD_QUERY,           "child_profiles_export",      "child_profile"),
         ("scenarios",           SCENARIOS_QUERY,       "scenarios_export",            "scenarios"),
-        ("moderation_sessions", MOD_QUERY,             "moderation_sessions_export", "moderation_session"),
-        ("exit_quiz_responses", EXIT_QUERY,            "exit_quiz_responses_export", "exit_quiz_response"),
-        ("assignment_time",     ASSIGNMENT_TIME_QUERY, "assignment_time_export",     "assignment_session_activity"),
+        ("moderation_sessions", MOD_QUERY,             "moderation_sessions_export",  "moderation_session"),
+        ("exit_quiz_responses", EXIT_QUERY,            "exit_quiz_responses_export",  "exit_quiz_response"),
+        ("assignment_time",     ASSIGNMENT_TIME_QUERY, "assignment_time_export",      "assignment_session_activity"),
+        ("concern_items",       CONCERN_ITEM_QUERY,    "concern_items_export",        "concern_item"),
+        ("selections",          SELECTION_QUERY,       "selections_export",           "selection"),
     ]
 
     results: list[tuple[str, Path, int]] = []
