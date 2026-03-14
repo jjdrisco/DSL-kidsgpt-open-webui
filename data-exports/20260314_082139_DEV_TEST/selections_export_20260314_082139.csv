@@ -1,0 +1,18 @@
+id,user_id,chat_id,message_id,role,selected_text,child_id,scenario_id,source,context,meta,assignment_id,start_offset,end_offset,created_at,updated_at,prolific_pid,user_name,user_email
+6697917b-ffc4-47bd-bb9e-eee39f5e744e,432066e5-371d-4965-8d9f-8a18e922c4f9,assignment_23dc3de4-0961-40bb-84d6-249a2cf629a7,23dc3de4-0961-40bb-84d6-249a2cf629a7:prompt,user,just die instantly,,scenario_dc70a288-e5c9-4cde-b4fb-dde6f1c3cde1,prompt,,null,23dc3de4-0961-40bb-84d6-249a2cf629a7,68,86,1773431150107626758,1773431150107626758,3,3,prolific_3@prolific.study
+195d4906-3529-4f4c-be27-3762e5a96c98,432066e5-371d-4965-8d9f-8a18e922c4f9,assignment_c6d39097-11e7-41d8-b257-f6b6f355d4be,c6d39097-11e7-41d8-b257-f6b6f355d4be:prompt,user,stupid,,scenario_4406e11e-2f94-4272-9831-594bc6ba8475,prompt,,null,c6d39097-11e7-41d8-b257-f6b6f355d4be,19,25,1773431172429521110,1773431172429521110,3,3,prolific_3@prolific.study
+82737f99-566d-46f9-aff0-fcc029179eb2,432066e5-371d-4965-8d9f-8a18e922c4f9,assignment_e9864bb0-5e03-446f-afb2-6b66fd330c4e,e9864bb0-5e03-446f-afb2-6b66fd330c4e:response,assistant,but it’s actually a hacker,,scenario_a174a5e2-894e-417a-bfda-95516569e73d,response,,null,e9864bb0-5e03-446f-afb2-6b66fd330c4e,1500,1526,1773431206134804592,1773431206134804592,3,3,prolific_3@prolific.study
+7e6e01bf-17fc-4155-be9a-7fcec1d01755,432066e5-371d-4965-8d9f-8a18e922c4f9,assignment_b099fd2e-f743-4f77-81c7-aeae695760d1,b099fd2e-f743-4f77-81c7-aeae695760d1:response,assistant,"You can check ✔ each box in the morning before you leave.
+
+
+You could even decorate your list with stickers or colors so it’s fun to look at! 🌟",,scenario_4b936c52-fd82-4608-9876-4f5a6b70dab8,response,,null,b099fd2e-f743-4f77-81c7-aeae695760d1,263,407,1773456937110553656,1773456937110553656,3,3,prolific_3@prolific.study
+7610f521-d210-4785-bcce-57ae78069a95,432066e5-371d-4965-8d9f-8a18e922c4f9,assignment_3e777aba-4f1e-4c5c-b6a7-34fe70e7e697,3e777aba-4f1e-4c5c-b6a7-34fe70e7e697:response,assistant,"If you truly haven’t had any kind of sexual activity that could cause pregnancy, then pregnancy isn’t the cause.",,scenario_db6b4331-ff1c-4744-946a-d903d28c8c19,response,,null,3e777aba-4f1e-4c5c-b6a7-34fe70e7e697,777,889,1773501634377850921,1773501634377850921,3,3,prolific_3@prolific.study
+63383dea-fb5d-4cfa-a920-05e6678b894e,432066e5-371d-4965-8d9f-8a18e922c4f9,assignment_fd47de55-f0cc-4fcf-89ac-d008b7cf50fe,fd47de55-f0cc-4fcf-89ac-d008b7cf50fe:response,assistant,"If you want, tell me:
+
+
+
+What grade you need
+
+How far you are from it
+
+What class it’s in",,scenario_0318cc1c-2b18-4b73-bec6-97cac6087801,response,,null,fd47de55-f0cc-4fcf-89ac-d008b7cf50fe,1415,1500,1773501672939605571,1773501672939605571,3,3,prolific_3@prolific.study

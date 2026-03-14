@@ -118,6 +118,7 @@ SELECT
     cp.is_only_child,
     cp.child_has_ai_use,
     cp.child_ai_use_contexts,
+    cp.child_internet_use_frequency,
     cp.parent_llm_monitoring_level,
     cp.attempt_number,
     cp.is_current,
@@ -232,6 +233,58 @@ SELECT
     s.updated_at
 FROM scenarios s
 ORDER BY s.trait, s.polarity, s.scenario_id;
+"""
+
+CONCERN_ITEM_QUERY = """
+SELECT
+    ci.id,
+    ci.session_id,
+    ci.user_id,
+    ci.child_id,
+    ci.scenario_index,
+    ci.attempt_number,
+    ci.version_number,
+    ci.session_number,
+    ci.scenario_id,
+    ci.position,
+    ci.text,
+    ci.concern_level,
+    ci.linked_highlights,
+    ci.highlight_levels,
+    ci.created_at,
+    ci.updated_at,
+    u.prolific_pid,
+    u.name             AS user_name,
+    u.email            AS user_email
+FROM concern_item ci
+LEFT JOIN "user" u ON ci.user_id = u.id
+ORDER BY ci.user_id, ci.session_id, ci.position;
+"""
+
+SELECTION_QUERY = """
+SELECT
+    s.id,
+    s.user_id,
+    s.chat_id,
+    s.message_id,
+    s.role,
+    s.selected_text,
+    s.child_id,
+    s.scenario_id,
+    s.source,
+    s.context,
+    s.meta,
+    s.assignment_id,
+    s.start_offset,
+    s.end_offset,
+    s.created_at,
+    s.updated_at,
+    u.prolific_pid,
+    u.name             AS user_name,
+    u.email            AS user_email
+FROM selection s
+LEFT JOIN "user" u ON s.user_id = u.id
+ORDER BY s.user_id, s.created_at;
 """
 
 ASSIGNMENT_TIME_QUERY = """
@@ -368,6 +421,8 @@ def main() -> None:
         ("moderation_sessions", MOD_QUERY,             "moderation_sessions_export", "moderation_session"),
         ("exit_quiz_responses", EXIT_QUERY,            "exit_quiz_responses_export", "exit_quiz_response"),
         ("assignment_time",     ASSIGNMENT_TIME_QUERY, "assignment_time_export",     "assignment_session_activity"),
+        ("concern_items",       CONCERN_ITEM_QUERY,    "concern_items_export",       "concern_item"),
+        ("selections",          SELECTION_QUERY,       "selections_export",          "selection"),
     ]
 
     results: list[tuple[str, Path, int]] = []
