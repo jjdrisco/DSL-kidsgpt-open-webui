@@ -34,8 +34,8 @@ class ModerationSession(Base):
     is_final_version = Column(Boolean, nullable=False, default=False)
 
     # Pre-moderation judgment fields (Step 2)
-    concern_level = Column(Integer, nullable=True)  # 1-5 Likert scale
-    concern_reason = Column(Text, nullable=True)  # Step 2: Explanation of concern
+    concern_level = Column(Integer, nullable=True)  # 1-7 bipolar scale (1=Very negative, 4=Neutral, 7=Very positive)
+    concern_reason = Column(Text, nullable=True)  # Step 2: Parent's reasoning
     # Note: would_show_child column was removed (migration 84b2215f7772) - it existed in DB but not in model
 
     # Step 3: Satisfaction check fields
@@ -67,11 +67,6 @@ class ModerationSession(Base):
     session_metadata = Column(
         JSONField, nullable=True
     )  # Any additional data (answers, etc.)
-
-    # Attention check tracking
-    is_attention_check = Column(Boolean, nullable=False, default=False)
-    attention_check_selected = Column(Boolean, nullable=False, default=False)
-    attention_check_passed = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -124,9 +119,6 @@ class ModerationSessionModel(BaseModel):
     response_highlighted_html: Optional[str] = None
     prompt_highlighted_html: Optional[str] = None
     session_metadata: Optional[dict] = None
-    is_attention_check: bool
-    attention_check_selected: bool
-    attention_check_passed: bool
     created_at: int
     updated_at: int
 
@@ -160,9 +152,6 @@ class ModerationSessionForm(BaseModel):
     prompt_highlighted_html: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
-    is_attention_check: Optional[bool] = False
-    attention_check_selected: Optional[bool] = False
-    attention_check_passed: Optional[bool] = False
 
 
 class ModerationSessionTable:
@@ -330,9 +319,6 @@ class ModerationSessionTable:
                         obj.session_metadata = merged_metadata
                     else:
                         obj.session_metadata = form.session_metadata
-                obj.is_attention_check = bool(form.is_attention_check)
-                obj.attention_check_selected = bool(form.attention_check_selected)
-                obj.attention_check_passed = bool(form.attention_check_passed)
                 # Ensure session_number remains consistent for this update
                 obj.session_number = resolved_session_number
                 obj.updated_at = ts
@@ -372,9 +358,6 @@ class ModerationSessionTable:
                     response_highlighted_html=form.response_highlighted_html,
                     prompt_highlighted_html=form.prompt_highlighted_html,
                     session_metadata=form.session_metadata,
-                    is_attention_check=bool(form.is_attention_check),
-                    attention_check_selected=bool(form.attention_check_selected),
-                    attention_check_passed=bool(form.attention_check_passed),
                     created_at=ts,
                     updated_at=ts,
                 )
@@ -558,7 +541,7 @@ class ConcernItemRow(Base):
     scenario_id = Column(Text, nullable=True)
     position = Column(Integer, nullable=False, default=0)
     text = Column(Text, nullable=False, default="")
-    concern_level = Column(Integer, nullable=True)
+    concern_level = Column(Integer, nullable=True)  # 1-7 bipolar scale per reason
     linked_highlights = Column(JSONField, nullable=True)
     highlight_levels = Column(JSONField, nullable=True)
     created_at = Column(BigInteger, nullable=False)

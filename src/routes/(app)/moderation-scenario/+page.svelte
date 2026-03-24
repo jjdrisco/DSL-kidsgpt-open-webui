@@ -44,6 +44,7 @@
 		getCurrentAttempt
 	} from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
+	import { getBackendConfig } from '$lib/apis';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import {
@@ -56,8 +57,6 @@
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
-	import AttentionCheckBar from '$lib/components/moderation/AttentionCheckBar.svelte';
-
 	const i18n = getContext('i18n');
 
 	// =================================================================================================
@@ -90,20 +89,21 @@
 		],
 		'Match their Age': ['Tailor to Age Group'],
 		'Defer to Support': ['Defer to Parents', 'Defer to Resources'],
-		'Attention Check': ['I read the instructions'],
 		Custom: ['Custom']
 	};
 
 	// Convert to array for compatibility with existing code
 	$: moderationOptionsArray = Object.values(moderationOptions).flat();
 
-	// Tooltips for concern levels (Step 3)
+	// Tooltips for bipolar sentiment scale (1-7)
 	const concernTooltips: Record<number, string> = {
-		1: "Not concerned — Appropriate for my child; I don't see meaningful risk.",
-		2: 'Slightly concerned — Minor issues, but unlikely to cause harm.',
-		3: 'Moderately concerned — Could confuse, mislead, or upset my child; I would prefer changes before they see it.',
-		4: 'Very concerned — Likely to cause harm or encourage unsafe behavior; my child should not see it as-is.',
-		5: 'Extremely concerned — Serious/urgent risk; must not be shown as-is.'
+		1: 'Very negative — This content is clearly harmful, inappropriate, or dangerous for my child.',
+		2: 'Somewhat negative — This content has notable problems that could mislead or upset my child.',
+		3: 'Slightly negative — Minor issues; not ideal but unlikely to cause real harm.',
+		4: 'Neutral — Neither positive nor negative; this content is unremarkable.',
+		5: 'Slightly positive — Mildly helpful or appropriate, but nothing special.',
+		6: 'Somewhat positive — Good content that is helpful, age-appropriate, or well-framed.',
+		7: 'Very positive — Excellent response; exactly what I would want my child to see.'
 	};
 
 	// Tooltips for each moderation strategy
@@ -678,9 +678,6 @@
 		// showOriginal1 and moderationPanelVisible are now derived
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
-		attentionCheckSelected = false;
-		attentionCheckPassed = null;
-		attentionCheckProcessing = false;
 		markedNotApplicable = false;
 		// Reset unified initial decision flow state
 		step1Completed = false;
@@ -855,16 +852,12 @@
 
 				for (const assignment of existingAssignments) {
 					let prompt = assignment.prompt_text;
-					const existingResponseText = assignment.attention_check_code
-						? assignment.response_text + `\n\n[Attention code: ${assignment.attention_check_code}]`
-						: assignment.response_text;
-					basePairs.push([prompt, existingResponseText]);
+					basePairs.push([prompt, assignment.response_text]);
 					const position = assignment.assignment_position || 0;
 					baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
 					assignmentMap.set(position, {
 						assignment_id: assignment.assignment_id,
-						scenario_id: assignment.scenario_id,
-						attention_check_code: assignment.attention_check_code ?? null
+						scenario_id: assignment.scenario_id
 					});
 				}
 				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
@@ -887,8 +880,6 @@
 							customInstructions: [],
 							showOriginal1: false,
 							showComparisonView: false,
-							attentionCheckSelected: false,
-							attentionCheckPassed: null,
 							markedNotApplicable: false,
 							step1Completed: false,
 							step2Completed: false,
@@ -903,7 +894,6 @@
 						};
 						existingState.assignment_id = assignment.assignment_id;
 						existingState.scenario_id = assignment.scenario_id;
-						existingState.attention_check_code = assignment.attention_check_code ?? null;
 						scenarioStates.set(identifier, existingState);
 					}
 				});
@@ -929,7 +919,7 @@
 				const baseIdentifiers: string[] = [];
 				const assignmentMap: Map<
 					number,
-					{ assignment_id: string; scenario_id: string; attention_check_code?: string | null }
+					{ assignment_id: string; scenario_id: string }
 				> = new Map();
 
 				for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
@@ -942,16 +932,11 @@
 						});
 
 						let prompt = assignResponse.prompt_text;
-						const newResponseText = assignResponse.attention_check_code
-							? assignResponse.response_text +
-								`\n\n[Attention code: ${assignResponse.attention_check_code}]`
-							: assignResponse.response_text;
-						basePairs.push([prompt, newResponseText]);
+						basePairs.push([prompt, assignResponse.response_text]);
 						baseIdentifiers.push(assignResponse.assignment_id); // Use assignment_id as identifier
 						assignmentMap.set(i, {
 							assignment_id: assignResponse.assignment_id,
-							scenario_id: assignResponse.scenario_id,
-							attention_check_code: assignResponse.attention_check_code ?? null
+							scenario_id: assignResponse.scenario_id
 						});
 						console.log(
 							`✅ Assigned scenario ${i + 1}/${SCENARIOS_PER_SESSION}: ${assignResponse.scenario_id}`
@@ -980,47 +965,7 @@
 
 				console.log(`✅ Created ${basePairs.length} new scenarios from backend`);
 
-				// Pick one assignment at random to receive an attention check code
-				const allAssignments = Array.from(assignmentMap.entries()); // [[position, {assignment_id,...}], ...]
-				if (allAssignments.length > 0) {
-					const [winnerPosition, winnerAssignment] =
-						allAssignments[Math.floor(Math.random() * allAssignments.length)];
-					try {
-						const acRes = await fetch(
-							`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winnerAssignment.assignment_id}/attention-code`,
-							{
-								method: 'PATCH',
-								headers: {
-									'Content-Type': 'application/json',
-									Authorization: `Bearer ${token}`
-								}
-							}
-						);
-						if (acRes.ok) {
-							const acBody = await acRes.json();
-							const code: string = acBody.attention_check_code;
-							winnerAssignment.attention_check_code = code;
-							assignmentMap.set(winnerPosition, winnerAssignment);
-							// Append the code to the response text already stored in basePairs
-							const pairIndex = baseIdentifiers.indexOf(winnerAssignment.assignment_id);
-							if (pairIndex !== -1) {
-								basePairs[pairIndex] = [
-									basePairs[pairIndex][0],
-									basePairs[pairIndex][1] + `\n\n[Attention code: ${code}]`
-								];
-							}
-							console.log(
-								`🔐 Assigned attention code ${code} to assignment ${winnerAssignment.assignment_id}`
-							);
-						} else {
-							console.warn('⚠️ Failed to assign attention check code:', await acRes.text());
-						}
-					} catch (acErr) {
-						console.error('⚠️ Error calling attention-code endpoint:', acErr);
-					}
-				}
-
-				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
+				// Build final list
 				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
 				scenarioList = list;
 				scenarioIdentifiers = identifiers;
@@ -1041,8 +986,6 @@
 							customInstructions: [],
 							showOriginal1: false,
 							showComparisonView: false,
-							attentionCheckSelected: false,
-							attentionCheckPassed: null,
 							markedNotApplicable: false,
 							step1Completed: false,
 							step2Completed: false,
@@ -1057,7 +1000,6 @@
 						};
 						existingState.assignment_id = assignment.assignment_id;
 						existingState.scenario_id = assignment.scenario_id;
-						existingState.attention_check_code = assignment.attention_check_code ?? null;
 						scenarioStates.set(identifier, existingState);
 					}
 				});
@@ -1085,31 +1027,18 @@
 		}
 	}
 
-	/**
-	 * Determine whether the scenario at a given index is an attention check.
-	 * The backend now supplies a short code on each assignment when an
-	 * attention check is present.  We store that code in the scenario state as
-	 * `attention_check_code`.  A non-null value indicates an attention check.
-	 */
 	function isAttentionCheckByIndex(index: number): boolean {
-		const identifier = getScenarioId(index);
-		const state = scenarioStates.get(identifier);
-		return state?.attention_check_code != null;
+		return false;
 	}
 
-	// Reactive convenience variable for the currently selected scenario
-	$: isAttentionCheckScenario = (() => {
-		const _ = scenarioStatesUpdateTrigger;
-		return isAttentionCheckByIndex(selectedScenarioIndex);
-	})();
+	$: isAttentionCheckScenario = false;
 	$: canSubmit =
 		highlightedTexts1.length > 0 &&
 		highlightedTexts1.every((h) => {
 			const ids = highlightConcerns[h.text] ?? [];
 			return (
 				ids.length > 0 &&
-				(isAttentionCheckScenario ||
-					ids.every((id) => (concernHighlightLevels[h.text]?.[id] ?? null) !== null))
+				ids.every((id) => (concernHighlightLevels[h.text]?.[id] ?? null) !== null)
 			);
 		});
 
@@ -1179,7 +1108,6 @@
 				showComparisonView = false; // Not showing comparison view
 				// showOriginal1 and moderationPanelVisible are now derived
 				moderationPanelExpanded = false; // Panel collapsed
-				attentionCheckSelected = false; // Not attention check
 
 				// Initialize unified initial decision flow state for the custom scenario
 				step1Completed = false; // Reset to step 1
@@ -1228,8 +1156,7 @@
 	/**
 	 * Check if a scenario is completed.
 	 *
-	 * For attention check scenarios: completed when attentionCheckSelected AND attentionCheckPassed are both true.
-	 * For regular scenarios: completed when markedNotApplicable OR confirmedVersionIndex is set.
+	 * Completed when markedNotApplicable OR confirmedVersionIndex is set.
 	 *
 	 * @param index - Scenario index to check
 	 * @returns true if scenario is completed, false otherwise
@@ -1237,32 +1164,18 @@
 	function isScenarioCompleted(index: number): boolean {
 		const identifier = getScenarioId(index);
 		const state = scenarioStates.get(identifier);
-		const isAttentionCheck = isAttentionCheckByIndex(index);
 		if (state) {
-			// For attention checks: completed if selected
-			if (isAttentionCheck && state.attentionCheckSelected) {
-				return true;
-			}
 			// Completed if: marked not applicable or confirmed a version (including accept original = -1)
 			const completed = state.markedNotApplicable || state.confirmedVersionIndex !== null;
 			return completed;
 		}
 		// Check current scenario
 		if (index === selectedScenarioIndex) {
-			// For attention checks: completed if selected AND result is known (passed or failed)
-			if (isAttentionCheck && attentionCheckSelected) {
-				return true;
-			}
-			// For current scenario, check if they've made a decision
-			// Scenario is completed if: marked as not applicable OR a version has been confirmed (including -1 = accept original)
 			const completed = markedNotApplicable || confirmedVersionIndex !== null;
 			console.log('Current scenario completion check:', {
 				index,
 				markedNotApplicable,
 				confirmedVersionIndex,
-				isAttentionCheck,
-				attentionCheckSelected,
-				attentionCheckPassed,
 				completed
 			});
 			return completed;
@@ -1303,12 +1216,6 @@
 		customInstructions: Array<{ id: string; text: string }>;
 		showOriginal1: boolean;
 		showComparisonView: boolean;
-		// Attention check tracking: selected indicates user attempted to enter code,
-		// passed indicates they got it correct.  `attention_check_code` stores the
-		// expected value when present.
-		attentionCheckSelected: boolean;
-		attentionCheckPassed: boolean | null;
-		attention_check_code?: string | null;
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		// Unified initial decision flow state (3-step flow)
@@ -1374,33 +1281,18 @@
 	let showCustomInput: boolean = false; // Show inline input instead of modal
 	let customInstructionInput: string = '';
 	let customInstructions: Array<{ id: string; text: string }> = [];
-	// Attention check state: selected when user chooses "I read the instructions",
-	// passed when attention check scenario is completed, processing during async save
-	let attentionCheckSelected: boolean = false;
-	let attentionCheckPassed: boolean | null = null;
-	let attentionCheckProcessing: boolean = false;
-
 	// Version management state
 	let versions: ModerationVersion[] = [];
 	let currentVersionIndex: number = -1;
 	let confirmedVersionIndex: number | null = null;
 
 	// Reactive computation for current scenario completion
-	// Scenario is completed if: marked as not applicable OR a version has been confirmed (including accept original = -1) OR attention check passed
+	// Scenario is completed if: marked as not applicable OR a version has been confirmed (including accept original = -1)
 	$: currentScenarioCompleted = (() => {
-		const isAttentionCheck = isAttentionCheckByIndex(selectedScenarioIndex);
-		// Completion check: use confirmedVersionIndex as the primary signal for all
-		// scenarios (completeStep2 always sets it to 0 on submit).  For attention checks
-		// that haven't yet been submitted we also accept attentionCheckSelected+pass/fail
-		// so the sidebar count is consistent with isScenarioCompleted.
 		const completed =
 			markedNotApplicable ||
-			confirmedVersionIndex !== null ||
-			(isAttentionCheck && attentionCheckSelected);
+			confirmedVersionIndex !== null;
 		console.log('Reactive: currentScenarioCompleted =', completed, {
-			isAttentionCheck,
-			attentionCheckSelected,
-			attentionCheckPassed,
 			markedNotApplicable,
 			confirmedVersionIndex
 		});
@@ -1414,10 +1306,7 @@
 		scenarioList.forEach((_, index) => {
 			if (isScenarioCompleted(index)) completedInMap++;
 		});
-		const isCurrentAttentionCheck = isAttentionCheckByIndex(selectedScenarioIndex);
-		const currentCompleted = isCurrentAttentionCheck
-			? attentionCheckSelected
-			: markedNotApplicable || confirmedVersionIndex !== null;
+		const currentCompleted = markedNotApplicable || confirmedVersionIndex !== null;
 		const currentIdentifier = getScenarioId(selectedScenarioIndex);
 		const currentNotInMap = !scenarioStates.has(currentIdentifier);
 		const completedCount = completedInMap + (currentCompleted && currentNotInMap ? 1 : 0);
@@ -2827,8 +2716,6 @@
 			customInstructions: [...customInstructions],
 			showOriginal1,
 			showComparisonView,
-			attentionCheckSelected,
-			attentionCheckPassed,
 			markedNotApplicable,
 			customPrompt:
 				isCustomScenario && customScenarioGenerated
@@ -2851,8 +2738,7 @@
 			// Assignment tracking (preserve existing values)
 			assignment_id: existingState?.assignment_id,
 			scenario_id: existingState?.scenario_id,
-			assignmentStarted: existingState?.assignmentStarted,
-			attention_check_code: existingState?.attention_check_code ?? null
+			assignmentStarted: existingState?.assignmentStarted
 		};
 		scenarioStates.set(currentIdentifier, currentState);
 		// Force reactive update by reassigning the Map
@@ -2925,9 +2811,6 @@
 		customInstructions = [];
 		showOriginal1 = false;
 		showComparisonView = false;
-		attentionCheckSelected = false;
-		attentionCheckPassed = null;
-		attentionCheckProcessing = false; // Reset processing flag when loading new scenario
 		// Reset Step 3 UI state fields
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
@@ -3054,7 +2937,6 @@
 				moderationPanelVisible = false;
 				moderationPanelExpanded = false;
 				expandedGroups.clear();
-				attentionCheckSelected = false;
 				markedNotApplicable = false;
 
 				childPrompt1 = prompt;
@@ -3350,8 +3232,6 @@
 			customInstructions = [...savedState.customInstructions];
 			showOriginal1 = savedState.showOriginal1 || showOriginal1;
 			showComparisonView = savedState.showComparisonView || showComparisonView;
-			attentionCheckSelected = savedState.attentionCheckSelected || false;
-			attentionCheckPassed = savedState.attentionCheckPassed ?? attentionCheckPassed;
 			if (!backendSession) {
 				// No backend data — restore all fields from in-memory state
 				step1Completed = savedState.step1Completed || false;
@@ -3498,10 +3378,7 @@
 		customInstructions = [];
 		showComparisonView = false;
 		// showOriginal1 and moderationPanelVisible are now derived
-		attentionCheckSelected = false;
 		moderationFinalized = false;
-		attentionCheckPassed = null;
-		attentionCheckProcessing = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
 		// Reset unified initial decision flow state
@@ -3632,10 +3509,7 @@
 					response_highlighted_html: responseHighlightedHTML || undefined,
 					prompt_highlighted_html: promptHighlightedHTML || undefined,
 					is_final_version: true,
-					decided_at: Date.now(),
-					is_attention_check: isAttentionCheckScenario,
-					attention_check_selected: attentionCheckSelected,
-					attention_check_passed: isAttentionCheckScenario ? (attentionCheckPassed ?? false) : false
+					decided_at: Date.now()
 				});
 				console.log('Final version confirmed and saved to backend');
 				window.dispatchEvent(new Event('workflow-updated'));
@@ -3686,145 +3560,6 @@
 		if (option === 'Custom') {
 			showCustomInput = !showCustomInput;
 			return;
-		}
-
-		// Handle attention check selection: sets flags, saves to backend, navigates to next scenario
-		if (option === 'ATTENTION_CHECK' || option === 'I read the instructions') {
-			// If deselecting, just toggle
-			if (attentionCheckSelected) {
-				attentionCheckSelected = false;
-				attentionCheckPassed = null;
-				attentionCheckProcessing = false;
-				// Clear step 3 tracking
-				if (isAttentionCheckScenario) {
-					const currentIdentifier = getScenarioId(selectedScenarioIndex);
-					const state = scenarioStates.get(currentIdentifier);
-					if (state) {
-						state.attentionCheckPassed = null;
-						scenarioStates.set(currentIdentifier, state);
-					}
-				}
-				return;
-			}
-
-			if (isAttentionCheckScenario) {
-				attentionCheckSelected = true;
-				attentionCheckProcessing = true; // Lock button immediately
-
-				// Track step 3: User selected "I read the instructions"
-				const currentIdentifier = getScenarioId(selectedScenarioIndex);
-				const state = scenarioStates.get(currentIdentifier) || {
-					versions: [],
-					currentVersionIndex: -1,
-					confirmedVersionIndex: null,
-					highlightedTexts1: [],
-					selectedModerations: new Set(),
-					customInstructions: [],
-					showOriginal1: false,
-					showComparisonView: false,
-					attentionCheckSelected: false,
-					attentionCheckPassed: null,
-					markedNotApplicable: false,
-					step1Completed: false,
-					step2Completed: false,
-					step3Completed: false,
-					concernLevel: null,
-					concernReason: '',
-					concernMappings: [],
-					highlightConcerns: {},
-					satisfactionLevel: null,
-					satisfactionReason: '',
-					nextAction: null
-				};
-
-				scenarioStates.set(currentIdentifier, state);
-				console.log(
-					'[ATTENTION_CHECK] Scenario:',
-					selectedScenarioIndex,
-					'Selected:',
-					attentionCheckSelected,
-					'Passed:',
-					attentionCheckPassed,
-					'Timestamp:',
-					new Date().toISOString()
-				);
-
-				// Immediately save attention check as passed and navigate to next
-				(async () => {
-					try {
-						// Save attention check status to backend
-						const sessionId = `scenario_${selectedScenarioIndex}`;
-						await saveModerationSession(localStorage.token, {
-							session_id: sessionId,
-							user_id: $user?.id || 'unknown',
-							child_id: selectedChildId || 'unknown',
-							scenario_index: selectedScenarioIndex,
-							attempt_number: currentAttemptNumber,
-							version_number: 0,
-							session_number: sessionNumber,
-							scenario_id: getCurrentScenarioId(),
-							scenario_prompt: childPrompt1,
-							original_response: originalResponse1,
-							// Use 'accept_original' to match the simplified-flow convention for
-							// a completed identification scenario (fixes: initial_decision=null
-							// causing NaN in analysis for attention-check rows).
-							initial_decision: 'accept_original',
-							// Include concern fields collected in steps 1-2 so they are
-							// persisted on the finalized row (fixes: concern_level/concern_reason
-							// always null for attention-check rows).
-							concern_level: concernLevel ?? undefined,
-							concern_reason: concernReason.trim() || undefined,
-							strategies: [],
-							custom_instructions: [],
-							highlighted_texts: highlightedTexts1.map((h) => ({
-								text: h.text,
-								start_offset: h.startOffset,
-								end_offset: h.endOffset
-							})),
-							refactored_response: undefined,
-							response_highlighted_html: responseHighlightedHTML || undefined,
-							prompt_highlighted_html: promptHighlightedHTML || undefined,
-							// Mark as final so the row is counted as a completed scenario
-							// (fixes: attention-check rows always having is_final_version=false).
-							is_final_version: true,
-							decided_at: Date.now(),
-							is_attention_check: true,
-							attention_check_selected: true,
-							attention_check_passed: attentionCheckPassed === true
-						});
-
-						// Show success message
-						toast.success('✓ Passed attention check!');
-
-						// Mark scenario as completed with all necessary flags
-						// Scenario completion is now tracked via confirmedVersionIndex
-						step3Completed = true; // Complete the initial decision flow
-						moderationPanelVisible = false; // Close moderation panel
-						// showInitialDecisionPane is now derived // Hide initial decision pane
-
-						// Save state to localStorage so it persists when navigating back
-						saveCurrentScenarioState();
-					} catch (e) {
-						console.error('Failed to save attention check status:', e);
-						toast.error('Failed to save attention check status');
-						attentionCheckProcessing = false; // Unlock on error
-					}
-				})();
-
-				return;
-			} else {
-				// Not an attention check scenario, just toggle
-				attentionCheckSelected = !attentionCheckSelected;
-				console.log(
-					'[ATTENTION_CHECK] Scenario:',
-					selectedScenarioIndex,
-					'Selected:',
-					attentionCheckSelected,
-					'Timestamp:',
-					new Date().toISOString()
-				);
-				return;
-			}
 		}
 
 		// Toggle selection for standard options and saved customs
@@ -4105,10 +3840,7 @@
 					response_highlighted_html: responseHighlightedHTML || undefined,
 					prompt_highlighted_html: promptHighlightedHTML || undefined,
 					is_final_version: false,
-					decided_at: Date.now(),
-					is_attention_check: isAttentionCheckScenario,
-					attention_check_selected: false,
-					attention_check_passed: attentionCheckPassed ?? false
+					decided_at: Date.now()
 				});
 				window.dispatchEvent(new Event('workflow-updated'));
 			} catch (e) {
@@ -4117,44 +3849,12 @@
 
 			// showInitialDecisionPane is now derived
 		} else {
-			// For attention checks: track if highlighted (non-blocking)
-			if (isAttentionCheckScenario) {
-				const currentIdentifier = getScenarioId(selectedScenarioIndex);
-				const state = scenarioStates.get(currentIdentifier) || {
-					versions: [],
-					currentVersionIndex: -1,
-					confirmedVersionIndex: null,
-					highlightedTexts1: [],
-					selectedModerations: new Set(),
-					customInstructions: [],
-					showOriginal1: false,
-					showComparisonView: false,
-					attentionCheckSelected: false,
-					attentionCheckPassed: null,
-					markedNotApplicable: false,
-					step1Completed: false,
-					step2Completed: false,
-					step3Completed: false,
-					concernLevel: null,
-					concernReason: '',
-					concernMappings: [],
-					highlightConcerns: {},
-					satisfactionLevel: null,
-					satisfactionReason: '',
-					nextAction: null
-				};
-				// Track if user highlighted anything (non-blocking)
-				scenarioStates.set(currentIdentifier, state);
+			// **VALIDATION**: Require at least one highlight to continue
+			if (highlightedTexts1.length === 0) {
+				toast.error('Please highlight at least one section to continue, or skip this scenario');
+				return;
 			}
 
-			// **VALIDATION**: Require at least one highlight to continue (for regular scenarios only)
-			// Attention checks can proceed without highlights (non-blocking)
-			if (!isAttentionCheckScenario && highlightedTexts1.length === 0) {
-				toast.error('Please highlight at least one concern to continue, or skip this scenario');
-				return; // Cannot proceed without highlights for regular scenarios
-			}
-
-			// User has highlighted at least one concern (or it's an attention check)
 			step1Completed = true;
 
 			// Save highlights to `moderation_session` table (batch save as JSON array)
@@ -4185,10 +3885,7 @@
 					response_highlighted_html: responseHighlightedHTML || undefined,
 					prompt_highlighted_html: promptHighlightedHTML || undefined,
 					is_final_version: false,
-					highlights_saved_at: Date.now(),
-					is_attention_check: isAttentionCheckScenario,
-					attention_check_selected: attentionCheckSelected,
-					attention_check_passed: attentionCheckPassed ?? false
+					highlights_saved_at: Date.now()
 				});
 				console.log('Highlights saved to moderation_session table successfully');
 			} catch (e) {
@@ -4218,84 +3915,39 @@
 	async function completeStep2() {
 		// Validate every linked (highlight, concern) pair has a severity rating
 		if (
-			!isAttentionCheckScenario &&
 			highlightedTexts1.some((h) => {
 				const ids = highlightConcerns[h.text] ?? [];
 				return ids.some((id) => (concernHighlightLevels[h.text]?.[id] ?? null) === null);
 			})
 		) {
-			toast.error('Please rate severity for every highlight–concern pair');
+			toast.error('Please rate every highlight–reason pair');
 			return;
 		}
 
-		// For attention checks: track step 2 (non-blocking)
-		if (isAttentionCheckScenario) {
-			const currentIdentifier = getScenarioId(selectedScenarioIndex);
-			const state = scenarioStates.get(currentIdentifier) || {
-				versions: [],
-				currentVersionIndex: -1,
-				confirmedVersionIndex: null,
-				highlightedTexts1: [],
-				selectedModerations: new Set(),
-				customInstructions: [],
-				showOriginal1: false,
-				showComparisonView: false,
-				attentionCheckSelected: false,
-				attentionCheckPassed: null,
-				markedNotApplicable: false,
-				step1Completed: false,
-				step2Completed: false,
-				step3Completed: false,
-				concernLevel: null,
-				concernReason: '',
-				concernMappings: [],
-				highlightConcerns: {},
-				satisfactionLevel: null,
-				satisfactionReason: '',
-				nextAction: null
-			};
-			scenarioStates.set(currentIdentifier, state);
-		}
-
-		// Validate at least one concern with text is provided (for regular scenarios only)
-		// Attention checks can proceed without validation (non-blocking)
+		// Validate at least one concern with text is provided
 		const validConcerns = concernMappings.filter((c) => c.text.trim());
-		if (!isAttentionCheckScenario && validConcerns.length === 0) {
-			toast.error('Please add at least one specific concern');
+		if (validConcerns.length === 0) {
+			toast.error('Please add at least one reason');
 			return;
 		}
 
 		// Validate each concern with text has at least one linked highlight (when highlights exist)
-		if (!isAttentionCheckScenario && highlightedTexts1.length > 0 && !allConcernsHaveHighlights()) {
-			toast.error('Please link each concern to at least one highlight');
+		if (highlightedTexts1.length > 0 && !allConcernsHaveHighlights()) {
+			toast.error('Please link each reason to at least one highlight');
 			return;
 		}
 
 		// Validate ALL highlights are matched to at least one concern (when highlights exist)
-		if (!isAttentionCheckScenario && highlightedTexts1.length > 0 && !allHighlightsMatched()) {
+		if (highlightedTexts1.length > 0 && !allHighlightsMatched()) {
 			const unmatched = getUnmatchedHighlights();
 			toast.error(
-				`Please add a concern for each highlight (${unmatched.length} highlight${unmatched.length > 1 ? 's' : ''} remaining)`
+				`Please add a reason for each highlight (${unmatched.length} highlight${unmatched.length > 1 ? 's' : ''} remaining)`
 			);
 			return;
 		}
 
 		// Derive concernReason from mappings for backward compatibility
 		concernReason = deriveConcernReason(concernMappings);
-
-		// For attention checks: Calculate overall pass/fail after step 2
-		if (isAttentionCheckScenario) {
-			const currentIdentifier = getScenarioId(selectedScenarioIndex);
-			const state = scenarioStates.get(currentIdentifier);
-			if (state) {
-				// Step 3 may have been tracked already if user selected "I read the instructions"
-				// If not, it will be tracked when user selects it
-				scenarioStates.set(currentIdentifier, state);
-				console.log('Attention check tracking:', {
-					overall: state.attentionCheckPassed
-				});
-			}
-		}
 
 		// Mark step 2 and step 3 as complete (simplified flow - no Step 3)
 		step2Completed = true;
@@ -4339,12 +3991,21 @@
 			const userId = $user?.id || 'unknown';
 			const childId = selectedChildId || 'unknown';
 
-			// Derive session-level concern_level as MAX of all per-(highlight, concern) severity ratings
+			// Derive session-level concern_level as the most extreme rating from neutral (4)
+			// On a 1-7 bipolar scale, "most extreme" = largest absolute distance from midpoint
 			const allSeverityLevels = Object.values(concernHighlightLevels)
 				.flatMap((perHighlight) => Object.values(perHighlight))
 				.filter((v): v is number => v !== null && v !== undefined);
 			const derivedConcernLevel =
-				allSeverityLevels.length > 0 ? Math.max(...allSeverityLevels) : null;
+				allSeverityLevels.length > 0
+					? allSeverityLevels.reduce((extreme, v) =>
+							Math.abs(v - 4) > Math.abs(extreme - 4)
+								? v
+								: Math.abs(v - 4) === Math.abs(extreme - 4) && v < extreme
+									? v
+									: extreme
+						)
+					: null;
 
 			// Fall back to scenarioStates if the module-level HTML vars are empty.
 			// This guards against cases where loadScenario cleared the vars (e.g. after
@@ -4384,12 +4045,6 @@
 				response_highlighted_html: effectiveResponseHTML,
 				prompt_highlighted_html: effectivePromptHTML,
 				is_final_version: true, // Mark as final - scenario is complete
-				is_attention_check: isAttentionCheckScenario,
-				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: isAttentionCheckScenario
-					? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ??
-						false)
-					: false,
 				session_metadata: {
 					highlight_concerns: highlightConcerns,
 					concern_highlight_levels: concernHighlightLevels
@@ -4484,13 +4139,7 @@
 						: undefined,
 				response_highlighted_html: responseHighlightedHTML || undefined,
 				prompt_highlighted_html: promptHighlightedHTML || undefined,
-				is_final_version: action === 'move_on', // Mark as final if moving on
-				is_attention_check: isAttentionCheckScenario,
-				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: isAttentionCheckScenario
-					? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ??
-						false)
-					: false
+				is_final_version: action === 'move_on' // Mark as final if moving on
 			});
 
 			console.log('✅ Satisfaction check saved to backend');
@@ -4603,13 +4252,7 @@
 				response_highlighted_html: responseHighlightedHTML || undefined,
 				prompt_highlighted_html: promptHighlightedHTML || undefined,
 				is_final_version: false,
-				decided_at: Date.now(),
-				is_attention_check: isAttentionCheckScenario,
-				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: isAttentionCheckScenario
-					? (scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed ??
-						false)
-					: false
+				decided_at: Date.now()
 			});
 			window.dispatchEvent(new Event('workflow-updated'));
 		} catch (e) {
@@ -4651,7 +4294,6 @@
 	function clearSelections() {
 		selectedModerations.clear();
 		customInstructions = []; // Clear custom instructions too
-		attentionCheckSelected = false;
 		selectedModerations = selectedModerations; // Trigger reactivity
 	}
 
@@ -4678,31 +4320,9 @@
 	 * Creates a new version in the versions array and updates UI to show comparison view.
 	 */
 	async function applySelectedModerations() {
-		// Check if no strategies selected (attention check alone doesn't count for non-attention-check scenarios)
-		if (selectedModerations.size === 0 && !attentionCheckSelected) {
+		if (selectedModerations.size === 0) {
 			toast.error('Please select at least one moderation strategy');
 			return;
-		}
-
-		// If only attention check is selected (and it's not an attention check scenario), require other strategies
-		if (selectedModerations.size === 0 && attentionCheckSelected && !isAttentionCheckScenario) {
-			toast.error('Please select at least one moderation strategy');
-			// Log attention check attempt for research
-			console.log(
-				'[ATTENTION_CHECK] User attempted to generate version with only attention check selected. Scenario:',
-				selectedScenarioIndex
-			);
-			return;
-		}
-
-		// Log if attention check is selected along with other strategies
-		if (attentionCheckSelected) {
-			console.log(
-				'[ATTENTION_CHECK] User selected attention check along with',
-				selectedModerations.size,
-				'other strategies. Scenario:',
-				selectedScenarioIndex
-			);
 		}
 
 		console.log('Applying moderations:', Array.from(selectedModerations).join(', '));
@@ -4771,9 +4391,6 @@
 					mainContentContainer.scrollTo({ top: 0, behavior: 'smooth' });
 				}
 
-				// Snapshot attention check flag BEFORE clearing selections
-				const attentionSelectedSnapshot = attentionCheckSelected;
-
 				const total = standardStrategies.length + customTexts.length;
 				toast.success(
 					`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`
@@ -4807,10 +4424,7 @@
 						response_highlighted_html: responseHighlightedHTML || undefined,
 						prompt_highlighted_html: promptHighlightedHTML || undefined,
 						is_final_version: false,
-						decided_at: Date.now(),
-						is_attention_check: isAttentionCheckScenario,
-						attention_check_selected: attentionSelectedSnapshot,
-						attention_check_passed: attentionCheckPassed ?? false
+						decided_at: Date.now()
 					});
 				} catch (e) {
 					console.error('Failed to save moderation session', e);
@@ -4819,7 +4433,6 @@
 				// Clear current selections for next iteration (after save)
 				selectedModerations = new Set();
 				customInstructions = [];
-				attentionCheckSelected = false;
 			} else {
 				toast.error('Failed to apply moderation');
 			}
@@ -5124,6 +4737,9 @@
 		window.addEventListener('child-profiles-updated', handleProfileUpdate);
 
 		// Load child profiles for personality-based scenario generation
+		// Refresh $config first so SCENARIOS_PER_SESSION is populated before loadRandomScenarios runs
+		const freshConfig = await getBackendConfig();
+		if (freshConfig) config.set(freshConfig);
 		await loadChildProfiles();
 		// Resolve session number after child profiles are loaded
 		resolveSessionNumber();
@@ -5210,9 +4826,7 @@
 							);
 							const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
 								a.prompt_text,
-								a.attention_check_code
-									? a.response_text + `\n\n[Attention code: ${a.attention_check_code}]`
-									: a.response_text
+								a.response_text
 							]);
 							const baseIdentifiers: string[] = existingAssignments.map((a) => a.assignment_id);
 							const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
@@ -5230,8 +4844,6 @@
 										customInstructions: [],
 										showOriginal1: false,
 										showComparisonView: false,
-										attentionCheckSelected: false,
-										attentionCheckPassed: null,
 										markedNotApplicable: false,
 										step1Completed: false,
 										step2Completed: false,
@@ -5246,7 +4858,6 @@
 									};
 									existingState.assignment_id = assignment.assignment_id;
 									existingState.scenario_id = assignment.scenario_id;
-									existingState.attention_check_code = assignment.attention_check_code ?? null;
 									scenarioStates.set(identifier, existingState);
 								}
 							});
@@ -6207,24 +5818,7 @@
 								</div>
 							</div>
 						{:else if !isCustomScenario || customScenarioGenerated}
-							<!-- Attention check bar above prompt -->
-							<AttentionCheckBar
-								code={scenarioStates.get(getScenarioId(selectedScenarioIndex))
-									?.attention_check_code ?? null}
-								passed={scenarioStates.get(getScenarioId(selectedScenarioIndex))
-									?.attentionCheckPassed ?? null}
-								on:submit={(e) => {
-									const entry: string = e.detail;
-									const state = scenarioStates.get(getScenarioId(selectedScenarioIndex));
-									if (state) {
-										state.attentionCheckPassed = entry === state.attention_check_code;
-										scenarioStates.set(getScenarioId(selectedScenarioIndex), state);
-										attentionCheckPassed = state.attentionCheckPassed;
-										saveCurrentScenarioState();
-									}
-								}}
-							/>
-							<!-- Child Prompt Bubble -->
+								<!-- Child Prompt Bubble -->
 							<div class="flex justify-end">
 								<!-- 
 						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
@@ -6240,7 +5834,7 @@
 										: ''}"
 									bind:this={promptContainer1}
 									on:mouseup={handleTextSelection}
-									title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
+									title={isHighlightingEnabled ? 'Drag over text to highlight what stands out' : ''}
 								>
 									{#if isHighlightingEnabled && highlightedTexts1.length === 0}
 										<div
@@ -6383,7 +5977,7 @@
 										class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
 											? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all'
 											: ''}"
-										title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
+										title={isHighlightingEnabled ? 'Drag over text to highlight what stands out' : ''}
 									>
 										{#if isHighlightingEnabled && highlightedTexts1.length === 0}
 											<div
@@ -6537,7 +6131,7 @@
 											<div class="space-y-4">
 												<div>
 													<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-														Step 1: Highlight the content that concerns you
+														Step 1: Highlight content that stands out to you
 													</h3>
 
 													{#if highlightedTexts1.length > 0}
@@ -6587,8 +6181,9 @@
 															class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
 														>
 															<p class="text-xs text-yellow-800 dark:text-yellow-200">
-																⚠️ Drag over text in the response above to highlight concerns. If
-																this scenario is not relevant, click "Skip Scenario".
+																⚠️ Drag over text in the response above to highlight anything that
+																stands out — positive or negative. If this scenario is not relevant,
+																click "Skip Scenario".
 															</p>
 														</div>
 													{/if}
@@ -6625,7 +6220,7 @@
 											<div class="space-y-4">
 												<div class="flex items-center justify-between mb-2">
 													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-														Step 2: Add Concerns for Each Highlight
+														Step 2: Rate and Explain Each Highlight
 													</h3>
 													<button
 														on:click={() => navigateToStep(1)}
@@ -6649,9 +6244,9 @@
 												</div>
 
 												<p class="text-base text-gray-600 dark:text-gray-400 mb-4">
-													For each highlighted passage, describe what concerns you about it. You can
-													reuse a concern across multiple highlights. <strong>Note:</strong> Please rate
-													your concern level separately for each highlighted passage.
+													For each highlighted passage, rate how you feel about it and explain why. You
+													can reuse a reason across multiple highlights. <strong>Note:</strong> Please
+													rate and explain each highlighted passage separately.
 												</p>
 
 												{#if highlightedTexts1.length === 0}
@@ -6660,7 +6255,7 @@
 													>
 														<p class="text-sm text-yellow-800 dark:text-yellow-200">
 															⚠️ No highlights found from Step 1. Go back and highlight text that
-															concerns you.
+															stands out to you.
 														</p>
 													</div>
 												{:else}
@@ -6785,12 +6380,13 @@
 																					<div class="ml-7 flex flex-col gap-1.5">
 																						<span
 																							class="text-sm font-medium text-gray-600 dark:text-gray-400"
-																							>How severe is this concern for this passage?</span
+																							>How do you feel about this for your child?</span
 																						>
 																						<div class="flex flex-wrap gap-1.5">
-																							{#each [{ v: 1, l: 'Not concerning' }, { v: 2, l: 'Slightly concerning' }, { v: 3, l: 'Moderately concerning' }, { v: 4, l: 'Very concerning' }, { v: 5, l: 'Extremely concerning' }] as opt}
+																							{#each [{ v: 1, l: 'Very negative' }, { v: 2, l: 'Somewhat negative' }, { v: 3, l: 'Slightly negative' }, { v: 4, l: 'Neutral' }, { v: 5, l: 'Slightly positive' }, { v: 6, l: 'Somewhat positive' }, { v: 7, l: 'Very positive' }] as opt}
 																								<button
 																									type="button"
+																									title={concernTooltips[opt.v]}
 																									on:click={() => {
 																										concernHighlightLevels = {
 																											...concernHighlightLevels,
@@ -6802,7 +6398,7 @@
 																											}
 																										};
 																									}}
-																									class="px-3 py-1.5 text-sm rounded border transition-colors {(concernHighlightLevels[
+																									class="px-2 py-1 text-xs rounded border transition-colors {(concernHighlightLevels[
 																										highlight.text
 																									]?.[concern.id] ?? null) === opt.v
 																										? 'bg-blue-500 border-blue-500 text-white font-semibold'
@@ -6833,7 +6429,7 @@
 																				addConcernForHighlight(highlight.text);
 																			}
 																		}}
-																		placeholder="Describe a concern…"
+																		placeholder="Why does this stand out to you?"
 																		class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
 																	/>
 																	<button
@@ -6842,7 +6438,7 @@
 																		disabled={!(newConcernInputs[highlight.text] ?? '').trim()}
 																		class="w-full px-3 py-2 text-base font-medium bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
 																	>
-																		+ Add concern
+																		+ Add reason
 																	</button>
 																</div>
 															</div>
@@ -6854,15 +6450,14 @@
 												<div>
 													<button
 														on:click={completeStep2}
-														disabled={!canSubmit && !isAttentionCheckScenario}
+														disabled={!canSubmit}
 														class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 													>
 														Submit
 													</button>
 													{#if !canSubmit && highlightedTexts1.length > 0}
 														<p class="text-sm text-amber-600 dark:text-amber-400 mt-1 text-center">
-															Add at least one concern for each highlight and rate every concern
-															before submitting
+															Rate each highlight and add at least one reason before submitting
 														</p>
 													{/if}
 												</div>
@@ -7161,7 +6756,7 @@
 														<p class="text-sm text-gray-600 dark:text-gray-400">
 															Choose up to <b>3 strategies</b> to improve the AI's response.
 														</p>
-														{#if selectedModerations.size > 0 || attentionCheckSelected}
+														{#if selectedModerations.size > 0}
 															<button
 																on:click={clearSelections}
 																class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
@@ -7215,7 +6810,7 @@
 																			</h4>
 																		</div>
 																		<div class="flex items-center space-x-2">
-																			{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
+																			{#if options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
 																				<span
 																					class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
 																				>
@@ -7223,8 +6818,6 @@
 																						{customInstructions.filter((c) =>
 																							selectedModerations.has(c.id)
 																						).length} selected
-																					{:else if category === 'Attention Check'}
-																						{attentionCheckSelected ? 1 : 0} selected
 																					{:else}
 																						{options.filter((option) =>
 																							selectedModerations.has(option)
@@ -7284,14 +6877,8 @@
 																					<button
 																						on:click={() => toggleModerationSelection(option)}
 																						disabled={moderationLoading}
-																						aria-pressed={option === 'I read the instructions'
-																							? attentionCheckSelected
-																							: selectedModerations.has(option)}
-																						class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {(
-																							option === 'I read the instructions'
-																								? attentionCheckSelected
-																								: selectedModerations.has(option)
-																						)
+																						aria-pressed={selectedModerations.has(option)}
+																						class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {selectedModerations.has(option)
 																							? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
 																							: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
 																					>
@@ -7456,8 +7043,7 @@
 														<button
 															on:click={applySelectedModerations}
 															disabled={moderationLoading ||
-																(selectedModerations.size === 0 && !attentionCheckSelected) ||
-																attentionCheckProcessing}
+																selectedModerations.size === 0}
 															class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 														>
 															{#if moderationLoading}
@@ -7642,7 +7228,7 @@
 
 								<!-- Strategy Count -->
 								<div class="flex items-center justify-end mb-3">
-									{#if selectedModerations.size > 0 || attentionCheckSelected}
+									{#if selectedModerations.size > 0}
 										<button
 											on:click={clearSelections}
 											class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
@@ -7695,15 +7281,13 @@
 														</h4>
 													</div>
 													<div class="flex items-center space-x-2">
-														{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
+														{#if options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
 															<span
 																class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
 															>
 																{#if category === 'Custom'}
 																	{customInstructions.filter((c) => selectedModerations.has(c.id))
 																		.length} selected
-																{:else if category === 'Attention Check'}
-																	{attentionCheckSelected ? 1 : 0} selected
 																{:else}
 																	{options.filter((option) => selectedModerations.has(option))
 																		.length} selected
@@ -7762,14 +7346,8 @@
 																<button
 																	on:click={() => toggleModerationSelection(option)}
 																	disabled={moderationLoading}
-																	aria-pressed={option === 'I read the instructions'
-																		? attentionCheckSelected
-																		: selectedModerations.has(option)}
-																	class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {(
-																		option === 'I read the instructions'
-																			? attentionCheckSelected
-																			: selectedModerations.has(option)
-																	)
+																	aria-pressed={selectedModerations.has(option)}
+																	class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {selectedModerations.has(option)
 																		? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
 																		: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
 																>
@@ -7927,9 +7505,7 @@
 								<button
 									on:click={applySelectedModerations}
 									disabled={moderationLoading ||
-										(selectedModerations.size === 0 && !attentionCheckSelected) ||
-										(selectedModerations.size === 0 && attentionCheckSelected) ||
-										attentionCheckProcessing}
+										selectedModerations.size === 0}
 									class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 								>
 									{#if moderationLoading}
