@@ -806,6 +806,7 @@ class UsersTable:
                     {
                         "current_session_id": session_id,
                         "session_number": session_number,
+                        "current_attempt_number": 1,
                         "updated_at": int(time.time()),
                     }
                 )

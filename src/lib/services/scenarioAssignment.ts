@@ -1,5 +1,4 @@
 import { assignScenario, type ScenarioAssignResponse } from '$lib/apis/moderation';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 /**
  * Assign scenarios for a child profile in the background.
@@ -48,32 +47,6 @@ export async function assignScenariosForChild(
 		console.log(
 			`✅ Completed scenario assignment for child ${childId}: ${successCount}/${scenariosPerSession} successful`
 		);
-
-		// select one of the successful assignments at random to receive an attention check code
-		if (assignments.length > 0) {
-			const winner = assignments[Math.floor(Math.random() * assignments.length)];
-			try {
-				const res = await fetch(
-					`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${winner.assignment_id}/attention-code`,
-					{
-						method: 'PATCH',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${token}`
-						}
-					}
-				);
-				if (res.ok) {
-					const body = await res.json();
-					winner.attention_check_code = body.attention_check_code;
-					console.log('🔐 Assigned attention code to assignment', winner.assignment_id);
-				} else {
-					console.warn('Failed to patch attention code', await res.text());
-				}
-			} catch (err) {
-				console.error('Error calling attention-code endpoint', err);
-			}
-		}
 
 		return {
 			success: successCount === scenariosPerSession,

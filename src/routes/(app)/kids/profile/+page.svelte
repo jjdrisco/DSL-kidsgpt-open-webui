@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar, user } from '$lib/stores';
+	import { showSidebar, user, config } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
@@ -47,11 +47,12 @@
 
 		if (userId && token) {
 			const sessionNumber = await determineSessionNumberForUser(userId, token);
-			assignScenariosForChild(profile.id, userId, sessionNumber, token, 6)
+			const scenariosPerSession = get(config)?.study?.scenarios_per_session ?? 6;
+			assignScenariosForChild(profile.id, userId, sessionNumber, token, scenariosPerSession)
 				.then((result) => {
 					console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${profile.id}`);
-					if (result.assignmentCount < 6) {
-						console.warn(`⚠️ Only ${result.assignmentCount}/6 scenarios assigned`);
+					if (result.assignmentCount < scenariosPerSession) {
+						console.warn(`⚠️ Only ${result.assignmentCount}/${scenariosPerSession} scenarios assigned`);
 					}
 				})
 				.catch((error) => {

@@ -132,36 +132,6 @@ class Scenario(Base):
     )
 
 
-class AttentionCheckScenario(Base):
-    __tablename__ = "attention_check_scenarios"
-
-    scenario_id = Column(String, primary_key=True)
-    prompt_text = Column(Text, nullable=False)
-    response_text = Column(Text, nullable=False)
-
-    # Metadata fields (matching CSV structure)
-    trait_theme = Column(String, nullable=True)  # 'attention_check'
-    trait_phrase = Column(String, nullable=True)  # 'attention_check'
-    sentiment = Column(String, nullable=True)  # 'neutral', etc.
-    trait_index = Column(Integer, nullable=True)
-    prompt_index = Column(Integer, nullable=True)
-
-    # Management fields
-    set_name = Column(String, nullable=True)  # Optional set identifier
-    is_active = Column(Boolean, nullable=False, default=True)
-    source = Column(String, nullable=True)  # 'csv_file', 'api_generated', 'manual'
-
-    # Timestamps
-    created_at = Column(BigInteger, nullable=False)
-    updated_at = Column(BigInteger, nullable=False)
-
-    __table_args__ = (
-        Index("idx_ac_scenarios_is_active", "is_active"),
-        Index("idx_ac_scenarios_set_name", "set_name"),
-        Index("idx_ac_scenarios_trait_theme", "trait_theme"),
-    )
-
-
 class ScenarioAssignment(Base):
     __tablename__ = "scenario_assignments"
 
@@ -194,9 +164,6 @@ class ScenarioAssignment(Base):
     assignment_position = Column(
         Integer, nullable=True
     )  # Position in session (0-indexed)
-
-    # Attention check code assigned after session generation (nullable)
-    attention_check_code = Column(String, nullable=True)
 
     # Outcome fields
     issue_any = Column(Integer, nullable=True)  # 0, 1, or NULL
@@ -283,8 +250,6 @@ class ScenarioAssignmentModel(BaseModel):
     skip_reason: Optional[str] = None
     skip_reason_text: Optional[str] = None
     duration_seconds: Optional[int] = None
-    # optional code for attention check
-    attention_check_code: Optional[str] = None
 
 
 class ScenarioAssignmentForm(BaseModel):
@@ -755,201 +720,6 @@ class ScenarioAssignmentTable:
             return [ScenarioAssignmentModel.model_validate(row) for row in rows]
 
 
-class AttentionCheckScenarioModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    trait_theme: Optional[str] = None
-    trait_phrase: Optional[str] = None
-    sentiment: Optional[str] = None
-    trait_index: Optional[int] = None
-    prompt_index: Optional[int] = None
-    set_name: Optional[str] = None
-    is_active: bool
-    source: Optional[str] = None
-    created_at: int
-    updated_at: int
-
-
-class AttentionCheckScenarioForm(BaseModel):
-    prompt_text: str
-    response_text: str
-    trait_theme: Optional[str] = None
-    trait_phrase: Optional[str] = None
-    sentiment: Optional[str] = None
-    trait_index: Optional[int] = None
-    prompt_index: Optional[int] = None
-    set_name: Optional[str] = None
-    is_active: bool = True
-    source: Optional[str] = None
-
-
-class AttentionCheckScenarioTable:
-    def _generate_scenario_id(self, prompt_text: str, response_text: str) -> str:
-        """Generate stable scenario_id from prompt and response hash"""
-        content = f"{prompt_text}|{response_text}".encode("utf-8")
-        hash_obj = hashlib.sha256(content)
-        return f"ac_{hash_obj.hexdigest()[:16]}"
-
-    def upsert(self, form: AttentionCheckScenarioForm) -> AttentionCheckScenarioModel:
-        """Insert or update an attention check scenario"""
-        scenario_id = self._generate_scenario_id(form.prompt_text, form.response_text)
-        now = int(time.time() * 1000)
-
-        with get_db() as db:
-            obj = (
-                db.query(AttentionCheckScenario)
-                .filter(AttentionCheckScenario.scenario_id == scenario_id)
-                .first()
-            )
-
-            if obj:
-                # Update existing
-                obj.prompt_text = form.prompt_text
-                obj.response_text = form.response_text
-                obj.trait_theme = form.trait_theme
-                obj.trait_phrase = form.trait_phrase
-                obj.sentiment = form.sentiment
-                obj.trait_index = form.trait_index
-                obj.prompt_index = form.prompt_index
-                obj.set_name = form.set_name
-                obj.is_active = form.is_active
-                obj.source = form.source
-                obj.updated_at = now
-            else:
-                # Create new
-                obj = AttentionCheckScenario(
-                    scenario_id=scenario_id,
-                    prompt_text=form.prompt_text,
-                    response_text=form.response_text,
-                    trait_theme=form.trait_theme,
-                    trait_phrase=form.trait_phrase,
-                    sentiment=form.sentiment,
-                    trait_index=form.trait_index,
-                    prompt_index=form.prompt_index,
-                    set_name=form.set_name,
-                    is_active=form.is_active,
-                    source=form.source,
-                    created_at=now,
-                    updated_at=now,
-                )
-                db.add(obj)
-
-            db.commit()
-            db.refresh(obj)
-            return AttentionCheckScenarioModel.model_validate(obj)
-
-    def get_by_id(self, scenario_id: str) -> Optional[AttentionCheckScenarioModel]:
-        """Get an attention check scenario by ID"""
-        with get_db() as db:
-            obj = (
-                db.query(AttentionCheckScenario)
-                .filter(AttentionCheckScenario.scenario_id == scenario_id)
-                .first()
-            )
-            return AttentionCheckScenarioModel.model_validate(obj) if obj else None
-
-    def get_all(
-        self, is_active: Optional[bool] = None, set_name: Optional[str] = None
-    ) -> List[AttentionCheckScenarioModel]:
-        """Get all attention check scenarios, optionally filtered"""
-        with get_db() as db:
-            query = db.query(AttentionCheckScenario)
-            if is_active is not None:
-                query = query.filter(AttentionCheckScenario.is_active == is_active)
-            if set_name:
-                query = query.filter(AttentionCheckScenario.set_name == set_name)
-            rows = query.order_by(AttentionCheckScenario.created_at.asc()).all()
-            return [AttentionCheckScenarioModel.model_validate(row) for row in rows]
-
-    def get_random(
-        self, is_active: bool = True
-    ) -> Optional[AttentionCheckScenarioModel]:
-        """Get a random active attention check scenario"""
-        with get_db() as db:
-            rows = (
-                db.query(AttentionCheckScenario)
-                .filter(AttentionCheckScenario.is_active == is_active)
-                .all()
-            )
-            if not rows:
-                return None
-            selected = random.choice(rows)
-            return AttentionCheckScenarioModel.model_validate(selected)
-
-    def deactivate_by_set_name(self, set_name: str) -> int:
-        """Deactivate all active attention check scenarios with the given set_name. Returns count deactivated."""
-        with get_db() as db:
-            updated = (
-                db.query(AttentionCheckScenario)
-                .filter(
-                    AttentionCheckScenario.set_name == set_name,
-                    AttentionCheckScenario.is_active == True,
-                )
-                .update({"is_active": False, "updated_at": int(time.time() * 1000)})
-            )
-            db.commit()
-            return updated
-
-    def get_distinct_set_names(self) -> List[Optional[str]]:
-        """Get all distinct set_name values from attention_check_scenarios table (including None/null)"""
-        try:
-            with get_db() as db:
-                # Query returns tuples, extract first element and handle None
-                set_names_raw = (
-                    db.query(AttentionCheckScenario.set_name).distinct().all()
-                )
-                # Extract scalar values from tuples (each row is a 1-tuple)
-                set_names = [row[0] for row in set_names_raw]
-                return set_names
-        except Exception as e:
-            log.error(f"Error getting distinct set names from attention checks: {e}")
-            return []
-
-    def set_active_set(self, set_name: Optional[str]) -> dict:
-        """
-        Activate attention check scenarios with set_name, deactivate all others.
-        If set_name is None, activate all attention check scenarios.
-        Returns counts of activated and deactivated scenarios.
-        """
-        with get_db() as db:
-            ts = int(time.time() * 1000)
-            if set_name is None:
-                # Activate all attention check scenarios
-                activated = (
-                    db.query(AttentionCheckScenario)
-                    .filter(AttentionCheckScenario.is_active == False)
-                    .update({"is_active": True, "updated_at": ts})
-                )
-                deactivated = 0
-            else:
-                # Activate attention check scenarios with this set_name
-                activated = (
-                    db.query(AttentionCheckScenario)
-                    .filter(
-                        AttentionCheckScenario.set_name == set_name,
-                        AttentionCheckScenario.is_active == False,
-                    )
-                    .update({"is_active": True, "updated_at": ts})
-                )
-
-                # Deactivate all other attention check scenarios
-                deactivated = (
-                    db.query(AttentionCheckScenario)
-                    .filter(
-                        AttentionCheckScenario.set_name != set_name,
-                        AttentionCheckScenario.is_active == True,
-                    )
-                    .update({"is_active": False, "updated_at": ts})
-                )
-
-            db.commit()
-            return {"activated": activated, "deactivated": deactivated}
-
-
 # Global instances
 Scenarios = ScenarioTable()
 ScenarioAssignments = ScenarioAssignmentTable()
-AttentionCheckScenarios = AttentionCheckScenarioTable()

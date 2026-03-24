@@ -16,7 +16,7 @@ def ts(ms):
 
 # Attempt 11 sessions with full detail
 c.execute(
-    """SELECT scenario_index, is_attention_check, attention_check_passed,
+    """SELECT scenario_index,
                     initial_decision, is_final_version, concern_level,
                     created_at, updated_at
              FROM moderation_session

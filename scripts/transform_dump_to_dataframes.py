@@ -264,7 +264,6 @@ class DataTransformer:
         "exit_quiz_response",
         "scenario_assignments",  # May not exist in older dumps
         "scenarios",  # May not exist in older dumps
-        "attention_check_scenarios",  # May not exist in older dumps
         "assignment_session_activity",  # May not exist in older dumps
     ]
 

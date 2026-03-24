@@ -7,14 +7,11 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
 from pydantic import BaseModel
-from sqlalchemy import func
-
 from open_webui.models.users import Users, UserModel, User
 from open_webui.models.auths import Auths
 from open_webui.models.consent_audit import ConsentAudits, ConsentAuditForm
-from open_webui.models.moderation import ModerationSession
-from open_webui.models.child_profiles import ChildProfiles, ChildProfile
-from open_webui.models.exit_quiz import ExitQuizzes, ExitQuizResponse
+from open_webui.models.child_profiles import ChildProfiles
+from open_webui.models.exit_quiz import ExitQuizzes
 from open_webui.models.workflow_draft import WorkflowDraft
 from open_webui.internal.db import get_db
 from open_webui.utils.auth import (
@@ -63,29 +60,10 @@ class ConsentForm(BaseModel):
 def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
     """
     Reset a user's workflow when they return with a new Prolific study ID.
-    Mirrors the logic in POST /workflow/reset but resets session_number to 1
-    and updates study_id to the new value.
+    Resets session_number to 1, resets attempt_number to 1 (attempt only
+    increments on explicit Restart Survey), and updates study_id.
     """
     with get_db() as db:
-        max_mod = (
-            db.query(func.max(ModerationSession.attempt_number))
-            .filter(ModerationSession.user_id == user_id)
-            .scalar()
-            or 0
-        )
-        max_child = (
-            db.query(func.max(ChildProfile.attempt_number))
-            .filter(ChildProfile.user_id == user_id)
-            .scalar()
-            or 0
-        )
-        max_exit = (
-            db.query(func.max(ExitQuizResponse.attempt_number))
-            .filter(ExitQuizResponse.user_id == user_id)
-            .scalar()
-            or 0
-        )
-        new_attempt = max(max_mod, max_child, max_exit) + 1
         reset_ts = int(time.time() * 1000)
 
         db.query(User).filter(User.id == user_id).update(
@@ -93,7 +71,7 @@ def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
                 "study_id": new_study_id,
                 "workflow_reset_at": reset_ts,
                 "instructions_completed_at": None,
-                "current_attempt_number": new_attempt,
+                "current_attempt_number": 1,
                 "session_number": 1,
             }
         )
@@ -101,7 +79,7 @@ def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
         db.commit()
         log.info(
             f"Auto-reset workflow for user {user_id} on new study_id '{new_study_id}' "
-            f"(attempt {new_attempt})"
+            f"(attempt reset to 1)"
         )
 
 

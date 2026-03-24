@@ -193,14 +193,6 @@
 		return users.find((u) => u.id === selectedUserId);
 	};
 
-	const getAttentionCheckStats = (scenarios: any[]) => {
-		const attentionChecks = scenarios
-			.flatMap((s) => s.versions)
-			.filter((v) => v.is_attention_check);
-		const passed = attentionChecks.filter((v) => v.attention_check_passed).length;
-		return { total: attentionChecks.length, passed };
-	};
-
 	const parseExitQuizAnswers = (answers: any) => {
 		if (!answers) return null;
 
@@ -675,7 +667,6 @@
 								{:else}
 									<div class="mt-2 space-y-4">
 										{#each groupWithinSessionByChild(sessionData.moderation_sessions, sessionData.child_profiles) as childGroup}
-											{@const attnStats = getAttentionCheckStats(childGroup.scenarios)}
 											{@const timeSpent = getSessionTime(
 												submissionsData.user_info.id,
 												childGroup.child_id,
@@ -694,21 +685,6 @@
 														>
 															⏱️ {formatTimeSpent(timeSpent)}
 														</span>
-														{#if attnStats.total > 0}
-															{#if attnStats.passed === attnStats.total}
-																<span
-																	class="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-																>
-																	Attention: {attnStats.passed}/{attnStats.total} passed
-																</span>
-															{:else}
-																<span
-																	class="px-2 py-0.5 text-xs rounded bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200"
-																>
-																	Attention: {attnStats.passed}/{attnStats.total} passed
-																</span>
-															{/if}
-														{/if}
 													</div>
 												</div>
 												<div class="p-3 space-y-3">
@@ -795,7 +771,6 @@
 																			<th class="px-3 py-2">Attempt</th>
 																			<th class="px-3 py-2">Version</th>
 																			<th class="px-3 py-2">Decision</th>
-																			<th class="px-3 py-2">Attn Check</th>
 																			<th class="px-3 py-2">Final</th>
 																			<th class="px-3 py-2">Created</th>
 																			<th class="px-3 py-2">Details</th>
@@ -809,13 +784,6 @@
 																				<td class="px-3 py-2">{row.attempt_number}</td>
 																				<td class="px-3 py-2">{row.version_number}</td>
 																				<td class="px-3 py-2">{row.initial_decision || 'N/A'}</td>
-																				<td class="px-3 py-2">
-																					{#if row.is_attention_check}
-																						<span class="text-yellow-600 dark:text-yellow-400"
-																							>✓</span
-																						>
-																					{/if}
-																				</td>
 																				<td class="px-3 py-2">
 																					{#if row.is_final_version}
 																						<span
@@ -841,38 +809,8 @@
 																			</tr>
 																			{#if isVersionExpanded(row.id) && expansionCounter >= 0}
 																				<tr class="bg-gray-50 dark:bg-gray-800">
-																					<td colspan="7" class="px-4 py-3">
+																					<td colspan="6" class="px-4 py-3">
 																						<div class="space-y-3">
-																							{#if row.is_attention_check}
-																								<div
-																									class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800"
-																								>
-																									<div
-																										class="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2"
-																									>
-																										Attention Check
-																									</div>
-																									<div class="space-y-1 text-sm">
-																										<div>
-																											Selected "I read the instructions":
-																											{#if row.attention_check_selected}
-																												<span class="text-green-600">✓ Yes</span>
-																											{:else}
-																												<span class="text-red-600">✗ No</span>
-																											{/if}
-																										</div>
-																										<div>
-																											Status:
-																											{#if row.attention_check_passed}
-																												<span class="text-green-600">✓ PASSED</span>
-																											{:else}
-																												<span class="text-red-600">✗ FAILED</span>
-																											{/if}
-																										</div>
-																									</div>
-																								</div>
-																							{/if}
-																							{#if row.strategies && row.strategies.length > 0}
 																								<div>
 																									<span
 																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"

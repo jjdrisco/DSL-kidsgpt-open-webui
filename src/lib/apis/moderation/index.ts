@@ -59,10 +59,6 @@ export interface ModerationSessionPayload {
 	refactored_response?: string;
 	is_final_version?: boolean;
 	session_metadata?: Record<string, any>;
-	// Attention check tracking
-	is_attention_check?: boolean;
-	attention_check_selected?: boolean;
-	attention_check_passed?: boolean;
 }
 
 export interface ModerationSessionResponse {
@@ -88,9 +84,6 @@ export interface ModerationSessionResponse {
 	prompt_highlighted_html?: string; // HTML with <mark> elements for prompt
 	refactored_response?: string;
 	session_metadata?: Record<string, any>;
-	is_attention_check: boolean;
-	attention_check_selected: boolean;
-	attention_check_passed: boolean;
 	created_at: number;
 	updated_at: number;
 }
@@ -400,8 +393,6 @@ export interface ScenarioAssignResponse {
 		weight: number;
 		sampling_prob: number;
 	};
-	/** code displayed for attention-check scenario, if any */
-	attention_check_code?: string | null;
 }
 
 export interface ScenarioStatusUpdateRequest {
@@ -553,21 +544,6 @@ export const abandonScenario = async (
 	return res.json();
 };
 
-// attention-check API functions have been deprecated in favour of
-// assignment-level code logic.  The server no longer exposes
-// /moderation/attention-checks/random; callers should ignore these types.
-
-export interface AttentionCheckResponse {
-	scenario_id: string;
-	prompt_text: string;
-	response_text: string;
-	trait_theme?: string;
-	trait_phrase?: string;
-	sentiment?: string;
-}
-
-// NOTE: getRandomAttentionCheck removed.  See new attention-check plan.
-
 // Highlights API functions
 
 export const createHighlight = async (
@@ -610,7 +586,6 @@ export interface AssignmentWithScenario {
 	status: string;
 	assigned_at: number;
 	started_at?: number;
-	attention_check_code?: string | null;
 }
 
 export const getAssignmentsForChild = async (
@@ -675,29 +650,6 @@ export interface ScenarioUploadResponse {
 	errors: number;
 	total: number;
 	error_details?: string[];
-}
-
-export interface AttentionCheckAdminListResponse {
-	attention_checks: AttentionCheckAdminModel[];
-	total: number;
-	active_count: number;
-	inactive_count: number;
-}
-
-export interface AttentionCheckAdminModel {
-	scenario_id: string;
-	prompt_text: string;
-	response_text: string;
-	trait_theme?: string;
-	trait_phrase?: string;
-	sentiment?: string;
-	trait_index?: number;
-	prompt_index?: number;
-	set_name?: string;
-	is_active: boolean;
-	source?: string;
-	created_at: number;
-	updated_at: number;
 }
 
 export const uploadScenariosAdmin = async (
@@ -781,66 +733,6 @@ export const updateScenarioAdmin = async (
 	return parseJsonOrThrow<{ status: string; scenario: ScenarioModel }>(res);
 };
 
-export const uploadAttentionChecksAdmin = async (
-	token: string,
-	file: File,
-	setName: string = 'default',
-	source: string = 'admin_upload',
-	deactivatePrevious: boolean = false
-): Promise<ScenarioUploadResponse> => {
-	const formData = new FormData();
-	formData.append('file', file);
-	formData.append('set_name', setName);
-	formData.append('source', source);
-	if (deactivatePrevious) {
-		formData.append('deactivate_previous', 'true');
-	}
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/upload`, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`
-		},
-		body: formData
-	});
-	return parseJsonOrThrow<ScenarioUploadResponse>(res);
-};
-
-export const listAttentionChecksAdmin = async (
-	token: string,
-	options: { is_active?: boolean; page?: number; page_size?: number } = {}
-): Promise<AttentionCheckAdminListResponse> => {
-	const params = new URLSearchParams();
-	if (options.is_active !== undefined) params.append('is_active', String(options.is_active));
-	if (options.page) params.append('page', String(options.page));
-	if (options.page_size) params.append('page_size', String(options.page_size));
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks?${params.toString()}`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	});
-	return parseJsonOrThrow<AttentionCheckAdminListResponse>(res);
-};
-
-export const updateAttentionCheckAdmin = async (
-	token: string,
-	scenarioId: string,
-	is_active?: boolean
-): Promise<{ status: string; attention_check: AttentionCheckAdminModel }> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/${scenarioId}`, {
-		method: 'PATCH',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ is_active })
-	});
-	return parseJsonOrThrow<{ status: string; attention_check: AttentionCheckAdminModel }>(res);
-};
-
 // Set name management APIs
 
 export interface SetNamesResponse {
@@ -849,17 +741,6 @@ export interface SetNamesResponse {
 
 export const getScenarioSetNames = async (token: string): Promise<SetNamesResponse> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/set-names`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	});
-	return parseJsonOrThrow<SetNamesResponse>(res);
-};
-
-export const getAttentionCheckSetNames = async (token: string): Promise<SetNamesResponse> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/set-names`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -895,17 +776,3 @@ export const setActiveScenarioSet = async (
 	return parseJsonOrThrow<SetActiveSetResponse>(res);
 };
 
-export const setActiveAttentionCheckSet = async (
-	token: string,
-	setName: string | null
-): Promise<SetActiveSetResponse> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/set-active-set`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ set_name: setName })
-	});
-	return parseJsonOrThrow<SetActiveSetResponse>(res);
-};

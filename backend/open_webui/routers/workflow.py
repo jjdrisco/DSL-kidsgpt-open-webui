@@ -116,7 +116,6 @@ async def get_workflow_state(
 
             # Moderation progress: count unique scenarios that have a terminal decision
             # Terminal = initial_decision in (accept_original, moderate, not_applicable)
-            # OR attention check passed (is_attention_check and attention_check_passed)
             # Exclude sessions created before last workflow reset.
             # Filter sessions by latest_child so count and total refer to the same child.
             try:
@@ -134,10 +133,6 @@ async def get_workflow_state(
                         "accept_original",
                         "moderate",
                         "not_applicable",
-                    ):
-                        decided.add(s.scenario_index)
-                    elif getattr(s, "is_attention_check", False) and getattr(
-                        s, "attention_check_passed", False
                     ):
                         decided.add(s.scenario_index)
                 progress["moderation_completed_count"] = len(decided)

@@ -32,10 +32,7 @@ from open_webui.models.scenarios import (
     ScenarioModel,
     ScenarioForm,
     AssignmentStatus,
-    AttentionCheckScenarios,
-    AttentionCheckScenarioForm,
     Scenario,
-    AttentionCheckScenario,
 )
 from open_webui.internal.db import get_db
 
@@ -72,10 +69,6 @@ class ModerationSessionPayload(BaseModel):
     prompt_highlighted_html: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
-    # Attention check tracking
-    is_attention_check: Optional[bool] = False
-    attention_check_selected: Optional[bool] = False
-    attention_check_passed: Optional[bool] = False
 
 
 @router.post("/moderation/sessions", response_model=ModerationSessionModel)
@@ -116,9 +109,6 @@ async def create_or_update_session(
             prompt_highlighted_html=form_data.prompt_highlighted_html,
             is_final_version=form_data.is_final_version,
             session_metadata=form_data.session_metadata,
-            is_attention_check=form_data.is_attention_check,
-            attention_check_selected=form_data.attention_check_selected,
-            attention_check_passed=form_data.attention_check_passed,
         )
 
         result = ModerationSessions.upsert(form)
@@ -197,8 +187,6 @@ class ScenarioAssignResponse(BaseModel):
     response_text: str
     assignment_position: Optional[int] = None
     sampling_audit: Optional[dict] = None
-    # attention vérification code, if assigned to this row
-    attention_check_code: Optional[str] = None
 
 
 @router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
@@ -246,7 +234,6 @@ async def assign_scenario(
 
             db.commit()
 
-        # include attention_check_code in response if already present (should be null here)
         return ScenarioAssignResponse(
             assignment_id=assignment.assignment_id,
             scenario_id=selected_scenario.scenario_id,
@@ -254,7 +241,6 @@ async def assign_scenario(
             response_text=selected_scenario.response_text,
             assignment_position=assignment.assignment_position,
             sampling_audit=sampling_audit,
-            attention_check_code=getattr(assignment, "attention_check_code", None),
         )
     except HTTPException:
         raise
@@ -640,48 +626,6 @@ async def get_highlights(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-class AttentionCheckResponse(BaseModel):
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    trait_theme: Optional[str] = None
-    trait_phrase: Optional[str] = None
-    sentiment: Optional[str] = None
-
-
-@router.get(
-    "/moderation/attention-checks/random", response_model=AttentionCheckResponse
-)
-async def get_random_attention_check(
-    user: UserModel = Depends(get_verified_user),
-):
-    """
-    Get a random active attention check scenario.
-    Uses simple random sampling (not weighted, since attention checks don't need balancing).
-    """
-    try:
-        attention_check = AttentionCheckScenarios.get_random(is_active=True)
-
-        if not attention_check:
-            raise HTTPException(
-                status_code=404, detail="No active attention check scenarios available"
-            )
-
-        return AttentionCheckResponse(
-            scenario_id=attention_check.scenario_id,
-            prompt_text=attention_check.prompt_text,
-            response_text=attention_check.response_text,
-            trait_theme=attention_check.trait_theme,
-            trait_phrase=attention_check.trait_phrase,
-            sentiment=attention_check.sentiment,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error getting random attention check: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 class AssignmentWithScenario(BaseModel):
     assignment_id: str
     scenario_id: str
@@ -691,8 +635,6 @@ class AssignmentWithScenario(BaseModel):
     status: str
     assigned_at: int
     started_at: Optional[int] = None
-    # code associated to this assignment (client shows it if present)
-    attention_check_code: Optional[str] = None
 
 
 @router.get(
@@ -750,7 +692,6 @@ async def get_assignments_for_child(
                         status=assignment.status,
                         assigned_at=assignment.assigned_at,
                         started_at=assignment.started_at,
-                        attention_check_code=assignment.attention_check_code,
                     )
                 )
 
@@ -762,55 +703,6 @@ async def get_assignments_for_child(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# ---------------------------------------------------------------------------
-# Attention-code utilities
-# ---------------------------------------------------------------------------
-
-import secrets
-import string
-
-
-def _generate_attention_code(length: int = 5) -> str:
-    alphabet = string.ascii_uppercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(length))
-
-
-@router.patch(
-    "/moderation/scenarios/assignments/{assignment_id}/attention-code",
-    response_model=dict,
-)
-async def patch_assignment_attention_code(
-    assignment_id: str, user: UserModel = Depends(get_verified_user)
-):
-    """Ensure an assignment has a short attention check code.
-
-    If the row already contains a code it is returned unchanged. Otherwise a new
-    code is generated, persisted, and returned. Only the owning participant may
-    call this route.
-    """
-    try:
-        with get_db() as db:
-            assignment = (
-                db.query(ScenarioAssignment)
-                .filter(ScenarioAssignment.assignment_id == assignment_id)
-                .first()
-            )
-            if not assignment or assignment.participant_id != user.id:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            code = assignment.attention_check_code
-            if not code:
-                code = _generate_attention_code()
-                assignment.attention_check_code = code
-                db.commit()
-        return {"assignment_id": assignment_id, "attention_check_code": code}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error patching attention code for {assignment_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# ========== ADMIN ENDPOINTS ==========
 
 
 # ========== ADMIN ENDPOINTS ==========
@@ -1070,246 +962,6 @@ async def update_scenario_admin(
         log.error(f"Error updating scenario: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-
-@router.post("/admin/attention-checks/upload")
-async def upload_attention_checks_admin(
-    file: UploadFile = File(...),
-    set_name: str = Form("default"),
-    source: str = Form("admin_upload"),
-    deactivate_previous: bool = Form(False),
-    user: UserModel = Depends(get_admin_user),
-):
-    """Admin endpoint to upload attention check scenarios from JSON file. Always creates new attention checks with UUID-based IDs."""
-    import json
-
-    try:
-        if not file.filename.endswith(".json"):
-            raise HTTPException(status_code=400, detail="File must be a JSON file")
-
-        contents = await file.read()
-        data = json.loads(contents.decode("utf-8"))
-
-        # Support both array format and object with scenarios array
-        if isinstance(data, dict) and "scenarios" in data:
-            scenarios_data = data["scenarios"]
-        elif isinstance(data, list):
-            scenarios_data = data
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="JSON must contain a list of scenarios or object with 'scenarios' array",
-            )
-
-        # Deactivate previous attention checks if requested
-        deactivated_count = 0
-        if deactivate_previous:
-            deactivated_count = AttentionCheckScenarios.deactivate_by_set_name(set_name)
-            log.info(
-                f"Deactivated {deactivated_count} previous attention checks with set_name='{set_name}'"
-            )
-
-        loaded_count = 0
-        error_count = 0
-        errors = []
-        ts = int(time.time() * 1000)
-
-        with get_db() as db:
-            for idx, scenario_data in enumerate(scenarios_data, 1):
-                try:
-                    # Accept multiple field name formats for flexibility (same as scenario upload)
-                    prompt_text = (
-                        scenario_data.get("child_prompt")
-                        or scenario_data.get("prompt_text")
-                        or scenario_data.get("prompt", "")
-                    )
-                    response_text = (
-                        scenario_data.get("model_response")
-                        or scenario_data.get("response_text")
-                        or scenario_data.get("response", "")
-                    )
-
-                    if not prompt_text or not response_text:
-                        error_count += 1
-                        errors.append(
-                            f"Attention check {idx}: Missing prompt or response"
-                        )
-                        continue
-
-                    # Generate new UUID-based scenario_id for each upload
-                    scenario_id = f"ac_{uuid.uuid4()}"
-
-                    # Create new attention check directly (always new, never update)
-                    obj = AttentionCheckScenario(
-                        scenario_id=scenario_id,
-                        prompt_text=prompt_text,
-                        response_text=response_text,
-                        trait_theme=scenario_data.get("trait_theme"),
-                        trait_phrase=scenario_data.get("trait_phrase"),
-                        sentiment=scenario_data.get("sentiment"),
-                        trait_index=scenario_data.get("trait_index"),
-                        prompt_index=scenario_data.get("prompt_index"),
-                        set_name=set_name,
-                        is_active=True,
-                        source=source,
-                        created_at=ts,
-                        updated_at=ts,
-                    )
-                    db.add(obj)
-                    loaded_count += 1
-
-                except Exception as e:
-                    error_count += 1
-                    errors.append(f"Attention check {idx}: {str(e)}")
-
-            db.commit()
-
-        return {
-            "status": "success",
-            "loaded": loaded_count,
-            "updated": 0,  # Always 0 since we always create new
-            "deactivated_count": deactivated_count,
-            "errors": error_count,
-            "total": len(scenarios_data),
-            "error_details": errors[:10] if errors else [],
-        }
-
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON format")
-    except Exception as e:
-        log.error(f"Error uploading attention checks: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error uploading attention checks: {str(e)}"
-        )
-
-
-@router.get("/admin/attention-checks")
-async def list_attention_checks_admin(
-    is_active: Optional[bool] = None,
-    page: int = 1,
-    page_size: int = 50,
-    user: UserModel = Depends(get_admin_user),
-):
-    """Admin endpoint to list all attention check scenarios"""
-    try:
-        all_checks = AttentionCheckScenarios.get_all(is_active=is_active)
-
-        active_count = sum(1 for ac in all_checks if ac.is_active)
-        inactive_count = len(all_checks) - active_count
-
-        # Paginate
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        paginated = all_checks[start_idx:end_idx]
-
-        return {
-            "attention_checks": paginated,
-            "total": len(all_checks),
-            "active_count": active_count,
-            "inactive_count": inactive_count,
-        }
-    except Exception as e:
-        log.error(f"Error listing attention checks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.patch("/admin/attention-checks/{scenario_id}")
-async def update_attention_check_admin(
-    scenario_id: str,
-    is_active: Optional[bool] = None,
-    user: UserModel = Depends(get_admin_user),
-):
-    """Admin endpoint to update an attention check scenario"""
-    try:
-        ac = AttentionCheckScenarios.get_by_id(scenario_id)
-        if not ac:
-            raise HTTPException(
-                status_code=404, detail="Attention check scenario not found"
-            )
-
-        form = AttentionCheckScenarioForm(
-            prompt_text=ac.prompt_text,
-            response_text=ac.response_text,
-            trait_theme=ac.trait_theme,
-            trait_phrase=ac.trait_phrase,
-            sentiment=ac.sentiment,
-            trait_index=ac.trait_index,
-            prompt_index=ac.prompt_index,
-            set_name=ac.set_name,
-            is_active=is_active if is_active is not None else ac.is_active,
-            source=ac.source,
-        )
-
-        updated = AttentionCheckScenarios.upsert(form)
-        return {"status": "success", "attention_check": updated}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error updating attention check: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/admin/scenarios/set-names")
-async def get_scenario_set_names(user: UserModel = Depends(get_admin_user)):
-    """Get all distinct set_name values for scenarios"""
-    try:
-        set_names = Scenarios.get_distinct_set_names()
-        return {"set_names": set_names}
-    except Exception as e:
-        log.error(f"Error getting scenario set names: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/admin/attention-checks/set-names")
-async def get_attention_check_set_names(user: UserModel = Depends(get_admin_user)):
-    """Get all distinct set_name values for attention checks"""
-    try:
-        set_names = AttentionCheckScenarios.get_distinct_set_names()
-        return {"set_names": set_names}
-    except Exception as e:
-        log.error(f"Error getting attention check set names: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class SetActiveSetRequest(BaseModel):
-    set_name: Optional[str] = None
-
-
-@router.post("/admin/scenarios/set-active-set")
-async def set_active_scenario_set(
-    request: SetActiveSetRequest,
-    user: UserModel = Depends(get_admin_user),
-):
-    """Set which set_name should be active. Activates all scenarios with that set_name and deactivates all others."""
-    try:
-        result = Scenarios.set_active_set(request.set_name)
-        return {
-            "status": "success",
-            "activated": result["activated"],
-            "deactivated": result["deactivated"],
-            "set_name": request.set_name,
-        }
-    except Exception as e:
-        log.error(f"Error setting active scenario set: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/admin/attention-checks/set-active-set")
-async def set_active_attention_check_set(
-    request: SetActiveSetRequest,
-    user: UserModel = Depends(get_admin_user),
-):
-    """Set which set_name should be active. Activates all attention checks with that set_name and deactivates all others."""
-    try:
-        result = AttentionCheckScenarios.set_active_set(request.set_name)
-        return {
-            "status": "success",
-            "activated": result["activated"],
-            "deactivated": result["deactivated"],
-            "set_name": request.set_name,
-        }
-    except Exception as e:
-        log.error(f"Error setting active attention check set: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 class SessionActivityPayload(BaseModel):
