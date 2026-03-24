@@ -218,6 +218,8 @@ SELECT
     ms.strategies::text,
     ms.custom_instructions::text,
     ms.highlighted_texts::text,
+    ms.response_highlighted_html,
+    ms.prompt_highlighted_html,
     ms.refactored_response,
     ms.session_metadata::text,
     ms.is_attention_check,
@@ -359,6 +361,63 @@ SELECT
 FROM assignment_session_activity ata
 LEFT JOIN "user" u ON ata.user_id = u.id
 ORDER BY ata.user_id, ata.session_number, ata.created_at;
+"""
+
+CONCERN_ITEM_QUERY = """
+SELECT
+    ci.id,
+    ci.session_id,
+    ci.user_id,
+    ci.child_id,
+    ci.scenario_id,
+    ci.scenario_index,
+    ci.attempt_number,
+    ci.version_number,
+    ci.session_number,
+    ci.position,
+    ci.text,
+    ci.concern_level,
+    ci.linked_highlights::text,
+    ci.highlight_levels::text,
+    ci.created_at,
+    ci.updated_at,
+    u.name             AS user_name,
+    u.email            AS user_email,
+    u.role             AS user_role,
+    u.prolific_pid,
+    cp.child_age,
+    cp.child_gender
+FROM concern_item ci
+LEFT JOIN "user"        u  ON ci.user_id  = u.id
+LEFT JOIN child_profile cp ON ci.child_id = cp.id
+ORDER BY ci.user_id, ci.scenario_index, ci.position;
+"""
+
+SELECTION_QUERY = """
+SELECT
+    s.id,
+    s.user_id,
+    s.chat_id,
+    s.message_id,
+    s.role,
+    s.selected_text,
+    s.child_id,
+    s.scenario_id,
+    s.source,
+    s.context,
+    s.meta::text,
+    s.assignment_id,
+    s.start_offset,
+    s.end_offset,
+    s.created_at,
+    s.updated_at,
+    u.name             AS user_name,
+    u.email            AS user_email,
+    u.role             AS user_role,
+    u.prolific_pid
+FROM selection s
+LEFT JOIN "user" u ON s.user_id = u.id
+ORDER BY s.user_id, s.scenario_id, s.created_at;
 """
 
 
