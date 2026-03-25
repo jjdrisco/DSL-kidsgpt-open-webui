@@ -1,6 +1,6 @@
 """Add attempt_number column to assignment_session_activity
 
-Revision ID: add_attempt_number_to_assignment_activity
+Revision ID: 4f919f805a75
 Revises: rm_attention_check_cleanup
 Create Date: 2026-03-25 00:00:00.000000
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
-revision = "add_attempt_number_to_assignment_activity"
+revision = "4f919f805a75"
 down_revision = ("rm_attention_check_cleanup", "aa11bb22cc44")
 branch_labels = None
 depends_on = None
