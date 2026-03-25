@@ -323,6 +323,7 @@ cypress/screenshots
 .vscode/settings.json
 backend/db_output.txt
 data/webui.db
+open-webui.db
 
 # i18n locale overrides (local edits)
 src/lib/i18n/locales/uz-Latn-UZ/translation.json
