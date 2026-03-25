@@ -7705,7 +7705,12 @@
 {/if}
 
 <!-- Assignment Time Tracker (separate from moderation tracking) -->
-<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} attemptNumber={currentAttemptNumber} enabled={true} />
+<AssignmentTimeTracker
+	userId={get(user)?.id || ''}
+	{sessionNumber}
+	attemptNumber={currentAttemptNumber}
+	enabled={true}
+/>
 
 <!-- Help Video Modal -->
 <VideoModal

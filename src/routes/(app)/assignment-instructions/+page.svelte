@@ -6,7 +6,11 @@
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
-	import { getWorkflowState, markInstructionsComplete, getCurrentAttempt } from '$lib/apis/workflow';
+	import {
+		getWorkflowState,
+		markInstructionsComplete,
+		getCurrentAttempt
+	} from '$lib/apis/workflow';
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
@@ -265,6 +269,11 @@
 
 	<!-- Assignment Time Tracker -->
 	{#if trackingEnabled}
-		<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={trackingEnabled} />
+		<AssignmentTimeTracker
+			userId={get(user)?.id || ''}
+			{sessionNumber}
+			{attemptNumber}
+			enabled={trackingEnabled}
+		/>
 	{/if}
 </div>
