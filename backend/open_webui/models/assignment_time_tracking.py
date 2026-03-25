@@ -19,7 +19,12 @@ class AssignmentSessionActivity(Base):
     created_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
-        Index("idx_assignment_activity_user_session_attempt", "user_id", "session_number", "attempt_number"),
+        Index(
+            "idx_assignment_activity_user_session_attempt",
+            "user_id",
+            "session_number",
+            "attempt_number",
+        ),
         Index("idx_assignment_activity_created_at", "created_at"),
     )
 

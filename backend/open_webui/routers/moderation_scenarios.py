@@ -703,8 +703,6 @@ async def get_assignments_for_child(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-
-
 # ========== ADMIN ENDPOINTS ==========
 
 
@@ -961,7 +959,6 @@ async def update_scenario_admin(
     except Exception as e:
         log.error(f"Error updating scenario: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
 
 
 class SessionActivityPayload(BaseModel):
