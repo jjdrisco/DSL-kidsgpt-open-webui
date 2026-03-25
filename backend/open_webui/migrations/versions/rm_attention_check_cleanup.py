@@ -22,7 +22,9 @@ def upgrade() -> None:
 
     # 1. Drop attention_check_code column + index from scenario_assignments
     if "scenario_assignments" in inspector.get_table_names():
-        existing_cols = [c["name"] for c in inspector.get_columns("scenario_assignments")]
+        existing_cols = [
+            c["name"] for c in inspector.get_columns("scenario_assignments")
+        ]
         if "attention_check_code" in existing_cols:
             existing_indexes = [
                 idx["name"] for idx in inspector.get_indexes("scenario_assignments")
@@ -77,9 +79,7 @@ def downgrade() -> None:
             sa.Column("trait_index", sa.Integer(), nullable=True),
             sa.Column("prompt_index", sa.Integer(), nullable=True),
             sa.Column("set_name", sa.String(), nullable=True),
-            sa.Column(
-                "is_active", sa.Boolean(), nullable=False, server_default="1"
-            ),
+            sa.Column("is_active", sa.Boolean(), nullable=False, server_default="1"),
             sa.Column("source", sa.String(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=False),
             sa.Column("updated_at", sa.BigInteger(), nullable=False),
@@ -117,7 +117,9 @@ def downgrade() -> None:
 
     # 3. Recreate attention_check_code column on scenario_assignments
     if "scenario_assignments" in inspector.get_table_names():
-        existing_cols = [c["name"] for c in inspector.get_columns("scenario_assignments")]
+        existing_cols = [
+            c["name"] for c in inspector.get_columns("scenario_assignments")
+        ]
         if "attention_check_code" not in existing_cols:
             op.add_column(
                 "scenario_assignments",
