@@ -53,7 +53,9 @@
 				.then((result) => {
 					console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${profile.id}`);
 					if (result.assignmentCount < scenariosPerSession) {
-						console.warn(`⚠️ Only ${result.assignmentCount}/${scenariosPerSession} scenarios assigned`);
+						console.warn(
+							`⚠️ Only ${result.assignmentCount}/${scenariosPerSession} scenarios assigned`
+						);
 					}
 				})
 				.catch((error) => {
@@ -297,5 +299,10 @@
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={true} />
+	<AssignmentTimeTracker
+		userId={get(user)?.id || ''}
+		{sessionNumber}
+		{attemptNumber}
+		enabled={true}
+	/>
 </div>
