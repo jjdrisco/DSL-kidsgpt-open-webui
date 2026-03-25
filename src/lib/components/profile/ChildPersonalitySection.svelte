@@ -1,16 +1,22 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	import {
 		personalityTraits,
 		type PersonalityTrait,
 		type SubCharacteristic
 	} from '$lib/data/personalityTraits';
 
-	// Two-way bindings for use in exit survey or child profile form
+	const dispatch = createEventDispatcher();
+
+	// Props for initial values (one-way down); changes dispatched upward via 'change' event
 	export let selectedSubCharacteristics: string[] = [];
 	export let additionalInfo: string = '';
 
 	// When true, show required asterisk on labels (e.g. ChildProfileForm). Exit survey can use false.
 	export let required: boolean = false;
+
+	// Dispatch changes upward so parent can reassign its state (guarantees Svelte reactivity)
+	$: dispatch('change', { selectedSubCharacteristics, additionalInfo });
 
 	// Local UI state: which Big 5 sections are expanded
 	let expandedTraits: Set<string> = new Set();

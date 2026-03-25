@@ -1609,8 +1609,15 @@
 								additional details below.
 							</p>
 							<ChildPersonalitySection
-								bind:selectedSubCharacteristics={surveyResponses.childPersonalitySubCharacteristics}
-								bind:additionalInfo={surveyResponses.childAdditionalInfo}
+								selectedSubCharacteristics={surveyResponses.childPersonalitySubCharacteristics}
+								additionalInfo={surveyResponses.childAdditionalInfo}
+								on:change={(e) => {
+									surveyResponses = {
+										...surveyResponses,
+										childPersonalitySubCharacteristics: e.detail.selectedSubCharacteristics,
+										childAdditionalInfo: e.detail.additionalInfo
+									};
+								}}
 								required={true}
 							/>
 						</div>
