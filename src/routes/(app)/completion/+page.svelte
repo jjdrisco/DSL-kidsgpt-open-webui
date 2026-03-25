@@ -130,5 +130,10 @@
 	</div>
 
 	<!-- Assignment Time Tracker (stops tracking after delay) -->
-	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={trackingEnabled} />
+	<AssignmentTimeTracker
+		userId={get(user)?.id || ''}
+		{sessionNumber}
+		{attemptNumber}
+		enabled={trackingEnabled}
+	/>
 </div>

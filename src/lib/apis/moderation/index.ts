@@ -775,4 +775,3 @@ export const setActiveScenarioSet = async (
 	});
 	return parseJsonOrThrow<SetActiveSetResponse>(res);
 };
-
