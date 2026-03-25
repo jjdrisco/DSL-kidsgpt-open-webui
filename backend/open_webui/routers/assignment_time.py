@@ -1,5 +1,6 @@
 import logging
 
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -19,6 +20,7 @@ router = APIRouter()
 class AssignmentSessionActivityPayload(BaseModel):
     user_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
 
@@ -35,6 +37,7 @@ async def post_assignment_session_activity(
         form = AssignmentSessionActivityForm(
             user_id=payload.user_id,
             session_number=payload.session_number,
+            attempt_number=payload.attempt_number or 1,
             active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
         )
         return AssignmentSessionActivities.add_activity(form)

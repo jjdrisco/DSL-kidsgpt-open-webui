@@ -1734,5 +1734,5 @@
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
+	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={true} />
 </div>

@@ -6,11 +6,22 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
+	import { getCurrentAttempt } from '$lib/apis/workflow';
 
 	$: sessionNumber = $user?.session_number || 1;
+	let attemptNumber: number = 1;
 	let trackingEnabled: boolean = true;
 
 	onMount(async () => {
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const attemptData = await getCurrentAttempt(token);
+				attemptNumber = attemptData.current_attempt || 1;
+			}
+		} catch (e) {
+			console.warn('Failed to get current attempt number', e);
+		}
 		// Ensure sidebar refetches workflow state (backend already has exit_survey_completed)
 		window.dispatchEvent(new Event('workflow-updated'));
 
@@ -119,5 +130,5 @@
 	</div>
 
 	<!-- Assignment Time Tracker (stops tracking after delay) -->
-	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={trackingEnabled} />
+	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={trackingEnabled} />
 </div>

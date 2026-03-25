@@ -7,6 +7,7 @@
 
 	export let userId: string = '';
 	export let sessionNumber: number = 1;
+	export let attemptNumber: number = 1;
 	export let enabled: boolean = true;
 
 	let assignmentActiveMs: number = 0;
@@ -24,8 +25,8 @@
 		return typeof document !== 'undefined' && document.visibilityState === 'visible';
 	}
 
-	function activityKeyFor(uId: string, session: number) {
-		return `assignmentActiveMs_${uId}_${session}`;
+	function activityKeyFor(uId: string, session: number, attempt: number) {
+		return `assignmentActiveMs_${uId}_${session}_${attempt}`;
 	}
 
 	async function syncActivity() {
@@ -37,6 +38,7 @@
 			await postAssignmentActivity(localStorage.token || '', {
 				user_id: currentUserId,
 				session_number: sessionNumber,
+				attempt_number: attemptNumber,
 				active_ms_cumulative: assignmentActiveMs
 			});
 		} catch (e) {
@@ -52,7 +54,7 @@
 
 		// Restore from localStorage
 		try {
-			const k = activityKeyFor(currentUserId, sessionNumber);
+			const k = activityKeyFor(currentUserId, sessionNumber, attemptNumber);
 			const saved = localStorage.getItem(k);
 			if (saved) {
 				assignmentActiveMs = Number(saved) || 0;
@@ -70,7 +72,7 @@
 				if (now - lastActivityAt <= IDLE_THRESHOLD_MS) {
 					assignmentActiveMs += 1000;
 					try {
-						const k = activityKeyFor(currentUserId, sessionNumber);
+						const k = activityKeyFor(currentUserId, sessionNumber, attemptNumber);
 						localStorage.setItem(k, String(assignmentActiveMs));
 					} catch (e) {
 						console.warn('Failed to save assignment activity to localStorage', e);
@@ -100,6 +102,7 @@
 				const payload = JSON.stringify({
 					user_id: currentUserId,
 					session_number: sessionNumber,
+					attempt_number: attemptNumber,
 					active_ms_cumulative: assignmentActiveMs
 				});
 				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/assignment/session-activity`, payload);

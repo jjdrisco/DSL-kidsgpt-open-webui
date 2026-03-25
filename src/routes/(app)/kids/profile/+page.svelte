@@ -6,7 +6,7 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
-	import { getWorkflowState } from '$lib/apis/workflow';
+	import { getWorkflowState, getCurrentAttempt } from '$lib/apis/workflow';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { assignScenariosForChild } from '$lib/services/scenarioAssignment';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
@@ -20,6 +20,7 @@
 
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
+	let attemptNumber: number = 1;
 
 	// Function to determine session number for new child profile
 	async function determineSessionNumberForUser(userId: string, token: string): Promise<number> {
@@ -124,6 +125,17 @@
 			}
 		} catch {
 			// On error, allow access (fallback)
+		}
+
+		// Fetch current attempt number for time tracking
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const attemptData = await getCurrentAttempt(token);
+				attemptNumber = attemptData.current_attempt || 1;
+			}
+		} catch (e) {
+			console.warn('Failed to get current attempt number', e);
 		}
 
 		// Wait for user store to be loaded
@@ -285,5 +297,5 @@
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={true} />
+	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={true} />
 </div>

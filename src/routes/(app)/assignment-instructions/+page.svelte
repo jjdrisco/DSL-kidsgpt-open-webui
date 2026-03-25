@@ -6,7 +6,7 @@
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
-	import { getWorkflowState, markInstructionsComplete } from '$lib/apis/workflow';
+	import { getWorkflowState, markInstructionsComplete, getCurrentAttempt } from '$lib/apis/workflow';
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
@@ -18,6 +18,7 @@
 	// Assignment time tracking
 	let trackingEnabled: boolean = false;
 	$: sessionNumber = $user?.session_number || 1;
+	let attemptNumber: number = 1;
 
 	async function fetchInstructionsStatus() {
 		try {
@@ -36,6 +37,16 @@
 
 	onMount(async () => {
 		await fetchInstructionsStatus();
+
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const attemptData = await getCurrentAttempt(token);
+				attemptNumber = attemptData.current_attempt || 1;
+			}
+		} catch (e) {
+			console.warn('Failed to get current attempt number', e);
+		}
 
 		const handleWorkflowUpdate = () => {
 			fetchInstructionsStatus();
@@ -254,6 +265,6 @@
 
 	<!-- Assignment Time Tracker -->
 	{#if trackingEnabled}
-		<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={trackingEnabled} />
+		<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} {attemptNumber} enabled={trackingEnabled} />
 	{/if}
 </div>
