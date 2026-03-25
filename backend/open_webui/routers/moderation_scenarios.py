@@ -968,6 +968,7 @@ class SessionActivityPayload(BaseModel):
     user_id: str
     child_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
 
@@ -985,6 +986,7 @@ async def post_session_activity(
             user_id=payload.user_id,
             child_id=payload.child_id,
             session_number=payload.session_number,
+            attempt_number=payload.attempt_number or 1,
             active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
         )
         return ModerationSessionActivities.add_activity(form)

@@ -92,6 +92,7 @@ export interface SessionActivityPayload {
 	user_id: string;
 	child_id: string;
 	session_number: number;
+	attempt_number: number;
 	active_ms_cumulative: number;
 }
 
@@ -100,6 +101,7 @@ export interface SessionActivityResponse {
 	user_id: string;
 	child_id: string;
 	session_number: number;
+	attempt_number: number;
 	active_ms_delta: number;
 	cumulative_ms: number;
 	created_at: number;

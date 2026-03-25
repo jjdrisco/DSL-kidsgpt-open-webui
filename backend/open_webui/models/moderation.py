@@ -452,16 +452,18 @@ class ModerationSessionActivity(Base):
     user_id = Column(Text, nullable=False)
     child_id = Column(Text, nullable=False)
     session_number = Column(BigInteger, nullable=False, default=1)
+    attempt_number = Column(BigInteger, nullable=True, default=1)
     active_ms_delta = Column(BigInteger, nullable=False, default=0)
     cumulative_ms = Column(BigInteger, nullable=False, default=0)
     created_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
         Index(
-            "idx_mod_activity_user_child_session",
+            "idx_mod_activity_user_child_session_attempt",
             "user_id",
             "child_id",
             "session_number",
+            "attempt_number",
         ),
         Index("idx_mod_activity_created_at", "created_at"),
     )
@@ -471,6 +473,7 @@ class ModerationSessionActivityForm(BaseModel):
     user_id: str
     child_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
 
@@ -481,6 +484,7 @@ class ModerationSessionActivityModel(BaseModel):
     user_id: str
     child_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_delta: int
     cumulative_ms: int
     created_at: int
@@ -492,13 +496,15 @@ class ModerationSessionActivityTable:
     ) -> ModerationSessionActivityModel:
         with get_db() as db:
             ts = int(time.time() * 1000)
-            # Fetch last cumulative for this user/child/session
+            # Fetch last cumulative for this user/child/session/attempt
+            attempt = form.attempt_number or 1
             last = (
                 db.query(ModerationSessionActivity)
                 .filter(
                     ModerationSessionActivity.user_id == form.user_id,
                     ModerationSessionActivity.child_id == form.child_id,
                     ModerationSessionActivity.session_number == form.session_number,
+                    ModerationSessionActivity.attempt_number == attempt,
                 )
                 .order_by(ModerationSessionActivity.created_at.desc())
                 .first()
@@ -511,6 +517,7 @@ class ModerationSessionActivityTable:
                 user_id=form.user_id,
                 child_id=form.child_id,
                 session_number=int(form.session_number),
+                attempt_number=attempt,
                 active_ms_delta=delta,
                 cumulative_ms=incoming,
                 created_at=ts,

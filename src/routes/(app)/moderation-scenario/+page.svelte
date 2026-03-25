@@ -425,6 +425,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId,
 					session_number: sessionNumber,
+					attempt_number: currentAttemptNumber,
 					scenario_id: getCurrentScenarioId(),
 					active_ms_cumulative: sessionActiveMs
 				});
@@ -440,6 +441,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId,
 				session_number: sessionNumber,
+				attempt_number: currentAttemptNumber,
 				scenario_id: getCurrentScenarioId(),
 				active_ms_cumulative: sessionActiveMs
 			});
