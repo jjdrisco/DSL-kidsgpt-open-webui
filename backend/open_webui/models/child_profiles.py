@@ -77,6 +77,9 @@ class ChildProfile(Base):
         JSONField, nullable=True
     )  # list[str] of enabled mode IDs
 
+    # Server-side cache for LLM-extracted chat topics (set by parent chat-topics page)
+    chat_topics_cache = Column(JSONField, nullable=True)  # TopicCache dict
+
     # Indexes for efficient querying
     __table_args__ = (
         Index("idx_child_profile_user_id", "user_id"),
@@ -120,6 +123,13 @@ class ChildProfileModel(BaseModel):
     child_email: Optional[str] = None
     selected_features: Optional[list[str]] = None
     selected_interface_modes: Optional[list[str]] = None
+    chat_topics_cache: Optional[dict] = None
+
+
+class ChatTopicsCacheForm(BaseModel):
+    """Form for updating the chat topics cache on a child profile."""
+
+    cache: dict
 
 
 class ChildProfileForm(BaseModel):
@@ -387,6 +397,7 @@ class ChildProfileTable:
                 selected_interface_modes=getattr(
                     current, "selected_interface_modes", None
                 ),
+                chat_topics_cache=getattr(current, "chat_topics_cache", None),
                 attempt_number=current.attempt_number,
                 is_current=True,
                 session_number=new_session_number,
@@ -419,6 +430,46 @@ class ChildProfileTable:
                 .first()
             )
             return ChildProfileModel.model_validate(profile) if profile else None
+
+    def update_chat_topics_cache(
+        self, profile_id: str, user_id: str, cache_data: dict
+    ) -> Optional[ChildProfileModel]:
+        """Update the chat topics cache for an existing profile.
+
+        Ownership is verified via user_id.
+        """
+        with get_db() as db:
+            profile = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.id == profile_id,
+                    ChildProfile.user_id == user_id,
+                )
+                .first()
+            )
+            if profile:
+                profile.chat_topics_cache = cache_data
+                db.commit()
+                db.refresh(profile)
+                return ChildProfileModel.model_validate(profile)
+            return None
+
+    def get_chat_topics_cache(
+        self, profile_id: str, user_id: str
+    ) -> Optional[dict]:
+        """Get the chat topics cache for an existing profile."""
+        with get_db() as db:
+            profile = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.id == profile_id,
+                    ChildProfile.user_id == user_id,
+                )
+                .first()
+            )
+            if profile:
+                return profile.chat_topics_cache
+            return None
 
     def update_selected_features(
         self, profile_id: str, user_id: str, whitelist_items: list[str]

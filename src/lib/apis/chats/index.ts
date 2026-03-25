@@ -1241,6 +1241,35 @@ export const exportSingleChatStats = async (token: string, chatId: string) => {
 	return res;
 };
 
+export const getChildChats = async (
+	token: string,
+	childUserId: string,
+	since: number = 0
+) => {
+	try {
+		const url = `${WEBUI_API_BASE_URL}/chats/child/${childUserId}?since=${since}`;
+		console.log('[getChildChats] Fetching:', url);
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`,
+				'Cache-Control': 'no-cache'
+			}
+		});
+		const contentType = res.headers.get('content-type') ?? '';
+		if (!res.ok || !contentType.includes('application/json')) {
+			console.error(`[getChildChats] ${res.status} ${res.statusText} (${contentType})`);
+			return [];
+		}
+		return await res.json();
+	} catch (err) {
+		console.error('[getChildChats] Error:', err);
+		return [];
+	}
+};
+
 export const downloadChatStats = async (
 	token: string = '',
 	updated_at: number | null = null

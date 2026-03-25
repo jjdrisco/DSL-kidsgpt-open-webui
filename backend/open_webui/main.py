@@ -1793,7 +1793,7 @@ async def chat_completion(
                         "total_tokens": 0,
                     },
                 }
-                return await process_chat_response(
+                result = await process_chat_response(
                     request,
                     blocked_response,
                     form_data,
@@ -1803,6 +1803,18 @@ async def chat_completion(
                     events,
                     tasks,
                 )
+                # Tag the assistant message as blocked so the parent can review
+                if metadata.get("chat_id") and metadata.get("message_id"):
+                    try:
+                        if not metadata["chat_id"].startswith("local:"):
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {"blocked": True},
+                            )
+                    except Exception as e:
+                        log.warning(f"Failed to tag blocked message: {e}")
+                return result
             # ─────────────────────────────────────────────────────────────────
 
             response = await chat_completion_handler(request, form_data, user)

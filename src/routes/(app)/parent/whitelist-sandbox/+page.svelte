@@ -19,11 +19,10 @@
 			// Pre-populate whitelist from saved profile if available
 			if (match?.selected_features && match.selected_features.length > 0) {
 				features = [...match.selected_features];
-				// Try to match the saved features back to a preset chip
-				const matchingChip = SUGGESTIONS.find(
+				const matchingPreset = SUGGESTIONS.find(
 					(s) => JSON.stringify(s.features) === JSON.stringify(features)
 				);
-				activeChip = matchingChip ? matchingChip.label : '✏️ Custom / DIY';
+				adoptedFrom = matchingPreset ? matchingPreset.label : '✏️ Custom / DIY';
 			}
 		} catch (e) {
 			console.warn('[Sandbox] Could not load child profile:', e);
@@ -84,13 +83,13 @@
 
 	// ─── State ────────────────────────────────────────────────────────────────
 	let features: string[] = [...SUGGESTIONS[0].features];
-	let activeChip: string = SUGGESTIONS[0].label;
+	let adoptedFrom: string = SUGGESTIONS[0].label;
+	let expandedSuggestion: string | null = null;
 	let newFeatureText: string = '';
 
-	// True when the feature list has diverged from the chip's preset.
-	// Chips lock (disabled) while customized so a fresh preset must be chosen first.
-	$: activeChipFeatures = SUGGESTIONS.find((s) => s.label === activeChip)?.features ?? [];
-	$: isCustomized = JSON.stringify(features) !== JSON.stringify(activeChipFeatures);
+	// True when the feature list has diverged from the adopted preset.
+	$: adoptedFeatures = SUGGESTIONS.find((s) => s.label === adoptedFrom)?.features ?? [];
+	$: isCustomized = JSON.stringify(features) !== JSON.stringify(adoptedFeatures);
 
 	// ─── Auto-save status ─────────────────────────────────────────────────────
 	type SaveStatus = 'idle' | 'saving' | 'saved';
@@ -150,19 +149,21 @@
 	}
 
 	// ─── Feature management ───────────────────────────────────────────────────
-	function applyChip(suggestion: { label: string; features: string[] }) {
+	function toggleSuggestion(label: string) {
+		expandedSuggestion = expandedSuggestion === label ? null : label;
+	}
+
+	function adoptSuggestion(suggestion: { label: string; features: string[] }) {
 		features = [...suggestion.features];
-		activeChip = suggestion.label;
+		adoptedFrom = suggestion.label;
+		expandedSuggestion = null;
 		scheduleSave();
 	}
 
-	function resetToPreset() {
-		// Re-apply the currently indicated chip, falling back to the first preset
-		// if the active chip is Custom/DIY or unrecognised.
-		const preset =
-			SUGGESTIONS.find((s) => s.label === activeChip && s.features.length > 0) ?? SUGGESTIONS[0];
+	function revertToPreset() {
+		const preset = SUGGESTIONS.find((s) => s.label === adoptedFrom);
+		if (!preset) return;
 		features = [...preset.features];
-		activeChip = preset.label;
 		scheduleSave();
 	}
 
@@ -333,8 +334,7 @@
 			<div>
 				<h1 class="text-xl font-bold text-gray-900 dark:text-white">{childName}'s Whitelist</h1>
 				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-					Define what topics and content your child's AI can discuss. Use a suggestion chip or add
-					features as you see fit.
+					Define what topics and content your child's AI can discuss.
 				</p>
 			</div>
 			<div class="shrink-0 mt-1.5 text-xs font-medium min-w-[56px] text-right">
@@ -348,41 +348,74 @@
 			</div>
 		</div>
 
-		<!-- Suggestion chips -->
+		<!-- Quick suggestions -->
 		<div class="px-6 pt-5">
 			<p
 				class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
 			>
 				Quick suggestions
 			</p>
-			<div class="flex flex-wrap gap-2">
-				{#each SUGGESTIONS as suggestion}
-					{@const isActive = activeChip === suggestion.label}
-					{@const locked = isCustomized && !isActive}
-					<button
-						type="button"
-						disabled={isCustomized}
-						class="px-3 py-1.5 rounded-full text-sm font-medium border transition
-							{isActive && !isCustomized
-							? 'bg-blue-600 text-white border-blue-600'
-							: isActive && isCustomized
-								? 'bg-transparent text-blue-500 border-blue-400 opacity-60 cursor-not-allowed'
-								: locked
-									? 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 opacity-40 cursor-not-allowed'
-									: 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'}"
-						on:click={() => !isCustomized && applyChip(suggestion)}
+			<div class="space-y-2">
+				{#each SUGGESTIONS.filter(s => s.features.length > 0) as suggestion}
+					{@const isAdopted = adoptedFrom === suggestion.label && !isCustomized}
+					{@const isExpanded = expandedSuggestion === suggestion.label}
+					<div
+						class="rounded-lg border transition
+							{isAdopted
+							? 'border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20'
+							: isCustomized
+								? 'border-gray-200 dark:border-gray-700 opacity-50'
+								: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
 					>
-						{suggestion.label}
-					</button>
+						<button
+							type="button"
+							on:click={() => toggleSuggestion(suggestion.label)}
+							class="w-full flex items-center justify-between px-4 py-2.5 text-left"
+						>
+							<span class="text-sm font-medium {isAdopted ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}">
+								{suggestion.label}
+								{#if isAdopted}
+									<span class="ml-1.5 text-xs font-normal text-blue-500 dark:text-blue-400">(active)</span>
+								{/if}
+							</span>
+							<span class="text-gray-400 dark:text-gray-500 text-xs transition-transform {isExpanded ? 'rotate-180' : ''}">
+								&#9662;
+							</span>
+						</button>
+
+						{#if isExpanded}
+							<div class="px-4 pb-3 border-t border-gray-100 dark:border-gray-700/50 pt-2">
+								<ul class="space-y-1 mb-3">
+									{#each suggestion.features as feature}
+										<li class="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+											<span class="text-gray-300 dark:text-gray-600 mt-0.5 shrink-0">&#8226;</span>
+											<span>{feature}</span>
+										</li>
+									{/each}
+								</ul>
+								<button
+									type="button"
+									disabled={isAdopted}
+									on:click={() => adoptSuggestion(suggestion)}
+									class="w-full py-1.5 rounded-md text-xs font-medium transition
+										{isAdopted
+										? 'bg-blue-100 dark:bg-blue-900/30 text-blue-400 dark:text-blue-500 cursor-default'
+										: 'bg-blue-600 text-white hover:bg-blue-700'}"
+								>
+									{isAdopted ? 'Currently Active' : 'Adopt'}
+								</button>
+							</div>
+						{/if}
+					</div>
 				{/each}
 			</div>
-			{#if isCustomized}
+			{#if isCustomized && adoptedFeatures.length > 0}
 				<button
 					type="button"
-					on:click={resetToPreset}
+					on:click={revertToPreset}
 					class="mt-2 text-xs text-blue-500 dark:text-blue-400 hover:underline"
 				>
-					↩ Reset to quick options
+					Revert to {adoptedFrom}
 				</button>
 			{/if}
 		</div>

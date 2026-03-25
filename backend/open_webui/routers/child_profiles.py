@@ -15,6 +15,7 @@ from open_webui.models.child_profiles import (
     ChildProfileModel,
     ChildProfileForm,
     WhitelistUpdateForm,
+    ChatTopicsCacheForm,
     ChildProfiles,
 )
 from open_webui.models.users import UserModel
@@ -219,6 +220,40 @@ async def patch_child_profile_whitelist(
         raise
     except Exception as e:
         log.error(f"Error updating whitelist for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/child-profiles/{profile_id}/chat-topics")
+async def get_chat_topics_cache(
+    profile_id: str, current_user: UserModel = Depends(get_verified_user)
+):
+    """Get the cached chat topics for a child profile."""
+    try:
+        cache = ChildProfiles.get_chat_topics_cache(profile_id, current_user.id)
+        return {"cache": cache}
+    except Exception as e:
+        log.error(f"Error getting chat topics cache for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch("/child-profiles/{profile_id}/chat-topics")
+async def update_chat_topics_cache(
+    profile_id: str,
+    form_data: ChatTopicsCacheForm,
+    current_user: UserModel = Depends(get_verified_user),
+):
+    """Save updated chat topics cache for a child profile."""
+    try:
+        profile = ChildProfiles.update_chat_topics_cache(
+            profile_id, current_user.id, form_data.cache
+        )
+        if not profile:
+            raise HTTPException(status_code=404, detail="Child profile not found")
+        return {"cache": profile.chat_topics_cache}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error updating chat topics cache for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

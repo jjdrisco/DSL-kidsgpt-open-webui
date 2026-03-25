@@ -273,6 +273,47 @@ export const getMyWhitelist = async (token: string = ''): Promise<string[]> => {
 	}
 };
 
+export const getChatTopicsCache = async (token: string = '', profileId: string) => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/child-profiles/${profileId}/chat-topics`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+		if (!res.ok) return null;
+		const data = await res.json();
+		return data?.cache ?? null;
+	} catch {
+		return null;
+	}
+};
+
+export const updateChatTopicsCache = async (
+	token: string = '',
+	profileId: string,
+	cache: object
+) => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/child-profiles/${profileId}/chat-topics`, {
+			method: 'PATCH',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ cache })
+		});
+		if (!res.ok) return null;
+		const data = await res.json();
+		return data?.cache ?? null;
+	} catch {
+		return null;
+	}
+};
+
 export const updateChildProfileWhitelist = async (
 	token: string = '',
 	profileId: string,

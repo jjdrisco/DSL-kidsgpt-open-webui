@@ -900,6 +900,7 @@
 						</Tooltip>
 					</div>
 
+					{#if sidebarCurrentChild}
 					<div>
 						<Tooltip content={$i18n.t('Whitelist Sandbox')} placement="right">
 							<a
@@ -921,9 +922,35 @@
 							</a>
 						</Tooltip>
 					</div>
+
+					<div>
+						<Tooltip content={$i18n.t('Chat Topics')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/parent/chat-topics"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/parent/chat-topics');
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('Chat Topics')}
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4.5">
+										<path fill-rule="evenodd" d="M3.43 2.524A41.29 41.29 0 0110 2c2.236 0 4.43.18 6.57.524 1.437.231 2.43 1.49 2.43 2.902v5.148c0 1.413-.993 2.67-2.43 2.902a41.202 41.202 0 01-5.183.501l-2.7 2.7A.75.75 0 017.5 16.06v-2.525c-.834-.054-1.663-.13-2.486-.228C3.622 13.076 2.5 11.82 2.5 10.406V5.426c0-1.413.993-2.67 2.43-2.902h.5z" clip-rule="evenodd" />
+										<path d="M6 8.5a1 1 0 100-2 1 1 0 000 2zm4 0a1 1 0 100-2 1 1 0 000 2zm4 0a1 1 0 100-2 1 1 0 000 2z" />
+									</svg>
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
 				{/if}
 
-				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+				{#if ($config?.features?.enable_notes ?? false) && $user?.role !== 'child' && $user?.role !== 'parent' && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
 							<a
@@ -1421,6 +1448,7 @@
 							</a>
 						</div>
 
+						{#if sidebarCurrentChild}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-whitelist-sandbox-button"
@@ -1441,6 +1469,31 @@
 								</div>
 							</a>
 						</div>
+
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-chat-topics-button"
+								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+								href="/parent/chat-topics"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Chat Topics')}
+							>
+								<div class="self-center">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4.5">
+										<path fill-rule="evenodd" d="M3.43 2.524A41.29 41.29 0 0110 2c2.236 0 4.43.18 6.57.524 1.437.231 2.43 1.49 2.43 2.902v5.148c0 1.413-.993 2.67-2.43 2.902a41.202 41.202 0 01-5.183.501l-2.7 2.7A.75.75 0 017.5 16.06v-2.525c-.834-.054-1.663-.13-2.486-.228C3.622 13.076 2.5 11.82 2.5 10.406V5.426c0-1.413.993-2.67 2.43-2.902h.5z" clip-rule="evenodd" />
+										<path d="M6 8.5a1 1 0 100-2 1 1 0 000 2zm4 0a1 1 0 100-2 1 1 0 000 2zm4 0a1 1 0 100-2 1 1 0 000 2z" />
+									</svg>
+								</div>
+
+								<div class="flex flex-1 self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">
+										{$i18n.t('Chat Topics')}
+									</div>
+								</div>
+							</a>
+						</div>
+					{/if}
 					{/if}
 
 					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}

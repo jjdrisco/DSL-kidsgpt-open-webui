@@ -34,6 +34,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
+from open_webui.models.users import Users
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +78,60 @@ def get_session_user_chat_list(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# GetChildChats (parent reads child's chat history)
+############################
+
+
+@router.get("/child/{child_user_id}", response_model=list[ChatResponse])
+def get_child_chats_for_parent(
+    child_user_id: str,
+    since: Optional[int] = 0,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Let a parent fetch their child's chats for topic extraction.
+
+    Args:
+        child_user_id: The child's user account ID.
+        since: Epoch nanosecond timestamp — only return chats updated after this.
+    """
+    if user.role not in ("parent", "prolific", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only parent accounts can access child chats",
+        )
+
+    # Verify the child belongs to this parent
+    child_user = Users.get_user_by_id(child_user_id, db=db)
+    if not child_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child user not found",
+        )
+    if user.role != "admin" and getattr(child_user, "parent_id", None) != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this child's chats",
+        )
+
+    try:
+        chat_filter = {}
+        if since and since > 0:
+            chat_filter["updated_at"] = since
+
+        result = Chats.get_chats_by_user_id(
+            child_user_id, filter=chat_filter if chat_filter else None, db=db
+        )
+        return [ChatResponse(**chat.model_dump()) for chat in result.items]
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
         )
 
 
