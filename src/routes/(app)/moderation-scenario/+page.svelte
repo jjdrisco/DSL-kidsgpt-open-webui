@@ -917,10 +917,8 @@
 				// Assign scenarios one by one using weighted sampling
 				const basePairs: Array<[string, string]> = [];
 				const baseIdentifiers: string[] = [];
-				const assignmentMap: Map<
-					number,
-					{ assignment_id: string; scenario_id: string }
-				> = new Map();
+				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> =
+					new Map();
 
 				for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
 					try {
@@ -1037,8 +1035,7 @@
 		highlightedTexts1.every((h) => {
 			const ids = highlightConcerns[h.text] ?? [];
 			return (
-				ids.length > 0 &&
-				ids.every((id) => (concernHighlightLevels[h.text]?.[id] ?? null) !== null)
+				ids.length > 0 && ids.every((id) => (concernHighlightLevels[h.text]?.[id] ?? null) !== null)
 			);
 		});
 
@@ -1289,9 +1286,7 @@
 	// Reactive computation for current scenario completion
 	// Scenario is completed if: marked as not applicable OR a version has been confirmed (including accept original = -1)
 	$: currentScenarioCompleted = (() => {
-		const completed =
-			markedNotApplicable ||
-			confirmedVersionIndex !== null;
+		const completed = markedNotApplicable || confirmedVersionIndex !== null;
 		console.log('Reactive: currentScenarioCompleted =', completed, {
 			markedNotApplicable,
 			confirmedVersionIndex
@@ -5818,7 +5813,7 @@
 								</div>
 							</div>
 						{:else if !isCustomScenario || customScenarioGenerated}
-								<!-- Child Prompt Bubble -->
+							<!-- Child Prompt Bubble -->
 							<div class="flex justify-end">
 								<!-- 
 						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
@@ -5977,7 +5972,9 @@
 										class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
 											? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all'
 											: ''}"
-										title={isHighlightingEnabled ? 'Drag over text to highlight what stands out' : ''}
+										title={isHighlightingEnabled
+											? 'Drag over text to highlight what stands out'
+											: ''}
 									>
 										{#if isHighlightingEnabled && highlightedTexts1.length === 0}
 											<div
@@ -6244,8 +6241,8 @@
 												</div>
 
 												<p class="text-base text-gray-600 dark:text-gray-400 mb-4">
-													For each highlighted passage, rate how you feel about it and explain why. You
-													can reuse a reason across multiple highlights. <strong>Note:</strong> Please
+													For each highlighted passage, rate how you feel about it and explain why.
+													You can reuse a reason across multiple highlights. <strong>Note:</strong> Please
 													rate and explain each highlighted passage separately.
 												</p>
 
@@ -6878,7 +6875,9 @@
 																						on:click={() => toggleModerationSelection(option)}
 																						disabled={moderationLoading}
 																						aria-pressed={selectedModerations.has(option)}
-																						class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {selectedModerations.has(option)
+																						class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {selectedModerations.has(
+																							option
+																						)
 																							? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
 																							: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
 																					>
@@ -7042,8 +7041,7 @@
 													<div class="flex space-x-3">
 														<button
 															on:click={applySelectedModerations}
-															disabled={moderationLoading ||
-																selectedModerations.size === 0}
+															disabled={moderationLoading || selectedModerations.size === 0}
 															class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 														>
 															{#if moderationLoading}
@@ -7347,7 +7345,9 @@
 																	on:click={() => toggleModerationSelection(option)}
 																	disabled={moderationLoading}
 																	aria-pressed={selectedModerations.has(option)}
-																	class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {selectedModerations.has(option)
+																	class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {selectedModerations.has(
+																		option
+																	)
 																		? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
 																		: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
 																>
@@ -7504,8 +7504,7 @@
 								<!-- Apply Button -->
 								<button
 									on:click={applySelectedModerations}
-									disabled={moderationLoading ||
-										selectedModerations.size === 0}
+									disabled={moderationLoading || selectedModerations.size === 0}
 									class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 								>
 									{#if moderationLoading}

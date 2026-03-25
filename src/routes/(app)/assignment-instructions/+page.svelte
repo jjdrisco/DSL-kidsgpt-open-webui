@@ -149,10 +149,11 @@
 
 			<!-- Task Steps (condensed) -->
 			<p class="text-gray-600 dark:text-gray-300 mb-4">
-				This study has three consecutive tasks: create a child profile, review example
-				AI responses, and finally complete a short exit survey. When reviewing, highlight anything
-				that stands out to you — positive or negative — and explain why. If a scenario isn’t
-				relevant, simply click <em>Skip</em> and move on.
+				This study has three consecutive tasks: create a child profile, review example AI responses,
+				and finally complete a short exit survey. When reviewing, highlight anything that stands out
+				to you — positive or negative — and explain why. If a scenario isn’t relevant, simply click <em
+					>Skip</em
+				> and move on.
 			</p>
 
 			<!-- Help Videos Notice (trimmed) -->

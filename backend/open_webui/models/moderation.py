@@ -34,7 +34,9 @@ class ModerationSession(Base):
     is_final_version = Column(Boolean, nullable=False, default=False)
 
     # Pre-moderation judgment fields (Step 2)
-    concern_level = Column(Integer, nullable=True)  # 1-7 bipolar scale (1=Very negative, 4=Neutral, 7=Very positive)
+    concern_level = Column(
+        Integer, nullable=True
+    )  # 1-7 bipolar scale (1=Very negative, 4=Neutral, 7=Very positive)
     concern_reason = Column(Text, nullable=True)  # Step 2: Parent's reasoning
     # Note: would_show_child column was removed (migration 84b2215f7772) - it existed in DB but not in model
 
