@@ -811,6 +811,7 @@
 																				<tr class="bg-gray-50 dark:bg-gray-800">
 																					<td colspan="6" class="px-4 py-3">
 																						<div class="space-y-3">
+																							{#if row.strategies && row.strategies.length > 0}
 																								<div>
 																									<span
 																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"
