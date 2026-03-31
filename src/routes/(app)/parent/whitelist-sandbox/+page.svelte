@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import { updateChildProfileWhitelist } from '$lib/apis/child-profiles';
 
@@ -16,13 +18,9 @@
 			if (match?.name) childName = match.name;
 			if (match?.child_age) childAge = match.child_age;
 			if (match?.id) profileId = match.id;
-			// Pre-populate whitelist from saved profile if available
 			if (match?.selected_features && match.selected_features.length > 0) {
 				features = [...match.selected_features];
-				const matchingPreset = SUGGESTIONS.find(
-					(s) => JSON.stringify(s.features) === JSON.stringify(features)
-				);
-				adoptedFrom = matchingPreset ? matchingPreset.label : '✏️ Custom / DIY';
+				savedFeatures = [...match.selected_features];
 			}
 		} catch (e) {
 			console.warn('[Sandbox] Could not load child profile:', e);
@@ -82,39 +80,30 @@
 	];
 
 	// ─── State ────────────────────────────────────────────────────────────────
-	let features: string[] = [...SUGGESTIONS[0].features];
-	let adoptedFrom: string = SUGGESTIONS[0].label;
+	let features: string[] = [];
+	let savedFeatures: string[] = [];
 	let expandedSuggestion: string | null = null;
 	let newFeatureText: string = '';
 
-	// True when the feature list has diverged from the adopted preset.
-	$: adoptedFeatures = SUGGESTIONS.find((s) => s.label === adoptedFrom)?.features ?? [];
-	$: isCustomized = JSON.stringify(features) !== JSON.stringify(adoptedFeatures);
+	$: hasUnsavedChanges = JSON.stringify(features) !== JSON.stringify(savedFeatures);
 
-	// ─── Auto-save status ─────────────────────────────────────────────────────
+	// ─── Save ─────────────────────────────────────────────────────────────────
 	type SaveStatus = 'idle' | 'saving' | 'saved';
 	let saveStatus: SaveStatus = 'idle';
-	let saveTimer: ReturnType<typeof setTimeout> | null = null;
-	let savedClearTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function scheduleSave() {
-		if (!profileId) return;
-		if (saveTimer) clearTimeout(saveTimer);
-		if (savedClearTimer) clearTimeout(savedClearTimer);
-		saveStatus = 'saving';
-		saveTimer = setTimeout(persistWhitelist, 800);
-	}
-
-	async function persistWhitelist() {
-		if (!profileId) return;
+	async function saveWhitelist() {
+		if (!profileId || !hasUnsavedChanges) return;
 		try {
+			saveStatus = 'saving';
 			const token = localStorage.getItem('token') ?? '';
 			await updateChildProfileWhitelist(token, profileId, features);
+			savedFeatures = [...features];
 			saveStatus = 'saved';
-			savedClearTimer = setTimeout(() => (saveStatus = 'idle'), 2500);
+			setTimeout(() => (saveStatus = 'idle'), 2500);
 		} catch (e) {
 			console.error('[Sandbox] Failed to save whitelist:', e);
 			saveStatus = 'idle';
+			toast.error('Failed to save whitelist');
 		}
 	}
 
@@ -155,21 +144,11 @@
 
 	function adoptSuggestion(suggestion: { label: string; features: string[] }) {
 		features = [...suggestion.features];
-		adoptedFrom = suggestion.label;
 		expandedSuggestion = null;
-		scheduleSave();
-	}
-
-	function revertToPreset() {
-		const preset = SUGGESTIONS.find((s) => s.label === adoptedFrom);
-		if (!preset) return;
-		features = [...preset.features];
-		scheduleSave();
 	}
 
 	function removeFeature(index: number) {
 		features = features.filter((_, i) => i !== index);
-		scheduleSave();
 	}
 
 	function addFeature() {
@@ -178,7 +157,6 @@
 		features = [...features, trimmed];
 		newFeatureText = '';
 		addInput?.focus();
-		scheduleSave();
 	}
 
 	function handleAddKeydown(e: KeyboardEvent) {
@@ -190,7 +168,6 @@
 
 	function updateFeature(index: number, value: string) {
 		features = features.map((f, i) => (i === index ? value : f));
-		scheduleSave();
 	}
 
 	// ─── Chat helpers ─────────────────────────────────────────────────────────
@@ -337,14 +314,23 @@
 					Define what topics and content your child's AI can discuss.
 				</p>
 			</div>
-			<div class="shrink-0 mt-1.5 text-xs font-medium min-w-[56px] text-right">
+			<div class="shrink-0 mt-1.5 flex items-center gap-2">
 				{#if saveStatus === 'saving'}
-					<span class="text-gray-400 dark:text-gray-500">Saving…</span>
+					<span class="text-xs text-gray-400 dark:text-gray-500">Saving…</span>
 				{:else if saveStatus === 'saved'}
-					<span class="text-green-500 dark:text-green-400">Saved ✓</span>
-				{:else}
-					<span class="text-gray-300 dark:text-gray-600">Auto-save on</span>
+					<span class="text-xs text-green-500 dark:text-green-400">Saved</span>
 				{/if}
+				<button
+					type="button"
+					on:click={saveWhitelist}
+					disabled={!hasUnsavedChanges || saveStatus === 'saving'}
+					class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+						{hasUnsavedChanges
+						? 'bg-blue-600 text-white hover:bg-blue-700'
+						: 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}"
+				>
+					Save
+				</button>
 			</div>
 		</div>
 
@@ -357,26 +343,20 @@
 			</p>
 			<div class="space-y-2">
 				{#each SUGGESTIONS.filter(s => s.features.length > 0) as suggestion}
-					{@const isAdopted = adoptedFrom === suggestion.label && !isCustomized}
 					{@const isExpanded = expandedSuggestion === suggestion.label}
 					<div
 						class="rounded-lg border transition
-							{isAdopted
-							? 'border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20'
-							: isCustomized
-								? 'border-gray-200 dark:border-gray-700 opacity-50'
-								: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
+							{hasUnsavedChanges
+							? 'border-gray-200 dark:border-gray-700 opacity-40 pointer-events-none'
+							: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
 					>
 						<button
 							type="button"
 							on:click={() => toggleSuggestion(suggestion.label)}
 							class="w-full flex items-center justify-between px-4 py-2.5 text-left"
 						>
-							<span class="text-sm font-medium {isAdopted ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}">
+							<span class="text-sm font-medium text-gray-700 dark:text-gray-200">
 								{suggestion.label}
-								{#if isAdopted}
-									<span class="ml-1.5 text-xs font-normal text-blue-500 dark:text-blue-400">(active)</span>
-								{/if}
 							</span>
 							<span class="text-gray-400 dark:text-gray-500 text-xs transition-transform {isExpanded ? 'rotate-180' : ''}">
 								&#9662;
@@ -395,38 +375,41 @@
 								</ul>
 								<button
 									type="button"
-									disabled={isAdopted}
-									on:click={() => adoptSuggestion(suggestion)}
-									class="w-full py-1.5 rounded-md text-xs font-medium transition
-										{isAdopted
-										? 'bg-blue-100 dark:bg-blue-900/30 text-blue-400 dark:text-blue-500 cursor-default'
-										: 'bg-blue-600 text-white hover:bg-blue-700'}"
+									on:click|stopPropagation={() => adoptSuggestion(suggestion)}
+									class="w-full py-1.5 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition"
 								>
-									{isAdopted ? 'Currently Active' : 'Adopt'}
+									Adopt this preset
 								</button>
 							</div>
 						{/if}
 					</div>
 				{/each}
 			</div>
-			{#if isCustomized && adoptedFeatures.length > 0}
-				<button
-					type="button"
-					on:click={revertToPreset}
-					class="mt-2 text-xs text-blue-500 dark:text-blue-400 hover:underline"
-				>
-					Revert to {adoptedFrom}
-				</button>
+			{#if hasUnsavedChanges}
+				<p class="mt-2 text-xs text-amber-500 dark:text-amber-400">
+					Save or discard your changes before adopting a preset.
+				</p>
 			{/if}
 		</div>
 
 		<!-- Feature bullet list -->
 		<div class="px-6 pt-5 flex flex-col flex-1">
-			<p
-				class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
-			>
-				Approved Features
-			</p>
+			<div class="flex items-center justify-between mb-3">
+				<p
+					class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+				>
+					Approved Features
+				</p>
+				{#if features.length > 0}
+					<button
+						type="button"
+						on:click={() => { features = []; }}
+						class="text-xs text-red-400 hover:text-red-500 dark:text-red-500 dark:hover:text-red-400 transition"
+					>
+						Clear all
+					</button>
+				{/if}
+			</div>
 
 			<ul class="space-y-2 mb-4">
 				{#each features as feature, i}
@@ -512,7 +495,13 @@
 							? 'bg-blue-600 text-white rounded-br-sm'
 							: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm'}"
 					>
-						{msg.content}
+						{#if msg.role === 'assistant'}
+							<div class="prose prose-sm dark:prose-invert max-w-none">
+								{@html DOMPurify.sanitize(marked.parse(msg.content))}
+							</div>
+						{:else}
+							{msg.content}
+						{/if}
 					</div>
 				</div>
 			{/each}

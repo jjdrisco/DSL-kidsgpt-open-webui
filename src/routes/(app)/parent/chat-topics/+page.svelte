@@ -359,13 +359,20 @@ Return ONLY valid JSON in the same format: { "topics": [{ "topic": string, "deta
 	}
 
 	async function addToWhitelist(topicLabel: string) {
-		if (!selectedProfileId) return;
+		console.log('[ChatTopics] addToWhitelist called, selectedProfileId:', selectedProfileId, 'topic:', topicLabel);
+		if (!selectedProfileId) {
+			toast.error('No profile selected');
+			return;
+		}
 		try {
 			const token = localStorage.getItem('token') ?? '';
 			await refreshWhitelist();
+			console.log('[ChatTopics] Current whitelist after refresh:', whitelist);
 			const updated = [...whitelist, topicLabel];
+			console.log('[ChatTopics] Saving updated whitelist:', updated);
 			await updateChildProfileWhitelist(token, selectedProfileId, updated);
 			whitelist = updated;
+			console.log('[ChatTopics] Whitelist saved successfully');
 			toast.success(`Added "${topicLabel}" to whitelist`);
 		} catch (e) {
 			console.error('[ChatTopics] Error adding to whitelist:', e);
