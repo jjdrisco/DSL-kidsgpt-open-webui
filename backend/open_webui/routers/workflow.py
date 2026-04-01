@@ -243,9 +243,8 @@ async def get_workflow_state(
                 )
 
             # All scenarios completed but user hasn't clicked "Done" yet
-            if (
-                user_type == "interviewee"
-                and not progress.get("moderation_finalized", False)
+            if user_type == "interviewee" and not progress.get(
+                "moderation_finalized", False
             ):
                 return WorkflowStateResponse(
                     next_route="/moderation-scenario",

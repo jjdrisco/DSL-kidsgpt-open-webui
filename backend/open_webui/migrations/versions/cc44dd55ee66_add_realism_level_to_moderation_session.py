@@ -1,7 +1,7 @@
 """Add realism_level column to moderation_session
 
 Revision ID: cc44dd55ee66
-Revises: 7b3e2c9f1d04, add_attempt_number_to_assignment_activity
+Revises: 7b3e2c9f1d04
 Create Date: 2026-03-31 00:00:00.000000
 """
 
@@ -25,9 +25,7 @@ def upgrade() -> None:
 
     if "realism_level" not in existing_columns:
         with op.batch_alter_table("moderation_session") as batch_op:
-            batch_op.add_column(
-                sa.Column("realism_level", sa.Integer(), nullable=True)
-            )
+            batch_op.add_column(sa.Column("realism_level", sa.Integer(), nullable=True))
 
 
 def downgrade() -> None:

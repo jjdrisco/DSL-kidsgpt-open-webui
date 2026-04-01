@@ -2129,10 +2129,7 @@
 	 * Used for backward compat / attention check flow.
 	 */
 	function addConcernItem() {
-		concernMappings = [
-			...concernMappings,
-			{ id: crypto.randomUUID(), text: '' }
-		];
+		concernMappings = [...concernMappings, { id: crypto.randomUUID(), text: '' }];
 	}
 
 	/**
@@ -3107,9 +3104,7 @@
 					);
 					derived[hText] =
 						values.length > 0
-							? values.reduce((ext, v) =>
-									Math.abs(v - 4) > Math.abs(ext - 4) ? v : ext
-								)
+							? values.reduce((ext, v) => (Math.abs(v - 4) > Math.abs(ext - 4) ? v : ext))
 							: null;
 				}
 				highlightRatings = derived;
@@ -6376,8 +6371,7 @@
 
 																<!-- Highlight-level sentiment rating -->
 																<div class="mt-2 mb-3">
-																	<span
-																		class="text-sm font-medium text-gray-600 dark:text-gray-400"
+																	<span class="text-sm font-medium text-gray-600 dark:text-gray-400"
 																		>How do you feel about this for your child?</span
 																	>
 																	<div class="flex flex-wrap gap-1.5 mt-1">

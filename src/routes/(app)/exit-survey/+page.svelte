@@ -998,8 +998,8 @@
 						<!-- 6. Attention Check -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								6. This question is an attention check. To show you are reading carefully,
-								please select 'Strongly disagree' below. <span class="text-red-500">*</span>
+								6. This question is an attention check. To show you are reading carefully, please
+								select 'Strongly disagree' below. <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
