@@ -2109,6 +2109,17 @@
 	}
 
 	/**
+	 * Remove a highlight and clean up its associated rating and concern links.
+	 */
+	function removeHighlightWithCleanup(highlight: HighlightInfo) {
+		removeHighlight(highlight);
+		const { [highlight.text]: _r, ...restRatings } = highlightRatings;
+		highlightRatings = restRatings;
+		const { [highlight.text]: _c, ...restConcerns } = highlightConcerns;
+		highlightConcerns = restConcerns;
+	}
+
+	/**
 	 * Add a new concern to the shared pool and immediately link it to the given highlight.
 	 * The new concern text is taken from newConcernInputs[highlightText].
 	 */
@@ -6363,10 +6374,30 @@
 																		{hIdx + 1}
 																	</span>
 																	<span
-																		class="text-base text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed"
+																		class="flex-1 text-base text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed"
 																	>
 																		"{highlight.text}"
 																	</span>
+																	<button
+																		type="button"
+																		on:click={() => removeHighlightWithCleanup(highlight)}
+																		class="text-red-400 hover:text-red-600 flex-shrink-0 mt-0.5"
+																		title="Remove highlight"
+																	>
+																		<svg
+																			class="w-4 h-4"
+																			fill="none"
+																			stroke="currentColor"
+																			viewBox="0 0 24 24"
+																		>
+																			<path
+																				stroke-linecap="round"
+																				stroke-linejoin="round"
+																				stroke-width="2"
+																				d="M6 18L18 6M6 6l12 12"
+																			/>
+																		</svg>
+																	</button>
 																</div>
 
 																<!-- Highlight-level sentiment rating -->
