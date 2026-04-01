@@ -55,6 +55,7 @@ class ModerationSessionPayload(BaseModel):
     initial_decision: Optional[str] = None
     concern_level: Optional[int] = None
     concern_reason: Optional[str] = None
+    realism_level: Optional[int] = None
     satisfaction_level: Optional[int] = None
     satisfaction_reason: Optional[str] = None
     next_action: Optional[str] = None
@@ -95,6 +96,7 @@ async def create_or_update_session(
             initial_decision=form_data.initial_decision,
             concern_level=form_data.concern_level,
             concern_reason=form_data.concern_reason,
+            realism_level=form_data.realism_level,
             satisfaction_level=form_data.satisfaction_level,
             satisfaction_reason=form_data.satisfaction_reason,
             next_action=form_data.next_action,
@@ -965,6 +967,7 @@ class SessionActivityPayload(BaseModel):
     user_id: str
     child_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
 
@@ -982,6 +985,7 @@ async def post_session_activity(
             user_id=payload.user_id,
             child_id=payload.child_id,
             session_number=payload.session_number,
+            attempt_number=payload.attempt_number or 1,
             active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
         )
         return ModerationSessionActivities.add_activity(form)

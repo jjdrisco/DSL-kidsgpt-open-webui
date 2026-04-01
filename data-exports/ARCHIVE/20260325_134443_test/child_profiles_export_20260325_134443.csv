@@ -1,0 +1,2 @@
+id,user_id,name,child_age,child_gender,child_characteristics,is_only_child,child_has_ai_use,child_ai_use_contexts,child_internet_use_frequency,parent_llm_monitoring_level,attempt_number,is_current,session_number,created_at,updated_at,user_name,user_email,user_role,prolific_pid,user_session_number,consent_given
+9cba03d8-f84d-496a-ab91-8eeea2da3b4d,049107f9-6b9a-4dd1-9f49-bad7ad65b33e,test,10 years old,Male,,,,null,8,,1,True,1,1774471023920519817,1774471023920519817,3,prolific_3@prolific.study,prolific,,2,True

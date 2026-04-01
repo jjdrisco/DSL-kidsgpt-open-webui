@@ -1,0 +1,3 @@
+id,email,username,role,name,prolific_pid,study_id,current_session_id,session_number,consent_given,parent_id,last_active_at,created_at,updated_at,workflow_reset_at,instructions_completed_at,current_attempt_number
+54dedb5f-441c-4ddf-8d6a-37ca25c45195,childai.research.ucsd@gmail.com,,admin,Admin,3,,,1,True,,1774471066,1774470952,1774471038,,,
+049107f9-6b9a-4dd1-9f49-bad7ad65b33e,prolific_3@prolific.study,,prolific,3,,,1,2,True,,1774471472,1774471013,1774471074,,1774471017490,1

@@ -21,6 +21,7 @@
 		genaiUsageFrequency: '',
 		parentInternetUseFrequency: '', // 1 (never) to 8 (several times per day)
 		parentingStyle: [], // Changed to array for multi-select
+		attentionCheck: '',
 		// Child profile research fields
 		isOnlyChild: '',
 		childHasAIUse: '',
@@ -155,6 +156,7 @@
 			: ans.parentingStyle
 				? [ans.parentingStyle]
 				: [];
+		surveyResponses.attentionCheck = (ans.attentionCheck as string) || '';
 		// Child profile research fields
 		surveyResponses.isOnlyChild = (ans.isOnlyChild as string) || '';
 		surveyResponses.childHasAIUse = (ans.childHasAIUse as string) || '';
@@ -271,6 +273,10 @@
 				toast.error('Please select how often you use the Internet');
 				return;
 			}
+			if (!surveyResponses.attentionCheck) {
+				toast.error('Please answer the attention check question');
+				return;
+			}
 			if (!surveyResponses.parentEthnicity || surveyResponses.parentEthnicity.length === 0) {
 				toast.error('Please select at least one ethnicity');
 				return;
@@ -312,6 +318,7 @@
 				genaiUsageFrequency: surveyResponses.genaiUsageFrequency,
 				parentInternetUseFrequency: surveyResponses.parentInternetUseFrequency,
 				parentingStyle: surveyResponses.parentingStyle, // Now an array
+				attentionCheck: surveyResponses.attentionCheck,
 				// Child profile research fields
 				isOnlyChild: surveyResponses.isOnlyChild,
 				childHasAIUse: surveyResponses.childHasAIUse,
@@ -606,6 +613,14 @@
 								surveyResponses.parentEthnicity.length > 0
 									? surveyResponses.parentEthnicity.join(', ')
 									: 'Not specified'}
+							</p>
+						</div>
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Attention Check
+							</div>
+							<p class="text-gray-900 dark:text-white">
+								{surveyResponses.attentionCheck || 'Not specified'}
 							</p>
 						</div>
 						<!-- Child Profile Research Fields -->
@@ -980,10 +995,70 @@
 							</div>
 						</div>
 
-						<!-- 6. Parent Age -->
+						<!-- 6. Attention Check -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								6. What is your age range? <span class="text-red-500">*</span>
+								6. This question is an attention check. To show you are reading carefully,
+								please select 'Strongly disagree' below. <span class="text-red-500">*</span>
+							</div>
+							<div class="space-y-2">
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={surveyResponses.attentionCheck}
+										value="strongly_agree"
+										class="mr-3"
+										id="attention-check-strongly-agree"
+									/>
+									<span class="text-gray-900 dark:text-white">Strongly agree</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={surveyResponses.attentionCheck}
+										value="agree"
+										class="mr-3"
+										id="attention-check-agree"
+									/>
+									<span class="text-gray-900 dark:text-white">Agree</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={surveyResponses.attentionCheck}
+										value="neutral"
+										class="mr-3"
+										id="attention-check-neutral"
+									/>
+									<span class="text-gray-900 dark:text-white">Neutral</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={surveyResponses.attentionCheck}
+										value="disagree"
+										class="mr-3"
+										id="attention-check-disagree"
+									/>
+									<span class="text-gray-900 dark:text-white">Disagree</span>
+								</label>
+								<label class="flex items-center">
+									<input
+										type="radio"
+										bind:group={surveyResponses.attentionCheck}
+										value="strongly_disagree"
+										class="mr-3"
+										id="attention-check-strongly-disagree"
+									/>
+									<span class="text-gray-900 dark:text-white">Strongly disagree</span>
+								</label>
+							</div>
+						</div>
+
+						<!-- 7. Parent Age -->
+						<div>
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+								7. What is your age range? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -1059,10 +1134,10 @@
 							</div>
 						</div>
 
-						<!-- 7. Area of Residency -->
+						<!-- 8. Area of Residency -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								7. What type of area do you live in? <span class="text-red-500">*</span>
+								8. What type of area do you live in? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -1108,10 +1183,10 @@
 							</div>
 						</div>
 
-						<!-- 8. Parent Education -->
+						<!-- 9. Parent Education -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								8. What is your highest level of education? <span class="text-red-500">*</span>
+								9. What is your highest level of education? <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
@@ -1189,10 +1264,10 @@
 							</div>
 						</div>
 
-						<!-- 9. Parent Ethnicity -->
+						<!-- 10. Parent Ethnicity -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								9. What is your ethnicity? (Select all that apply) <span class="text-red-500"
+								10. What is your ethnicity? (Select all that apply) <span class="text-red-500"
 									>*</span
 								>
 							</div>

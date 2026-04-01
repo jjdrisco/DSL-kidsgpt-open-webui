@@ -38,6 +38,9 @@ class ModerationSession(Base):
         Integer, nullable=True
     )  # 1-7 bipolar scale (1=Very negative, 4=Neutral, 7=Very positive)
     concern_reason = Column(Text, nullable=True)  # Step 2: Parent's reasoning
+    realism_level = Column(
+        Integer, nullable=True
+    )  # 1-7 Likert (1=Very Unrealistic, 7=Very Realistic)
     # Note: would_show_child column was removed (migration 84b2215f7772) - it existed in DB but not in model
 
     # Step 3: Satisfaction check fields
@@ -107,6 +110,7 @@ class ModerationSessionModel(BaseModel):
     is_final_version: bool
     concern_level: Optional[int] = None
     concern_reason: Optional[str] = None
+    realism_level: Optional[int] = None
     satisfaction_level: Optional[int] = None
     satisfaction_reason: Optional[str] = None
     next_action: Optional[str] = None
@@ -139,6 +143,7 @@ class ModerationSessionForm(BaseModel):
     initial_decision: Optional[str] = None
     concern_level: Optional[int] = None
     concern_reason: Optional[str] = None
+    realism_level: Optional[int] = None
     satisfaction_level: Optional[int] = None
     satisfaction_reason: Optional[str] = None
     next_action: Optional[str] = None
@@ -291,6 +296,7 @@ class ModerationSessionTable:
                 obj.initial_decision = form.initial_decision
                 obj.concern_level = form.concern_level
                 obj.concern_reason = form.concern_reason
+                obj.realism_level = form.realism_level
                 obj.satisfaction_level = form.satisfaction_level
                 obj.satisfaction_reason = form.satisfaction_reason
                 obj.next_action = form.next_action
@@ -346,6 +352,7 @@ class ModerationSessionTable:
                     initial_decision=form.initial_decision,
                     concern_level=form.concern_level,
                     concern_reason=form.concern_reason,
+                    realism_level=form.realism_level,
                     satisfaction_level=form.satisfaction_level,
                     satisfaction_reason=form.satisfaction_reason,
                     next_action=form.next_action,
@@ -452,16 +459,18 @@ class ModerationSessionActivity(Base):
     user_id = Column(Text, nullable=False)
     child_id = Column(Text, nullable=False)
     session_number = Column(BigInteger, nullable=False, default=1)
+    attempt_number = Column(BigInteger, nullable=True, default=1)
     active_ms_delta = Column(BigInteger, nullable=False, default=0)
     cumulative_ms = Column(BigInteger, nullable=False, default=0)
     created_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
         Index(
-            "idx_mod_activity_user_child_session",
+            "idx_mod_activity_user_child_session_attempt",
             "user_id",
             "child_id",
             "session_number",
+            "attempt_number",
         ),
         Index("idx_mod_activity_created_at", "created_at"),
     )
@@ -471,6 +480,7 @@ class ModerationSessionActivityForm(BaseModel):
     user_id: str
     child_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
 
@@ -481,6 +491,7 @@ class ModerationSessionActivityModel(BaseModel):
     user_id: str
     child_id: str
     session_number: int
+    attempt_number: Optional[int] = 1
     active_ms_delta: int
     cumulative_ms: int
     created_at: int
@@ -492,13 +503,15 @@ class ModerationSessionActivityTable:
     ) -> ModerationSessionActivityModel:
         with get_db() as db:
             ts = int(time.time() * 1000)
-            # Fetch last cumulative for this user/child/session
+            # Fetch last cumulative for this user/child/session/attempt
+            attempt = form.attempt_number or 1
             last = (
                 db.query(ModerationSessionActivity)
                 .filter(
                     ModerationSessionActivity.user_id == form.user_id,
                     ModerationSessionActivity.child_id == form.child_id,
                     ModerationSessionActivity.session_number == form.session_number,
+                    ModerationSessionActivity.attempt_number == attempt,
                 )
                 .order_by(ModerationSessionActivity.created_at.desc())
                 .first()
@@ -511,6 +524,7 @@ class ModerationSessionActivityTable:
                 user_id=form.user_id,
                 child_id=form.child_id,
                 session_number=int(form.session_number),
+                attempt_number=attempt,
                 active_ms_delta=delta,
                 cumulative_ms=incoming,
                 created_at=ts,

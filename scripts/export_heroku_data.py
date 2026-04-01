@@ -348,6 +348,7 @@ SELECT
     ata.id,
     ata.user_id,
     ata.session_number,
+    ata.attempt_number,
     ata.active_ms_delta,
     ata.cumulative_ms,
     ata.created_at,

@@ -425,6 +425,7 @@
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId,
 					session_number: sessionNumber,
+					attempt_number: currentAttemptNumber,
 					scenario_id: getCurrentScenarioId(),
 					active_ms_cumulative: sessionActiveMs
 				});
@@ -440,6 +441,7 @@
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId,
 				session_number: sessionNumber,
+				attempt_number: currentAttemptNumber,
 				scenario_id: getCurrentScenarioId(),
 				active_ms_cumulative: sessionActiveMs
 			});
@@ -684,11 +686,11 @@
 		step2Completed = false;
 		step3Completed = false;
 		concernLevel = null;
+		realismLevel = null;
 		concernMappings = [];
 		highlightConcerns = {};
 		newConcernInputs = {};
-		newConcernLevels = {};
-		concernHighlightLevels = {};
+		highlightRatings = {};
 		// showInitialDecisionPane is now derived
 		// Reset custom scenario state
 		customScenarioPrompt = '';
@@ -1031,12 +1033,11 @@
 
 	$: isAttentionCheckScenario = false;
 	$: canSubmit =
+		realismLevel !== null &&
 		highlightedTexts1.length > 0 &&
 		highlightedTexts1.every((h) => {
 			const ids = highlightConcerns[h.text] ?? [];
-			return (
-				ids.length > 0 && ids.every((id) => (concernHighlightLevels[h.text]?.[id] ?? null) !== null)
-			);
+			return (highlightRatings[h.text] ?? null) !== null && ids.length > 0;
 		});
 
 	// Custom scenario helper - reactive variable (NOT a function!)
@@ -1113,11 +1114,11 @@
 				step3Completed = false;
 				step3Completed = false;
 				concernLevel = null;
+				realismLevel = null;
 				concernMappings = [];
 				highlightConcerns = {};
 				newConcernInputs = {};
-				newConcernLevels = {};
-				concernHighlightLevels = {};
+				highlightRatings = {};
 				// showOriginal1 and showInitialDecisionPane are now derived
 
 				// Wait for DOM to update, then scroll to top after custom scenario loads
@@ -1190,9 +1191,19 @@
 	// Concern item interface for Step 2 concern enumeration + highlight matching
 	interface ConcernItem {
 		id: string;
-		text: string; // Parent's description of this specific concern
-		concernLevel: number | null; // Per-concern Likert rating (1-5)
+		text: string; // Parent's description of this specific concern (justification for highlight rating)
 	}
+
+	// Label lookup for dynamic reason prompt (maps 1-7 rating to sentiment label)
+	const ratingLabels: Record<number, string> = {
+		1: 'very negative',
+		2: 'somewhat negative',
+		3: 'slightly negative',
+		4: 'neutral',
+		5: 'slightly positive',
+		6: 'somewhat positive',
+		7: 'very positive'
+	};
 
 	// Version management interfaces
 	interface ModerationVersion {
@@ -1222,11 +1233,12 @@
 		step3Completed: boolean;
 		// Removed step4Completed - now 3-step flow
 		// Removed childAccomplish and assistantDoing - no longer collected in Step 2
-		concernLevel: number | null; // Step 2 (Assess): Concern assessment (1-5)
+		concernLevel: number | null; // Step 2 (Assess): Derived concern level (most extreme from neutral on 1-7 scale)
+		realismLevel: number | null; // Step 2: Scenario realism (1-7 Likert)
 		concernReason: string; // Step 2 (Assess): "Why?" explanation (derived from mappings)
 		concernMappings: ConcernItem[]; // Step 2 (Assess): Array of concerns with linked highlights
 		highlightConcerns: Record<string, string[]>; // Step 2 (Assess): highlight text → [concern IDs]
-		concernHighlightLevels: Record<string, Record<string, number | null>>; // per (highlight, concern) pair rating
+		highlightRatings: Record<string, number | null>; // per-highlight sentiment rating (1-7)
 		satisfactionLevel: number | null; // Step 3 (Update): Satisfaction level (1-5 Likert scale)
 		satisfactionReason: string; // Step 3 (Update): "Why?" for satisfaction
 		nextAction: 'try_again' | 'move_on' | null; // Step 3 (Update): Next action after satisfaction check
@@ -1394,12 +1406,12 @@
 
 	// Step 2 (Assess): Concern assessment fields
 	let concernLevel: number | null = null; // 1-5 (mapped from: 1=Not concerned at all, 2=Somewhat unconcerned, 3=Neutral, 4=Somewhat concerned, 5=Concerned)
+	let realismLevel: number | null = null; // 1-7 Likert (1=Very Unrealistic, 7=Very Realistic)
 	let concernReason: string = ''; // "Why?" field - derived from concernMappings for backward compat
 	let concernMappings: ConcernItem[] = []; // Array of specific concerns with linked highlights
 	let highlightConcerns: Record<string, string[]> = {}; // highlight text → [concern IDs]
 	let newConcernInputs: Record<string, string> = {}; // per-highlight new concern input values
-	let newConcernLevels: Record<string, number | null> = {}; // per-highlight pending concern level (rated before adding)
-	let concernHighlightLevels: Record<string, Record<string, number | null>> = {}; // per (highlight, concern) pair rating
+	let highlightRatings: Record<string, number | null> = {}; // per-highlight sentiment rating (1-7)
 
 	// Step 3 (Update): Satisfaction check fields (after version created)
 	let satisfactionLevel: number | null = null; // 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
@@ -2104,12 +2116,7 @@
 		const text = (newConcernInputs[highlightText] ?? '').trim();
 		if (!text) return;
 		const id = crypto.randomUUID();
-		concernMappings = [...concernMappings, { id, text, concernLevel: null }];
-		// Initialize per-pair rating to null — user rates after adding via the severity row
-		concernHighlightLevels = {
-			...concernHighlightLevels,
-			[highlightText]: { ...(concernHighlightLevels[highlightText] ?? {}), [id]: null }
-		};
+		concernMappings = [...concernMappings, { id, text }];
 		highlightConcerns = {
 			...highlightConcerns,
 			[highlightText]: [...(highlightConcerns[highlightText] ?? []), id]
@@ -2124,7 +2131,7 @@
 	function addConcernItem() {
 		concernMappings = [
 			...concernMappings,
-			{ id: crypto.randomUUID(), text: '', concernLevel: null }
+			{ id: crypto.randomUUID(), text: '' }
 		];
 	}
 
@@ -2142,13 +2149,6 @@
 			if (filtered.length > 0) updated[hText] = filtered;
 		}
 		highlightConcerns = updated;
-		// Remove per-pair levels for this concern
-		const updatedLevels: Record<string, Record<string, number | null>> = {};
-		for (const [hText, pairs] of Object.entries(concernHighlightLevels)) {
-			const { [id]: _r, ...rest } = pairs;
-			if (Object.keys(rest).length > 0) updatedLevels[hText] = rest;
-		}
-		concernHighlightLevels = updatedLevels;
 	}
 
 	// Persist the current concernMappings/highlightConcerns pool to backend
@@ -2166,29 +2166,28 @@
 				version_number: 0,
 				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId() ?? undefined,
-				items: concernMappings.map((c, idx) => ({
-					id: c.id,
-					position: idx,
-					text: c.text,
-					concern_level: (() => {
-						const levels = Object.entries(highlightConcerns)
-							.filter(([, ids]) => ids.includes(c.id))
-							.flatMap(([hText]) => {
-								const v = concernHighlightLevels[hText]?.[c.id];
-								return v !== null && v !== undefined ? [v] : [];
-							});
-						return levels.length > 0 ? Math.max(...levels) : null;
-					})(),
-					linked_highlights: Object.entries(highlightConcerns)
+				items: concernMappings.map((c, idx) => {
+					const linkedHighlightTexts = Object.entries(highlightConcerns)
 						.filter(([, ids]) => ids.includes(c.id))
-						.map(([hText]) => hText),
-					highlight_levels: Object.entries(highlightConcerns)
-						.filter(([, ids]) => ids.includes(c.id))
-						.reduce((acc: Record<string, number | null>, [hText]) => {
-							acc[hText] = concernHighlightLevels[hText]?.[c.id] ?? null;
-							return acc;
-						}, {})
-				}))
+						.map(([hText]) => hText);
+					const ratings = linkedHighlightTexts
+						.map((hText) => highlightRatings[hText])
+						.filter((v): v is number => v !== null && v !== undefined);
+					return {
+						id: c.id,
+						position: idx,
+						text: c.text,
+						concern_level: ratings.length > 0 ? Math.max(...ratings) : null,
+						linked_highlights: linkedHighlightTexts,
+						highlight_levels: linkedHighlightTexts.reduce(
+							(acc: Record<string, number | null>, hText) => {
+								acc[hText] = highlightRatings[hText] ?? null;
+								return acc;
+							},
+							{}
+						)
+					};
+				})
 			});
 		} catch (e) {
 			console.error('Failed to sync concern items after removal (non-blocking):', e);
@@ -2211,13 +2210,6 @@
 				...highlightConcerns,
 				[highlightText]: [...current.filter((id) => id !== concernId), concernId]
 			};
-			// Init per-pair level to null if not already set
-			if (concernHighlightLevels[highlightText]?.[concernId] === undefined) {
-				concernHighlightLevels = {
-					...concernHighlightLevels,
-					[highlightText]: { ...(concernHighlightLevels[highlightText] ?? {}), [concernId]: null }
-				};
-			}
 		} else {
 			const updated = current.filter((id) => id !== concernId);
 			highlightConcerns = { ...highlightConcerns, [highlightText]: updated };
@@ -2235,9 +2227,14 @@
 				const linkedHighlightTexts = Object.entries(highlightConcerns)
 					.filter(([, ids]) => ids.includes(c.id))
 					.map(([hText]) => hText);
-				return linkedHighlightTexts.length > 0
-					? `${c.text.trim()} (relates to: ${linkedHighlightTexts.map((h) => `"${h}"`).join(', ')})`
-					: c.text.trim();
+				if (linkedHighlightTexts.length > 0) {
+					const withRatings = linkedHighlightTexts.map((h) => {
+						const r = highlightRatings[h];
+						return r !== null && r !== undefined ? `"${h}" [${r}/7]` : `"${h}"`;
+					});
+					return `${c.text.trim()} (relates to: ${withRatings.join(', ')})`;
+				}
+				return c.text.trim();
 			})
 			.join('; ');
 	}
@@ -2723,10 +2720,11 @@
 			step2Completed,
 			step3Completed,
 			concernLevel,
+			realismLevel,
 			concernReason,
 			concernMappings: [...concernMappings],
 			highlightConcerns: { ...highlightConcerns },
-			concernHighlightLevels: JSON.parse(JSON.stringify(concernHighlightLevels)),
+			highlightRatings: { ...highlightRatings },
 			satisfactionLevel,
 			satisfactionReason,
 			nextAction,
@@ -2787,11 +2785,11 @@
 		responseHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		promptHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
 		concernLevel = null;
+		realismLevel = null;
 		concernMappings = [];
 		highlightConcerns = {};
 		newConcernInputs = {};
-		newConcernLevels = {};
-		concernHighlightLevels = {};
+		highlightRatings = {};
 		concernReason = '';
 		satisfactionLevel = null;
 		satisfactionReason = '';
@@ -3018,6 +3016,11 @@
 				console.log('✅ Restored Step 2 data from backend');
 			}
 
+			// Restore realism level from backend
+			if (backendSession.realism_level != null) {
+				realismLevel = backendSession.realism_level;
+			}
+
 			// Restore concern mappings — prefer new concern_item table, fall back to session_metadata
 			let restoredFromTable = false;
 			let dbItems: any[] = [];
@@ -3034,8 +3037,7 @@
 					if (dbItems.length > 0) {
 						concernMappings = dbItems.map((item: ConcernItemResponse) => ({
 							id: item.id,
-							text: item.text,
-							concernLevel: item.concern_level
+							text: item.text
 						}));
 						restoredFromTable = true;
 						console.log('✅ Restored concern mappings from DB table:', concernMappings.length);
@@ -3049,8 +3051,7 @@
 				concernMappings = (backendSession.session_metadata.concern_mappings as any[]).map(
 					(c: any) => ({
 						id: c.id ?? crypto.randomUUID(),
-						text: c.text ?? '',
-						concernLevel: c.concernLevel ?? null
+						text: c.text ?? ''
 					})
 				);
 				console.log(
@@ -3085,12 +3086,33 @@
 				highlightConcerns = derived;
 			}
 
-			// Restore per-(highlight, concern) severity ratings
-			if (backendSession.session_metadata?.concern_highlight_levels) {
-				concernHighlightLevels = backendSession.session_metadata.concern_highlight_levels as Record<
+			// Restore per-highlight sentiment ratings
+			if (backendSession.session_metadata?.highlight_ratings) {
+				// New format: per-highlight ratings
+				highlightRatings = backendSession.session_metadata.highlight_ratings as Record<
+					string,
+					number | null
+				>;
+			} else if (backendSession.session_metadata?.concern_highlight_levels) {
+				// Legacy format: derive per-highlight rating from per-pair ratings
+				// Use most extreme from neutral (4) across all concern ratings for each highlight
+				const legacy = backendSession.session_metadata.concern_highlight_levels as Record<
 					string,
 					Record<string, number | null>
 				>;
+				const derived: Record<string, number | null> = {};
+				for (const [hText, pairs] of Object.entries(legacy)) {
+					const values = Object.values(pairs).filter(
+						(v): v is number => v !== null && v !== undefined
+					);
+					derived[hText] =
+						values.length > 0
+							? values.reduce((ext, v) =>
+									Math.abs(v - 4) > Math.abs(ext - 4) ? v : ext
+								)
+							: null;
+				}
+				highlightRatings = derived;
 			}
 
 			// Step 3 completion is now determined by satisfaction check (satisfaction_level, satisfaction_reason, next_action)
@@ -3234,10 +3256,11 @@
 				step3Completed = savedState.step3Completed || false;
 				markedNotApplicable = savedState.markedNotApplicable || false;
 				concernLevel = savedState.concernLevel ?? null;
+				realismLevel = savedState.realismLevel ?? null;
 				concernReason = savedState.concernReason || '';
 				concernMappings = savedState.concernMappings || [];
 				highlightConcerns = (savedState as any).highlightConcerns || {};
-				concernHighlightLevels = (savedState as any).concernHighlightLevels || {};
+				highlightRatings = (savedState as any).highlightRatings || {};
 				satisfactionLevel = savedState.satisfactionLevel ?? null;
 				satisfactionReason = savedState.satisfactionReason || '';
 				nextAction = savedState.nextAction || null;
@@ -3382,10 +3405,11 @@
 		step3Completed = false;
 		// Removed step4Completed - now 3-step flow
 		concernLevel = null;
+		realismLevel = null;
 		concernMappings = [];
 		highlightConcerns = {};
 		newConcernInputs = {};
-		newConcernLevels = {};
+		highlightRatings = {};
 		// showInitialDecisionPane is now derived
 
 		// Reset ALL scenario states
@@ -3908,14 +3932,15 @@
 	 * Marks scenario as complete and navigates to next scenario if available.
 	 */
 	async function completeStep2() {
-		// Validate every linked (highlight, concern) pair has a severity rating
-		if (
-			highlightedTexts1.some((h) => {
-				const ids = highlightConcerns[h.text] ?? [];
-				return ids.some((id) => (concernHighlightLevels[h.text]?.[id] ?? null) === null);
-			})
-		) {
-			toast.error('Please rate every highlight–reason pair');
+		// Validate realism level is selected
+		if (realismLevel === null) {
+			toast.error('Please rate how realistic this scenario is');
+			return;
+		}
+
+		// Validate every highlight has a sentiment rating
+		if (highlightedTexts1.some((h) => (highlightRatings[h.text] ?? null) === null)) {
+			toast.error('Please rate every highlight');
 			return;
 		}
 
@@ -3988,9 +4013,9 @@
 
 			// Derive session-level concern_level as the most extreme rating from neutral (4)
 			// On a 1-7 bipolar scale, "most extreme" = largest absolute distance from midpoint
-			const allSeverityLevels = Object.values(concernHighlightLevels)
-				.flatMap((perHighlight) => Object.values(perHighlight))
-				.filter((v): v is number => v !== null && v !== undefined);
+			const allSeverityLevels = Object.values(highlightRatings).filter(
+				(v): v is number => v !== null && v !== undefined
+			);
 			const derivedConcernLevel =
 				allSeverityLevels.length > 0
 					? allSeverityLevels.reduce((extreme, v) =>
@@ -4028,6 +4053,7 @@
 				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
 				concern_level: derivedConcernLevel ?? undefined,
 				concern_reason: concernReason.trim(),
+				realism_level: realismLevel ?? undefined,
 				decided_at: Date.now(),
 				strategies: [],
 				custom_instructions: [],
@@ -4042,7 +4068,7 @@
 				is_final_version: true, // Mark as final - scenario is complete
 				session_metadata: {
 					highlight_concerns: highlightConcerns,
-					concern_highlight_levels: concernHighlightLevels
+					highlight_ratings: highlightRatings
 				}
 			});
 			console.log('✅ Identification complete - scenario marked as final');
@@ -4847,6 +4873,7 @@
 										concernReason: '',
 										concernMappings: [],
 										highlightConcerns: {},
+										highlightRatings: {},
 										satisfactionLevel: null,
 										satisfactionReason: '',
 										nextAction: null
@@ -5460,6 +5487,7 @@
 							>
 						{/if}
 						<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
+						<!-- Help button commented out
 						<button
 							on:click={() => (showHelpVideo = true)}
 							class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors ml-4"
@@ -5467,6 +5495,7 @@
 						>
 							Help
 						</button>
+						-->
 					</div>
 
 					<!-- Controls - always visible so Previous/Next Task accessible when scenarios sidebar is closed -->
@@ -6246,6 +6275,31 @@
 													rate and explain each highlighted passage separately.
 												</p>
 
+												<!-- Scenario realism assessment -->
+												<div
+													class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4"
+												>
+													<p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+														How realistic, if at all, is this scenario for a child to ask?
+													</p>
+													<div class="flex flex-wrap gap-1.5">
+														{#each [{ v: 1, l: 'Very Unrealistic' }, { v: 2, l: 'Unrealistic' }, { v: 3, l: 'Somewhat Unrealistic' }, { v: 4, l: 'Neutral' }, { v: 5, l: 'Somewhat Realistic' }, { v: 6, l: 'Realistic' }, { v: 7, l: 'Very Realistic' }] as opt}
+															<button
+																type="button"
+																on:click={() => {
+																	realismLevel = opt.v;
+																}}
+																class="px-2 py-1 text-xs rounded border transition-colors {realismLevel ===
+																opt.v
+																	? 'bg-blue-500 border-blue-500 text-white font-semibold'
+																	: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400'}"
+															>
+																{opt.v}. {opt.l}
+															</button>
+														{/each}
+													</div>
+												</div>
+
 												{#if highlightedTexts1.length === 0}
 													<div
 														class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
@@ -6259,14 +6313,7 @@
 													<!-- Progress bar -->
 													{@const matchedCount = highlightedTexts1.filter((h) => {
 														const ids = highlightConcerns[h.text] ?? [];
-														return (
-															ids.length > 0 &&
-															ids.every(
-																(id) =>
-																	(concernMappings.find((c) => c.id === id)?.concernLevel ??
-																		null) !== null
-															)
-														);
+														return (highlightRatings[h.text] ?? null) !== null && ids.length > 0;
 													}).length}
 													<div class="mb-2">
 														<div class="flex items-center justify-between mb-1">
@@ -6304,11 +6351,8 @@
 														{#each highlightedTexts1 as highlight, hIdx (highlight.text)}
 															{@const linkedIds = highlightConcerns[highlight.text] ?? []}
 															{@const isAddressed =
-																linkedIds.length > 0 &&
-																linkedIds.every(
-																	(id) =>
-																		(concernHighlightLevels[highlight.text]?.[id] ?? null) !== null
-																)}
+																(highlightRatings[highlight.text] ?? null) !== null &&
+																linkedIds.length > 0}
 															<div
 																class="p-3 border rounded-lg transition-colors {isAddressed
 																	? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10'
@@ -6330,83 +6374,75 @@
 																	</span>
 																</div>
 
-																<div class="mt-2 space-y-2">
+																<!-- Highlight-level sentiment rating -->
+																<div class="mt-2 mb-3">
+																	<span
+																		class="text-sm font-medium text-gray-600 dark:text-gray-400"
+																		>How do you feel about this for your child?</span
+																	>
+																	<div class="flex flex-wrap gap-1.5 mt-1">
+																		{#each [{ v: 1, l: 'Very negative' }, { v: 2, l: 'Somewhat negative' }, { v: 3, l: 'Slightly negative' }, { v: 4, l: 'Neutral' }, { v: 5, l: 'Slightly positive' }, { v: 6, l: 'Somewhat positive' }, { v: 7, l: 'Very positive' }] as opt}
+																			<button
+																				type="button"
+																				title={concernTooltips[opt.v]}
+																				on:click={() => {
+																					highlightRatings = {
+																						...highlightRatings,
+																						[highlight.text]: opt.v
+																					};
+																				}}
+																				class="px-2 py-1 text-xs rounded border transition-colors {highlightRatings[
+																					highlight.text
+																				] === opt.v
+																					? 'bg-blue-500 border-blue-500 text-white font-semibold'
+																					: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400'}"
+																			>
+																				{opt.v}. {opt.l}
+																			</button>
+																		{/each}
+																	</div>
+																</div>
+
+																<!-- Reasons section -->
+																<div class="space-y-2">
 																	{#if concernMappings.filter((c) => c.text.trim()).length > 0}
 																		{#each concernMappings.filter( (c) => c.text.trim() ) as concern (concern.id)}
-																			<div class="flex flex-col gap-1">
-																				<!-- Top row: checkbox + concern text + remove button -->
-																				<div class="flex items-center gap-2">
-																					<input
-																						type="checkbox"
-																						checked={linkedIds.includes(concern.id)}
-																						on:change={(e) =>
-																							toggleConcernLink(
-																								highlight.text,
-																								concern.id,
-																								e.currentTarget.checked
-																							)}
-																						class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
-																					/>
-																					<span
-																						class="flex-1 text-base text-gray-800 dark:text-gray-200"
-																						>{concern.text}</span
+																			<div class="flex items-center gap-2">
+																				<input
+																					type="checkbox"
+																					checked={linkedIds.includes(concern.id)}
+																					on:change={(e) =>
+																						toggleConcernLink(
+																							highlight.text,
+																							concern.id,
+																							e.currentTarget.checked
+																						)}
+																					class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 flex-shrink-0"
+																				/>
+																				<span
+																					class="flex-1 text-base text-gray-800 dark:text-gray-200"
+																					>{concern.text}</span
+																				>
+																				<button
+																					type="button"
+																					on:click={() => handleRemoveConcern(concern.id)}
+																					class="text-red-400 hover:text-red-600 flex-shrink-0"
+																					title="Remove"
+																				>
+																					<svg
+																						class="w-4 h-4"
+																						fill="none"
+																						stroke="currentColor"
+																						viewBox="0 0 24 24"
 																					>
-																					<button
-																						type="button"
-																						on:click={() => handleRemoveConcern(concern.id)}
-																						class="text-red-400 hover:text-red-600 flex-shrink-0"
-																						title="Remove"
-																					>
-																						<svg
-																							class="w-4 h-4"
-																							fill="none"
-																							stroke="currentColor"
-																							viewBox="0 0 24 24"
-																						>
-																							<path
-																								stroke-linecap="round"
-																								stroke-linejoin="round"
-																								stroke-width="2"
-																								d="M6 18L18 6M6 6l12 12"
-																							/>
-																						</svg>
-																					</button>
-																				</div>
-																				<!-- Severity row: only shown when this concern is linked to this highlight -->
-																				{#if linkedIds.includes(concern.id)}
-																					<div class="ml-7 flex flex-col gap-1.5">
-																						<span
-																							class="text-sm font-medium text-gray-600 dark:text-gray-400"
-																							>How do you feel about this for your child?</span
-																						>
-																						<div class="flex flex-wrap gap-1.5">
-																							{#each [{ v: 1, l: 'Very negative' }, { v: 2, l: 'Somewhat negative' }, { v: 3, l: 'Slightly negative' }, { v: 4, l: 'Neutral' }, { v: 5, l: 'Slightly positive' }, { v: 6, l: 'Somewhat positive' }, { v: 7, l: 'Very positive' }] as opt}
-																								<button
-																									type="button"
-																									title={concernTooltips[opt.v]}
-																									on:click={() => {
-																										concernHighlightLevels = {
-																											...concernHighlightLevels,
-																											[highlight.text]: {
-																												...(concernHighlightLevels[
-																													highlight.text
-																												] ?? {}),
-																												[concern.id]: opt.v
-																											}
-																										};
-																									}}
-																									class="px-2 py-1 text-xs rounded border transition-colors {(concernHighlightLevels[
-																										highlight.text
-																									]?.[concern.id] ?? null) === opt.v
-																										? 'bg-blue-500 border-blue-500 text-white font-semibold'
-																										: 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400'}"
-																								>
-																									{opt.v}. {opt.l}
-																								</button>
-																							{/each}
-																						</div>
-																					</div>
-																				{/if}
+																						<path
+																							stroke-linecap="round"
+																							stroke-linejoin="round"
+																							stroke-width="2"
+																							d="M6 18L18 6M6 6l12 12"
+																						/>
+																					</svg>
+																				</button>
 																			</div>
 																		{/each}
 																		<hr class="border-gray-200 dark:border-gray-600" />
@@ -6426,7 +6462,9 @@
 																				addConcernForHighlight(highlight.text);
 																			}
 																		}}
-																		placeholder="Why does this stand out to you?"
+																		placeholder={highlightRatings[highlight.text] != null
+																			? `I feel ${ratingLabels[highlightRatings[highlight.text]]} because...`
+																			: 'Why does this stand out to you?'}
 																		class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
 																	/>
 																	<button
@@ -7712,12 +7750,13 @@
 	enabled={true}
 />
 
-<!-- Help Video Modal -->
+<!-- Help Video Modal (commented out)
 <VideoModal
 	isOpen={showHelpVideo}
 	videoSrc="/video/scenario-review.mp4"
 	title="Moderation Scenario Tutorial"
 />
+-->
 
 <style>
 	.response-text :global(.selection-highlight) {
