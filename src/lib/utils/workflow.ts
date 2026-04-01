@@ -48,14 +48,18 @@ export function canAccessStep(step: number, workflowState: WorkflowStateResponse
 	const stepRoute = getStepRoute(step);
 
 	// If this is the next_route, it's always accessible
-	if (next_route === stepRoute || next_route.startsWith(stepRoute)) {
+	// (except completion — always require explicit check below)
+	if (step !== 4 && (next_route === stepRoute || next_route.startsWith(stepRoute))) {
 		return true;
 	}
 
 	// Check if step is completed - completed steps are always accessible
-	const isCompleted = isStepCompleted(step, workflowState);
-	if (isCompleted) {
-		return true;
+	// (except completion — always require explicit check below)
+	if (step !== 4) {
+		const isCompleted = isStepCompleted(step, workflowState);
+		if (isCompleted) {
+			return true;
+		}
 	}
 
 	// Step 0: Assignment Instructions - always accessible
@@ -96,12 +100,12 @@ export function canAccessStep(step: number, workflowState: WorkflowStateResponse
 
 	// Step 4: Completion - accessible only when all prior steps are done
 	if (step === 4) {
-		const allDone =
+		return (
 			!!progress.instructions_completed &&
 			!!progress.has_child_profile &&
 			!!(progress as any).moderation_finalized &&
-			!!progress.exit_survey_completed;
-		return allDone || next_route === '/completion';
+			!!progress.exit_survey_completed
+		);
 	}
 
 	return false;
