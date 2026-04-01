@@ -45,6 +45,7 @@ export interface ModerationSessionPayload {
 	initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
 	concern_level?: number;
 	concern_reason?: string;
+	realism_level?: number;
 	satisfaction_level?: number;
 	satisfaction_reason?: string;
 	next_action?: 'try_again' | 'move_on';
@@ -71,6 +72,7 @@ export interface ModerationSessionResponse {
 	is_final_version: boolean;
 	concern_level?: number;
 	concern_reason?: string;
+	realism_level?: number;
 	satisfaction_level?: number;
 	satisfaction_reason?: string;
 	next_action?: string;
@@ -209,6 +211,7 @@ export interface ConcernItemPayload {
 	text: string;
 	concern_level: number | null;
 	linked_highlights: string[] | null;
+	highlight_levels?: Record<string, number | null>;
 }
 
 export interface ConcernItemBatchPayload {

@@ -11,7 +11,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision = "7b3e2c9f1d04"
-down_revision = "4f919f805a75"
+down_revision = "add_attempt_number_to_assignment_activity"
 branch_labels = None
 depends_on = None
 
