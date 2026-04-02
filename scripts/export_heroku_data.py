@@ -209,6 +209,7 @@ SELECT
     ms.is_final_version,
     ms.concern_level,
     ms.concern_reason,
+    ms.realism_level,
     ms.satisfaction_level,
     ms.satisfaction_reason,
     ms.next_action,
