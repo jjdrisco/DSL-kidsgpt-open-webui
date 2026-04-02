@@ -7,7 +7,7 @@ model: sonnet
 
 ## Key Files
 
-- `src/routes/(app)/exit-survey/+page.svelte` — Main survey UI (1730 lines); handles form state, read-only view, autosave, draft hydration, submit, and reset.
+- `src/routes/(app)/exit-survey/+page.svelte` — Main survey UI (~1790 lines); handles form state, read-only view, autosave, draft hydration, submit, and reset. Includes an attention check question (Q6).
 - `src/lib/apis/exit-quiz/index.ts` — API client; `createExitQuiz`, `listExitQuiz` (with `allAttempts` flag), `resetExitQuiz`.
 - `src/lib/apis/workflow/index.ts` — `getWorkflowDraft`, `saveWorkflowDraft`, `deleteWorkflowDraft` used to persist in-progress responses.
 - `backend/open_webui/routers/exit_quiz.py` — REST endpoints: `POST /exit-quiz`, `GET /exit-quiz` (`all_attempts` param), `POST /exit-quiz/reset`, `PUT/DELETE /exit-quiz/{id}`.
@@ -18,10 +18,14 @@ model: sonnet
 
 1. On mount and after navigation, `loadSavedResponses()` calls `listExitQuiz(token, childId, allAttempts=true)`. If a submitted response exists, it populates the form and sets `isSaved = true` (read-only view). Otherwise, it falls back to the workflow draft via `getWorkflowDraft(token, childId, 'exit_survey')`.
 2. While editing, reactive block `$: if (isLoaded) { surveyResponses; saveDraft(); }` triggers a debounced (400ms) `POST /workflow/draft` on every change. The `isLoaded` flag prevents autosave from firing before hydration completes (race-condition guard).
-3. `submitSurvey()` validates all 19 required fields, resolves child ID, calls `POST /exit-quiz` with `{ child_id, answers, meta }`, then clears the draft and sets `isSaved = true`. Fires a `workflow-updated` DOM event so the sidebar reflects completion.
+3. `submitSurvey()` validates all 20 required fields (including `attentionCheck`), resolves child ID, calls `POST /exit-quiz` with `{ child_id, answers, meta }`, then clears the draft and sets `isSaved = true`. Fires a `workflow-updated` DOM event so the sidebar reflects completion.
 4. When `isSaved` is true, the read-only view renders all answers plus an **Edit** button (calls `startEditing()` to set `isSaved = false`) and a **Reset survey** link (opens `showResetSurveyModal` confirmation modal).
 5. Confirming the reset modal calls `resetExitSurvey()`: POSTs to `/exit-quiz/reset` with `{ child_id }` (backend deletes all rows for that user+child via `delete_responses_by_user_child`), deletes the draft, resets `surveyResponses` to `EMPTY_SURVEY_RESPONSES`, and sets `isSaved = false`. Toast confirms success.
-6. Survey fields (19 total): `parentGender`, `parentAge`, `areaOfResidency`, `parentEducation`, `parentEthnicity`, `genaiFamiliarity`, `genaiUsageFrequency`, `parentInternetUseFrequency`, `parentingStyle` (array), `isOnlyChild`, `childHasAIUse`, `childAIUseContexts`, `parentLLMMonitoringLevel`, `childInternetUseFrequency`, `childPersonalitySubCharacteristics` (Big Five), `childAdditionalInfo`, plus dynamic fields `childGenderOther`, `childAIUseContextsOther`, `parentLLMMonitoringOther`.
+6. Survey fields (20 total): `parentGender`, `parentAge`, `areaOfResidency`, `parentEducation`, `parentEthnicity`, `genaiFamiliarity`, `genaiUsageFrequency`, `parentInternetUseFrequency`, `parentingStyle` (array), `attentionCheck`, `isOnlyChild`, `childHasAIUse`, `childAIUseContexts`, `parentLLMMonitoringLevel`, `childInternetUseFrequency`, `childPersonalitySubCharacteristics` (Big Five), `childAdditionalInfo`, plus dynamic fields `childGenderOther`, `childAIUseContextsOther`, `parentLLMMonitoringOther`.
+
+## Attention Check (Q6)
+
+Question 6 is a classic instructed-response attention check using a 5-point Likert scale (Strongly agree → Strongly disagree). The question text instructs participants to select "Strongly disagree." The correct answer value is `strongly_disagree`. The field is stored as `attentionCheck` in the `answers` JSON. Validation only checks the field is answered — it does **not** enforce correctness. Researchers evaluate pass/fail during data analysis by filtering rows where `answers.attentionCheck !== 'strongly_disagree'`.
 
 ## Important Rules
 
