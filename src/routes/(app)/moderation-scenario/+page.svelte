@@ -6252,7 +6252,7 @@
 											<div class="space-y-4">
 												<div class="flex items-center justify-between mb-2">
 													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-														Step 2: Rate and Explain Each Highlight
+														Step 2: Reflect
 													</h3>
 													<button
 														on:click={() => navigateToStep(1)}
@@ -6275,13 +6275,10 @@
 													</button>
 												</div>
 
-												<p class="text-base text-gray-600 dark:text-gray-400 mb-4">
-													For each highlighted passage, rate how you feel about it and explain why.
-													You can reuse a reason across multiple highlights. <strong>Note:</strong> Please
-													rate and explain each highlighted passage separately.
-												</p>
-
-												<!-- Scenario realism assessment -->
+												<!-- 2a: Scenario Realism -->
+												<h4 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">
+													2a. Scenario Realism
+												</h4>
 												<div
 													class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4"
 												>
@@ -6305,6 +6302,16 @@
 														{/each}
 													</div>
 												</div>
+
+												<!-- 2b: Rate and Explain Each Highlight -->
+												<h4 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">
+													2b. Rate and Explain Each Highlight
+												</h4>
+												<p class="text-base text-gray-600 dark:text-gray-400 mb-4">
+													For each highlighted passage, rate how you feel about it and explain why.
+													You can reuse a reason across multiple highlights. <strong>Note:</strong> Please
+													rate and explain each highlighted passage separately.
+												</p>
 
 												{#if highlightedTexts1.length === 0}
 													<div
