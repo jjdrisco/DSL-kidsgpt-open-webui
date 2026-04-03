@@ -700,7 +700,11 @@
 												? 'No — I have not monitored or adjusted'
 												: surveyResponses.parentLLMMonitoringLevel === 'other'
 													? surveyResponses.parentLLMMonitoringOther || 'Other'
-													: 'Not specified'}
+													: surveyResponses.parentLLMMonitoringLevel === 'not_applicable'
+														? 'Not applicable — my child has not used LLMs'
+														: surveyResponses.parentLLMMonitoringLevel === 'prefer_not_to_say'
+															? 'Prefer not to say'
+															: 'Not specified'}
 							</p>
 						</div>
 						<div>
@@ -1652,6 +1656,17 @@
 											class="mr-3"
 										/>
 										<span class="text-gray-900 dark:text-white">Other</span>
+									</label>
+									<label class="flex items-center">
+										<input
+											type="radio"
+											bind:group={surveyResponses.parentLLMMonitoringLevel}
+											value="not_applicable"
+											class="mr-3"
+										/>
+										<span class="text-gray-900 dark:text-white"
+											>Not applicable — my child has not used LLMs</span
+										>
 									</label>
 									<label class="flex items-center">
 										<input
