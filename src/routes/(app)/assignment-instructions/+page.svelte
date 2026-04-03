@@ -6,6 +6,7 @@
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import HighlightDemo from '$lib/components/assignment/HighlightDemo.svelte';
 	import {
 		getWorkflowState,
 		markInstructionsComplete,
@@ -170,6 +171,9 @@
 					>Skip</em
 				> and move on.
 			</p>
+
+			<!-- Highlighting Demo Animation -->
+			<HighlightDemo />
 
 			<!-- Help Videos Notice (trimmed) -->
 			<div
