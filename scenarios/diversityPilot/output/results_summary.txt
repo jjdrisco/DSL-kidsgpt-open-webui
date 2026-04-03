@@ -1,0 +1,23 @@
+LLM Concern-Variance Prediction — Results Summary
+=======================================================
+
+Scenarios analysed: 66
+Raters per scenario: 4.0 (mean)
+
+--- SD ---
+  Spearman  r=0.185  p=0.1373
+  Pearson   r=0.134  p=0.2830
+  Kendall   τ=0.138  p=0.1386
+
+--- IQR ---
+  Spearman  r=0.112  p=0.3716
+  Pearson   r=0.058  p=0.6460
+  Kendall   τ=0.083  p=0.3841
+
+--- RANGE ---
+  Spearman  r=0.171  p=0.1705
+  Pearson   r=0.139  p=0.2664
+  Kendall   τ=0.134  p=0.1766
+
+Classification threshold (median SD): 1.00
+LLM rating range used: [np.int64(1), np.int64(2), np.int64(3), np.int64(4), np.int64(5), np.int64(6)]
