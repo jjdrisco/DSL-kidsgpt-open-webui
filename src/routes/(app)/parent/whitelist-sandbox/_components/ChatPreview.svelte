@@ -2,7 +2,14 @@
 	import { goto } from '$app/navigation';
 	import { afterUpdate } from 'svelte';
 	import { get } from 'svelte/store';
-	import { messages, inputText, isLoading, setInputValue, sendMessage, resetChat } from '../_state/sandbox';
+	import {
+		messages,
+		inputText,
+		isLoading,
+		setInputValue,
+		sendMessage,
+		resetChat
+	} from '../_state/sandbox';
 
 	export let showMobileBack: boolean = false;
 	export let builderPath: string = '/parent/whitelist-sandbox';
@@ -57,7 +64,9 @@
 
 	<div bind:this={chatContainer} class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 min-h-0">
 		{#if $messages.length === 0}
-			<div class="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm italic">
+			<div
+				class="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm italic"
+			>
 				No messages yet. Type something below to test the whitelist.
 			</div>
 		{/if}
@@ -79,7 +88,10 @@
 			<div class="flex justify-start">
 				<div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-bl-sm px-4 py-3">
 					<span class="flex gap-1">
-						<span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+						<span
+							class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+							style="animation-delay: 0ms"
+						></span>
 						<span
 							class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
 							style="animation-delay: 150ms"

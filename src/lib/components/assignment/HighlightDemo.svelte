@@ -66,7 +66,9 @@
 		const prompt = getSpanEdges(promptSpan);
 		const response = getSpanEdges(responseSpan);
 
-		let x = 0, y = 0, opacity = 0;
+		let x = 0,
+			y = 0,
+			opacity = 0;
 
 		if (elapsed < phases[0].end) {
 			// fadeIn: appear at center
@@ -181,10 +183,12 @@
 	<div bind:this={chatArea} class="flex flex-col gap-3 relative">
 		<!-- Child Prompt Bubble (right-aligned) -->
 		<div class="flex justify-end">
-			<div
-				class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm"
-			>
-				<p class="text-sm whitespace-pre-wrap">How do I make a <span bind:this={promptSpan} class="highlight-span">volcano for my science fair</span> project?</p>
+			<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
+				<p class="text-sm whitespace-pre-wrap">
+					How do I make a <span bind:this={promptSpan} class="highlight-span"
+						>volcano for my science fair</span
+					> project?
+				</p>
 			</div>
 		</div>
 
@@ -193,13 +197,24 @@
 			<div
 				class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
 			>
-				<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">Great question! You can build a volcano using <span bind:this={responseSpan} class="highlight-span">baking soda and vinegar</span>. Mix them together and watch the eruption!</p>
+				<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+					Great question! You can build a volcano using <span
+						bind:this={responseSpan}
+						class="highlight-span">baking soda and vinegar</span
+					>. Mix them together and watch the eruption!
+				</p>
 			</div>
 		</div>
 
 		<!-- Animated Cursor -->
 		<div bind:this={cursorEl} class="cursor-el">
-			<svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<svg
+				width="16"
+				height="20"
+				viewBox="0 0 16 20"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+			>
 				<path
 					d="M1 1L1 14.5L4.5 11.5L7.5 18L10 17L7 10.5L11.5 10.5L1 1Z"
 					fill="white"

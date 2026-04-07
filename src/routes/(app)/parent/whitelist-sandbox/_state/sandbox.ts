@@ -77,9 +77,12 @@ export const activeChipFeatures = derived([activeChip], ([$activeChip]) => {
 	return SUGGESTIONS.find((s) => s.label === $activeChip)?.features ?? [];
 });
 
-export const isCustomized = derived([features, activeChipFeatures], ([$features, $activeChipFeatures]) => {
-	return JSON.stringify($features) !== JSON.stringify($activeChipFeatures);
-});
+export const isCustomized = derived(
+	[features, activeChipFeatures],
+	([$features, $activeChipFeatures]) => {
+		return JSON.stringify($features) !== JSON.stringify($activeChipFeatures);
+	}
+);
 
 export const systemPrompt = derived([features], ([$features]) => {
 	return buildSystemPrompt($features);
@@ -239,13 +242,15 @@ export async function sendMessage() {
 	try {
 		const ageClause = get(childAge) ? `The child is ${get(childAge)}. ` : '';
 		const promptRewriteSystem =
-			'You are a strict content-routing assistant for a children\'s AI. ' +
+			"You are a strict content-routing assistant for a children's AI. " +
 			ageClause +
-			'Your job is to rewrite the child\'s message so it only addresses topics from the approved whitelist below, ' +
+			"Your job is to rewrite the child's message so it only addresses topics from the approved whitelist below, " +
 			'and so that the phrasing and vocabulary are appropriate for a child of that age. ' +
 			'If the message is already on-topic, return it unchanged or lightly reworded for clarity. ' +
 			'If the message cannot be redirected to any approved topic, respond with exactly: [BLOCKED]\n\n' +
-			`Approved whitelist:\n${get(features).map((f) => `• ${f}`).join('\n')}\n\n` +
+			`Approved whitelist:\n${get(features)
+				.map((f) => `• ${f}`)
+				.join('\n')}\n\n` +
 			'Return ONLY the rewritten message (or [BLOCKED]). Do not add explanations.';
 
 		const rewrittenPrompt = await llmCall(promptRewriteSystem, text);
@@ -283,7 +288,10 @@ export async function sendMessage() {
 			const errText = await mainRes.text();
 			console.error('[Sandbox] API error:', mainRes.status, errText);
 			toast.error(`API error: ${mainRes.status}`);
-			messages.update((current) => [...current, { role: 'assistant', content: `[Error ${mainRes.status}]` }]);
+			messages.update((current) => [
+				...current,
+				{ role: 'assistant', content: `[Error ${mainRes.status}]` }
+			]);
 			return;
 		}
 
@@ -293,7 +301,10 @@ export async function sendMessage() {
 	} catch (error) {
 		console.error('[Sandbox] Fetch error:', error);
 		toast.error('Failed to reach the API. Is the backend running?');
-		messages.update((current) => [...current, { role: 'assistant', content: '[Network error — check backend]' }]);
+		messages.update((current) => [
+			...current,
+			{ role: 'assistant', content: '[Network error — check backend]' }
+		]);
 	} finally {
 		isLoading.set(false);
 	}

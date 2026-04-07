@@ -39,7 +39,9 @@
 		class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-3"
 	>
 		<div class="min-w-0">
-			<h1 class="text-xl font-bold text-gray-900 dark:text-white break-words">{$childName}'s Whitelist</h1>
+			<h1 class="text-xl font-bold text-gray-900 dark:text-white break-words">
+				{$childName}'s Whitelist
+			</h1>
 			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
 				Define what topics and content your child's AI can discuss. Use a suggestion chip or add
 				features as you see fit.
@@ -57,12 +59,10 @@
 	</div>
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
-		<div
-			class="px-4 sm:px-6 {showMobileCta
-				? 'pt-8 pb-10'
-				: 'pt-5 pb-4'}"
-		>
-			<p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-4">
+		<div class="px-4 sm:px-6 {showMobileCta ? 'pt-8 pb-10' : 'pt-5 pb-4'}">
+			<p
+				class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-4"
+			>
 				Quick suggestions
 			</p>
 			<div class="flex flex-wrap gap-x-3 gap-y-3 sm:gap-x-3.5 sm:gap-y-3.5">
@@ -98,7 +98,9 @@
 			{/if}
 
 			<div class="flex flex-col {showMobileCta ? 'pt-11' : 'pt-7'}">
-				<p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+				<p
+					class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
+				>
 					Approved Features
 				</p>
 
