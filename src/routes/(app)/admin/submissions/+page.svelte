@@ -345,11 +345,7 @@
 
 		console.log('[Session Grouping] All sessions found:', {
 			fromModeration: Array.from(
-				new Set(
-					submissionsData.moderation_sessions
-						.map((s) => getSessionId(s))
-						.filter(Boolean)
-				)
+				new Set(submissionsData.moderation_sessions.map((s) => getSessionId(s)).filter(Boolean))
 			),
 			fromChildProfiles: Array.from(
 				new Set(submissionsData.child_profiles.map((p) => p.session_id).filter(Boolean))
@@ -358,7 +354,9 @@
 				? Object.keys(submissionsData.assignment_time_totals)
 						.map((k) => {
 							const parts = k.split('::');
-							return parts.length === 2 && parts[0] === submissionsData.user_info?.id ? parts[1] : null;
+							return parts.length === 2 && parts[0] === submissionsData.user_info?.id
+								? parts[1]
+								: null;
 						})
 						.filter(Boolean)
 				: [],
@@ -490,9 +488,7 @@
 			<div class="space-y-6">
 				{#each groupAllDataBySession() as sessionData}
 					{@const totalAssignmentTime = getTotalSessionAssignmentTime(sessionData.session_id)}
-					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(
-						sessionData.session_id
-					)}
+					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(sessionData.session_id)}
 					{@const _debug =
 						console.log('[Assignment Time Display]', {
 							sessionId: sessionData.session_id,
@@ -647,7 +643,7 @@
 											{@const timeSpent = getSessionTime(
 												submissionsData.user_info.id,
 												childGroup.child_id,
-													sessionData.session_id
+												sessionData.session_id
 											)}
 											<div class="rounded border border-gray-200 dark:border-gray-700">
 												<div

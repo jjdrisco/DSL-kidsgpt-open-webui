@@ -245,7 +245,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body).to.have.property('prolific_pid');
 					expect(response.body).to.have.property('study_id');
 					expect(response.body).to.have.property('current_session_id');
-						expect(response.body).to.have.property('session_id');
+					expect(response.body).to.have.property('session_id');
 					expect(response.body).to.have.property('is_prolific_user');
 					expect(response.body.is_prolific_user).to.be.a('boolean');
 				});

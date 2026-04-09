@@ -375,8 +375,7 @@
 		if (prolificPid) localStorage.setItem('prolificPid', prolificPid);
 		if (prolificStudyId) localStorage.setItem('prolificStudyId', prolificStudyId);
 		if (prolificSessionId) localStorage.setItem('prolificSessionId', prolificSessionId);
-		if (lastProlificSessionId)
-			localStorage.setItem('lastProlificSessionId', lastProlificSessionId);
+		if (lastProlificSessionId) localStorage.setItem('lastProlificSessionId', lastProlificSessionId);
 	}
 
 	async function setLogoImage() {

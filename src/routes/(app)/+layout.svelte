@@ -326,7 +326,12 @@
 
 		try {
 			const currentPath = $page.url.pathname;
-			const workflowRoutes = ['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion'];
+			const workflowRoutes = [
+				'/kids/profile',
+				'/moderation-scenario',
+				'/exit-survey',
+				'/completion'
+			];
 			const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
 
 			// Get workflow state from backend API (single source of truth)

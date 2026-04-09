@@ -19,22 +19,23 @@ All three were added in April 2026 to address participant data loss caused by pa
 The autosave uses the existing `workflow_draft` system (same backend table and API as exit-survey, but with `draft_type: 'moderation'`). A single draft blob per `(user_id, child_id, 'moderation')` stores data for all scenarios.
 
 **Draft blob structure:**
+
 ```json
 {
-  "moderation_finalized": true,
-  "scenario_drafts": {
-    "<scenario_identifier>": {
-      "highlightedTexts1": [{ "text": "...", "startOffset": 0, "endOffset": 10 }],
-      "responseHighlightedHTML": "<html>...",
-      "promptHighlightedHTML": "<html>...",
-      "step1Completed": true,
-      "highlightRatings": { "text": 5 },
-      "concernMappings": [{ "id": "uuid", "text": "reason" }],
-      "highlightConcerns": { "text": ["concern_id"] },
-      "realismLevel": 4,
-      "concernReason": "derived string"
-    }
-  }
+	"moderation_finalized": true,
+	"scenario_drafts": {
+		"<scenario_identifier>": {
+			"highlightedTexts1": [{ "text": "...", "startOffset": 0, "endOffset": 10 }],
+			"responseHighlightedHTML": "<html>...",
+			"promptHighlightedHTML": "<html>...",
+			"step1Completed": true,
+			"highlightRatings": { "text": 5 },
+			"concernMappings": [{ "id": "uuid", "text": "reason" }],
+			"highlightConcerns": { "text": ["concern_id"] },
+			"realismLevel": 4,
+			"concernReason": "derived string"
+		}
+	}
 }
 ```
 
@@ -50,6 +51,7 @@ The guard `if (isLoadingScenario) return` prevents save loops during restoration
 ### Save Flow (read-modify-write)
 
 Each save:
+
 1. Reads the existing draft via `getWorkflowDraft(token, childId, 'moderation')`
 2. Merges the current scenario's data under `scenario_drafts[scenarioId]`
 3. Writes the full blob back via `saveWorkflowDraft(...)`
@@ -82,12 +84,14 @@ In `loadScenario()`, after checking the backend `ModerationSession` and in-memor
 ### Section 2a: Scenario Realism
 
 A progress bar between the "2a. Scenario Realism" heading and the rating buttons:
+
 - **Before rating:** "0 of 1 rated" / "Rating needed" (amber), empty bar
 - **After rating:** "1 of 1 rated" / "Complete" (green), full bar
 
 ### Section 2b: Per-Highlight Progress
 
 A progress bar above the highlight cards:
+
 - Shows "X of N highlights complete (rated + linked to a reason)"
 - Bar color: blue (in progress) or green (all complete)
 - "All addressed!" or "N remaining" counter on the right
@@ -95,6 +99,7 @@ A progress bar above the highlight cards:
 ### Per-Highlight Status Badges
 
 Each highlight card shows two inline badges between the number circle and the highlight text:
+
 - **"Rated"** (green) or **"Needs rating"** (red) — whether `highlightRatings[text]` is set
 - **"Linked"** (green) or **"Needs reason"** (red) — whether `highlightConcerns[text]` has entries
 
@@ -107,12 +112,14 @@ The card border also changes: green when fully addressed, amber when incomplete.
 ### State Variable
 
 ```typescript
-let submitValidationErrors: Record<string, { missingRating: boolean; missingConcern: boolean }> = {};
+let submitValidationErrors: Record<string, { missingRating: boolean; missingConcern: boolean }> =
+	{};
 ```
 
 ### Validation Flow (`completeStep2`)
 
 Instead of returning on the first toast error, the function:
+
 1. Checks realism level first (toast + scroll to `#realism-rating` if missing)
 2. Collects per-highlight errors into `submitValidationErrors`
 3. Checks for missing concerns and unlinked concerns (toast)
@@ -121,12 +128,14 @@ Instead of returning on the first toast error, the function:
 ### Inline Error Display
 
 Below each highlight's rating buttons, if `submitValidationErrors[highlight.text]` is set:
+
 - "Please select a sentiment rating above" (red, with warning icon)
 - "Please link at least one reason to this highlight below" (red, with warning icon)
 
 ### Error Clearing
 
 Errors clear reactively:
+
 - **Rating selected** (`on:click` on rating button): clears `missingRating` for that highlight
 - **Concern linked** (`toggleConcernLink`): clears `missingConcern` for that highlight
 - **Scenario navigation** (`loadScenario`): resets entire `submitValidationErrors` object
@@ -136,17 +145,17 @@ Errors clear reactively:
 
 ## Key Files
 
-| File | What |
-|------|------|
-| `src/routes/(app)/moderation-scenario/+page.svelte` | All frontend logic: autosave, progress bars, validation |
-| `src/lib/apis/workflow/index.ts` | `saveWorkflowDraft`, `getWorkflowDraft`, `deleteWorkflowDraft` API functions |
-| `backend/open_webui/models/workflow_draft.py` | `WorkflowDraft` ORM model (table: `workflow_drafts`) |
-| `backend/open_webui/routers/workflow.py` | Draft CRUD endpoints (`/workflow/draft`) |
+| File                                                | What                                                                         |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/routes/(app)/moderation-scenario/+page.svelte` | All frontend logic: autosave, progress bars, validation                      |
+| `src/lib/apis/workflow/index.ts`                    | `saveWorkflowDraft`, `getWorkflowDraft`, `deleteWorkflowDraft` API functions |
+| `backend/open_webui/models/workflow_draft.py`       | `WorkflowDraft` ORM model (table: `workflow_drafts`)                         |
+| `backend/open_webui/routers/workflow.py`            | Draft CRUD endpoints (`/workflow/draft`)                                     |
 
 ## API Endpoints Used
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/workflow/draft?child_id=X&draft_type=moderation` | Read existing draft |
-| `POST` | `/workflow/draft` | Upsert draft blob |
-| `DELETE` | `/workflow/draft?child_id=X&draft_type=moderation` | Delete draft |
+| Method   | Path                                               | Purpose             |
+| -------- | -------------------------------------------------- | ------------------- |
+| `GET`    | `/workflow/draft?child_id=X&draft_type=moderation` | Read existing draft |
+| `POST`   | `/workflow/draft`                                  | Upsert draft blob   |
+| `DELETE` | `/workflow/draft?child_id=X&draft_type=moderation` | Delete draft        |

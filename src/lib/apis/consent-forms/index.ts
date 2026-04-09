@@ -123,10 +123,7 @@ export const updateConsentForm = async (
 	return res;
 };
 
-export const deleteConsentForm = async (
-	token: string,
-	formId: string
-): Promise<boolean> => {
+export const deleteConsentForm = async (token: string, formId: string): Promise<boolean> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prolific/consent-forms/${formId}`, {

@@ -379,7 +379,8 @@
 									<div>
 										<span class="font-medium">Slug:</span>
 										<span class="font-mono">{form.slug}</span>
-										&bull; <span class="font-medium">Version:</span> {form.version}
+										&bull; <span class="font-medium">Version:</span>
+										{form.version}
 									</div>
 									<div>
 										<span class="font-medium">Study IDs:</span>

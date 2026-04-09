@@ -1480,7 +1480,8 @@
 	let currentRequestId: number = 0;
 
 	// Validation error state for Step 2 submit (Fix 3)
-	let submitValidationErrors: Record<string, { missingRating: boolean; missingConcern: boolean }> = {};
+	let submitValidationErrors: Record<string, { missingRating: boolean; missingConcern: boolean }> =
+		{};
 
 	// =================================================================================================
 	// AUTOSAVE: Debounced draft persistence for Step 2 progress
@@ -3466,7 +3467,10 @@
 				const token = localStorage.token || '';
 				if (token && selectedChildId) {
 					const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
-					const scenarioDrafts = ((draftRes?.data as any)?.scenario_drafts ?? {}) as Record<string, any>;
+					const scenarioDrafts = ((draftRes?.data as any)?.scenario_drafts ?? {}) as Record<
+						string,
+						any
+					>;
 
 					const draftLookupKeys = [
 						identifier,
@@ -6531,14 +6535,21 @@
 															{realismLevel !== null ? '1 of 1' : '0 of 1'} rated
 														</span>
 														{#if realismLevel !== null}
-															<span class="text-sm font-medium text-green-600 dark:text-green-400">Complete</span>
+															<span class="text-sm font-medium text-green-600 dark:text-green-400"
+																>Complete</span
+															>
 														{:else}
-															<span class="text-sm font-medium text-amber-600 dark:text-amber-400">Rating needed</span>
+															<span class="text-sm font-medium text-amber-600 dark:text-amber-400"
+																>Rating needed</span
+															>
 														{/if}
 													</div>
 													<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 														<div
-															class="h-2 rounded-full transition-all duration-300 {realismLevel !== null ? 'bg-green-500' : 'bg-blue-500'}"
+															class="h-2 rounded-full transition-all duration-300 {realismLevel !==
+															null
+																? 'bg-green-500'
+																: 'bg-blue-500'}"
 															style="width: {realismLevel !== null ? 100 : 0}%"
 														></div>
 													</div>
@@ -6649,14 +6660,26 @@
 																	<!-- Per-highlight status badges -->
 																	<span class="flex items-center gap-1 flex-shrink-0 mt-1">
 																		{#if (highlightRatings[highlight.text] ?? null) !== null}
-																			<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" title="Rating provided">Rated</span>
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+																				title="Rating provided">Rated</span
+																			>
 																		{:else}
-																			<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" title="Rating needed">Needs rating</span>
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+																				title="Rating needed">Needs rating</span
+																			>
 																		{/if}
 																		{#if linkedIds.length > 0}
-																			<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" title="Linked to reason(s)">Linked</span>
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+																				title="Linked to reason(s)">Linked</span
+																			>
 																		{:else}
-																			<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" title="Needs a linked reason">Needs reason</span>
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+																				title="Needs a linked reason">Needs reason</span
+																			>
 																		{/if}
 																	</span>
 																	<span
@@ -6702,10 +6725,18 @@
 																						[highlight.text]: opt.v
 																					};
 																					// Clear validation error for this highlight
-																					if (submitValidationErrors[highlight.text]?.missingRating) {
+																					if (
+																						submitValidationErrors[highlight.text]?.missingRating
+																					) {
 																						const updated = { ...submitValidationErrors };
-																						updated[highlight.text] = { ...updated[highlight.text], missingRating: false };
-																						if (!updated[highlight.text].missingRating && !updated[highlight.text].missingConcern) {
+																						updated[highlight.text] = {
+																							...updated[highlight.text],
+																							missingRating: false
+																						};
+																						if (
+																							!updated[highlight.text].missingRating &&
+																							!updated[highlight.text].missingConcern
+																						) {
 																							delete updated[highlight.text];
 																						}
 																						submitValidationErrors = updated;
@@ -6727,17 +6758,37 @@
 																{#if submitValidationErrors[highlight.text]}
 																	<div class="mt-1 space-y-1">
 																		{#if submitValidationErrors[highlight.text].missingRating}
-																			<p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-																				<svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-																					<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+																			<p
+																				class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1"
+																			>
+																				<svg
+																					class="w-4 h-4 flex-shrink-0"
+																					fill="currentColor"
+																					viewBox="0 0 20 20"
+																				>
+																					<path
+																						fill-rule="evenodd"
+																						d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+																						clip-rule="evenodd"
+																					/>
 																				</svg>
 																				Please select a sentiment rating above
 																			</p>
 																		{/if}
 																		{#if submitValidationErrors[highlight.text].missingConcern}
-																			<p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-																				<svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-																					<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+																			<p
+																				class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1"
+																			>
+																				<svg
+																					class="w-4 h-4 flex-shrink-0"
+																					fill="currentColor"
+																					viewBox="0 0 20 20"
+																				>
+																					<path
+																						fill-rule="evenodd"
+																						d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+																						clip-rule="evenodd"
+																					/>
 																				</svg>
 																				Please link at least one reason to this highlight below
 																			</p>

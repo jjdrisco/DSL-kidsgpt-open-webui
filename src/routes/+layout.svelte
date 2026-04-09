@@ -831,8 +831,7 @@
 						const urlStudyId = $page.url.searchParams.get('STUDY_ID');
 						const urlSessionId = $page.url.searchParams.get('SESSION_ID');
 
-						const hasCompleteProlificParams =
-							!!urlProlificPid && !!urlStudyId && !!urlSessionId;
+						const hasCompleteProlificParams = !!urlProlificPid && !!urlStudyId && !!urlSessionId;
 						const prolificContextChanged =
 							hasCompleteProlificParams &&
 							(urlProlificPid !== sessionUser.prolific_pid ||

@@ -19,7 +19,8 @@
 	let mainPageContainer: HTMLElement;
 
 	// Assignment time tracking
-	$: sessionId = $user?.current_session_id || localStorage.getItem('prolificSessionId') || 'unknown';
+	$: sessionId =
+		$user?.current_session_id || localStorage.getItem('prolificSessionId') || 'unknown';
 	let attemptNumber: number = 1;
 
 	function resolveSessionIdForUser(): string {
@@ -286,10 +287,5 @@
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-	<AssignmentTimeTracker
-		userId={get(user)?.id || ''}
-		{sessionId}
-		{attemptNumber}
-		enabled={true}
-	/>
+	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionId} {attemptNumber} enabled={true} />
 </div>
