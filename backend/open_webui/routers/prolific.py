@@ -2,7 +2,6 @@ import logging
 import os
 import time
 import uuid
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
@@ -10,6 +9,12 @@ from pydantic import BaseModel
 from open_webui.models.users import Users, UserModel, User
 from open_webui.models.auths import Auths
 from open_webui.models.consent_audit import ConsentAudits, ConsentAuditForm
+from open_webui.models.consent_form import (
+    ConsentForms,
+    ConsentFormCreate,
+    ConsentFormUpdate,
+    ConsentFormModel,
+)
 from open_webui.models.child_profiles import ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizzes
 from open_webui.models.workflow_draft import WorkflowDraft
@@ -18,6 +23,7 @@ from open_webui.utils.auth import (
     create_token,
     get_password_hash,
     get_verified_user,
+    get_admin_user,
     is_interviewee_user,
 )
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -291,10 +297,20 @@ async def submit_consent(
 
     # Create consent audit record
     if form_data.consented:
-        # Get consent version from environment or config
-        consent_version = (
-            getattr(request.app.state.config, "CONSENT_VERSION", None) or VERSION
-        )
+        # Get consent version and form ID from the matching consent form in the DB,
+        # falling back to the global config/VERSION
+        study_id_for_lookup = form_data.study_id or updated_user.study_id
+        consent_version = None
+        consent_form_id = None
+        if study_id_for_lookup:
+            matched_form = ConsentForms.get_by_study_id(study_id_for_lookup)
+            if matched_form:
+                consent_version = matched_form.version
+                consent_form_id = matched_form.id
+        if not consent_version:
+            consent_version = (
+                getattr(request.app.state.config, "CONSENT_VERSION", None) or VERSION
+            )
 
         # Get user agent
         user_agent = request.headers.get("user-agent", None)
@@ -304,6 +320,7 @@ async def submit_consent(
             ConsentAuditForm(
                 user_id=user.id,
                 consent_version=consent_version,
+                consent_form_id=consent_form_id,
                 prolific_pid=form_data.prolific_pid or updated_user.prolific_pid,
                 study_id=form_data.study_id or updated_user.study_id,
                 session_id=form_data.session_id or updated_user.current_session_id,
@@ -336,28 +353,62 @@ async def get_session_info(user_id: str = None):
     }
 
 
-CONSENT_TEXTS_DIR = Path(__file__).resolve().parent.parent.parent / "consent_texts"
-
-
 @router.get("/consent-text")
 async def get_consent_text(study_id: Optional[str] = None):
     """
     Return consent body HTML for the given study_id.
-    Reads .html files from backend/consent_texts/. Each file's first line
-    is a comma-separated list of study IDs; the rest is HTML content.
+    Looks up the active consent form from the database whose study_ids
+    list contains the requested study_id.
     """
-    if not CONSENT_TEXTS_DIR.is_dir():
+    if not study_id:
         return {"content": "", "matched": False}
 
-    for html_file in CONSENT_TEXTS_DIR.glob("*.html"):
-        try:
-            text = html_file.read_text(encoding="utf-8")
-            first_newline = text.index("\n")
-            ids_line = text[:first_newline].strip()
-            study_ids = [sid.strip() for sid in ids_line.split(",")]
-            if study_id and study_id in study_ids:
-                return {"content": text[first_newline + 1 :], "matched": True}
-        except (ValueError, OSError):
-            continue
+    form = ConsentForms.get_by_study_id(study_id)
+    if form:
+        return {
+            "content": form.body_html,
+            "matched": True,
+            "version": form.version,
+            "title": form.title,
+        }
 
     return {"content": "", "matched": False}
+
+
+# ---------------------------------------------------------------------------
+# Admin CRUD for consent forms
+# ---------------------------------------------------------------------------
+
+
+@router.get("/consent-forms")
+async def list_consent_forms(user=Depends(get_admin_user)):
+    """List all consent forms (active and inactive)."""
+    return ConsentForms.get_all()
+
+
+@router.post("/consent-forms")
+async def create_consent_form(
+    form_data: ConsentFormCreate, user=Depends(get_admin_user)
+):
+    """Create a new consent form."""
+    return ConsentForms.create(form_data)
+
+
+@router.put("/consent-forms/{form_id}")
+async def update_consent_form(
+    form_id: str, form_data: ConsentFormUpdate, user=Depends(get_admin_user)
+):
+    """Update an existing consent form."""
+    updated = ConsentForms.update(form_id, form_data)
+    if not updated:
+        raise HTTPException(404, detail="Consent form not found")
+    return updated
+
+
+@router.delete("/consent-forms/{form_id}")
+async def delete_consent_form(form_id: str, user=Depends(get_admin_user)):
+    """Deactivate a consent form. Never hard-deleted — audit records reference these."""
+    success = ConsentForms.deactivate(form_id)
+    if not success:
+        raise HTTPException(404, detail="Consent form not found")
+    return {"success": True}

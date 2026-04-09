@@ -19,6 +19,7 @@ class ConsentAudit(Base):
     ui_version = Column(String, nullable=True)
     user_agent = Column(Text, nullable=True)
     consent_given = Column(Boolean, nullable=False, default=False)
+    consent_form_id = Column(String, nullable=True)
 
     __table_args__ = (
         Index("idx_consent_audit_user", "user_id"),
@@ -40,6 +41,7 @@ class ConsentAuditModel(BaseModel):
     ui_version: Optional[str] = None
     user_agent: Optional[str] = None
     consent_given: bool
+    consent_form_id: Optional[str] = None
 
 
 class ConsentAuditForm(BaseModel):
@@ -51,6 +53,7 @@ class ConsentAuditForm(BaseModel):
     ui_version: Optional[str] = None
     user_agent: Optional[str] = None
     consent_given: bool
+    consent_form_id: Optional[str] = None
 
 
 class ConsentAuditTable:
@@ -105,6 +108,7 @@ class ConsentAuditTable:
                 ui_version=form.ui_version,
                 user_agent=form.user_agent,
                 consent_given=form.consent_given,
+                consent_form_id=form.consent_form_id,
             )
 
             db.add(obj)
