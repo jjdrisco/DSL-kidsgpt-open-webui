@@ -2,7 +2,6 @@ import logging
 import os
 import time
 import uuid
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
@@ -10,6 +9,12 @@ from pydantic import BaseModel
 from open_webui.models.users import Users, UserModel, User
 from open_webui.models.auths import Auths
 from open_webui.models.consent_audit import ConsentAudits, ConsentAuditForm
+from open_webui.models.consent_form import (
+    ConsentForms,
+    ConsentFormCreate,
+    ConsentFormUpdate,
+    ConsentFormModel,
+)
 from open_webui.models.child_profiles import ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizzes
 from open_webui.models.workflow_draft import WorkflowDraft
@@ -18,6 +23,7 @@ from open_webui.utils.auth import (
     create_token,
     get_password_hash,
     get_verified_user,
+    get_admin_user,
     is_interviewee_user,
 )
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -44,7 +50,7 @@ class ProlificAuthRequest(BaseModel):
 class ProlificAuthResponse(BaseModel):
     token: str
     user: UserModel
-    session_number: int
+    session_id: str
     is_new_user: bool
     new_child_id: str | None = None
     has_exit_quiz: bool = False
@@ -60,8 +66,7 @@ class ConsentForm(BaseModel):
 def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
     """
     Reset a user's workflow when they return with a new Prolific study ID.
-    Resets session_number to 1, resets attempt_number to 1 (attempt only
-    increments on explicit Restart Survey), and updates study_id.
+    Resets attempt_number to 1 and updates study/session metadata.
     """
     with get_db() as db:
         reset_ts = int(time.time() * 1000)
@@ -72,7 +77,6 @@ def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
                 "workflow_reset_at": reset_ts,
                 "instructions_completed_at": None,
                 "current_attempt_number": 1,
-                "session_number": 1,
             }
         )
         db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user_id).delete()
@@ -83,13 +87,35 @@ def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
         )
 
 
+def reset_workflow_for_new_session(user_id: str, new_session_id: str) -> None:
+    """
+    Reset a user's workflow when they return with a new Prolific session ID.
+    """
+    with get_db() as db:
+        reset_ts = int(time.time() * 1000)
+
+        db.query(User).filter(User.id == user_id).update(
+            {
+                "workflow_reset_at": reset_ts,
+                "instructions_completed_at": None,
+                "current_attempt_number": 1,
+            }
+        )
+        db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user_id).delete()
+        db.commit()
+        log.info(
+            f"Auto-reset workflow for user {user_id} on new session_id '{new_session_id}' "
+            f"(attempt reset to 1)"
+        )
+
+
 @router.post("/auth", response_model=ProlificAuthResponse)
 async def prolific_auth(
     request: Request, response: Response, form_data: ProlificAuthRequest
 ):
     """
     Authenticate or create user based on Prolific parameters.
-    - If user with PROLIFIC_PID exists, check SESSION_ID to determine session_number
+    - If user with PROLIFIC_PID exists, check SESSION_ID string
     - If user doesn't exist, create new user with generated credentials
     - Return JWT token and session metadata
     """
@@ -115,7 +141,6 @@ async def prolific_auth(
                     "prolific_pid": form_data.prolific_pid,
                     "study_id": form_data.study_id,
                     "current_session_id": form_data.session_id,
-                    "session_number": 1,
                     "updated_at": int(time.time()),
                 },
             )
@@ -138,15 +163,21 @@ async def prolific_auth(
                 "resetting workflow."
             )
             reset_workflow_for_new_study(existing_user.id, form_data.study_id)
-            # Re-fetch user so we have the updated state (session_number=1, etc.)
+            # Re-fetch user so we have the updated reset state.
             existing_user = Users.get_user_by_email(prolific_email) or existing_user
             is_new_session = True  # Treat as new session after reset
 
+        if is_new_session and not study_changed:
+            log.info(
+                f"User {existing_user.id} returned with new session_id "
+                f"'{form_data.session_id}' (was '{existing_user.current_session_id}') — "
+                "resetting workflow."
+            )
+            reset_workflow_for_new_session(existing_user.id, form_data.session_id)
+
         if is_new_session:
-            # New session - increment session_number
-            new_session_number = (existing_user.session_number or 1) + 1
             updated_user = Users.update_user_session(
-                existing_user.id, form_data.session_id, new_session_number
+                existing_user.id, form_data.session_id
             )
             if not updated_user:
                 raise HTTPException(500, detail="Failed to update user session")
@@ -155,9 +186,7 @@ async def prolific_auth(
             latest_profile = ChildProfiles.get_latest_child_profile_any(user.id)
             new_child_id = latest_profile.id if latest_profile else None
         else:
-            # Same session - use existing session_number
             user = existing_user
-            new_session_number = user.session_number or 1
             new_child_id = None
 
         is_new_user = False
@@ -196,12 +225,10 @@ async def prolific_auth(
                 "prolific_pid": form_data.prolific_pid,
                 "study_id": form_data.study_id,
                 "current_session_id": form_data.session_id,
-                "session_number": 1,
                 "updated_at": int(time.time()),
             },
         )
         user = updated_user or auth_user
-        new_session_number = 1
         is_new_user = True
         # No child to reuse yet for first-time user
         new_child_id = None
@@ -238,7 +265,7 @@ async def prolific_auth(
     return ProlificAuthResponse(
         token=token,
         user=user,
-        session_number=new_session_number,
+        session_id=form_data.session_id,
         is_new_user=is_new_user,
         new_child_id=new_child_id,
         has_exit_quiz=has_exit,
@@ -268,18 +295,15 @@ async def submit_consent(
                     "prolific_pid": form_data.prolific_pid,
                     "study_id": form_data.study_id,
                     "current_session_id": form_data.session_id,
-                    "session_number": 1,
                     "role": role,
                 }
             )
         else:
             # Prolific IDs already stored — just update session if it changed
             if form_data.session_id and form_data.session_id != user.current_session_id:
-                new_session_number = (user.session_number or 1) + 1
                 update_data.update(
                     {
                         "current_session_id": form_data.session_id,
-                        "session_number": new_session_number,
                     }
                 )
 
@@ -291,10 +315,20 @@ async def submit_consent(
 
     # Create consent audit record
     if form_data.consented:
-        # Get consent version from environment or config
-        consent_version = (
-            getattr(request.app.state.config, "CONSENT_VERSION", None) or VERSION
-        )
+        # Get consent version and form ID from the matching consent form in the DB,
+        # falling back to the global config/VERSION
+        study_id_for_lookup = form_data.study_id or updated_user.study_id
+        consent_version = None
+        consent_form_id = None
+        if study_id_for_lookup:
+            matched_form = ConsentForms.get_by_study_id(study_id_for_lookup)
+            if matched_form:
+                consent_version = matched_form.version
+                consent_form_id = matched_form.id
+        if not consent_version:
+            consent_version = (
+                getattr(request.app.state.config, "CONSENT_VERSION", None) or VERSION
+            )
 
         # Get user agent
         user_agent = request.headers.get("user-agent", None)
@@ -304,6 +338,7 @@ async def submit_consent(
             ConsentAuditForm(
                 user_id=user.id,
                 consent_version=consent_version,
+                consent_form_id=consent_form_id,
                 prolific_pid=form_data.prolific_pid or updated_user.prolific_pid,
                 study_id=form_data.study_id or updated_user.study_id,
                 session_id=form_data.session_id or updated_user.current_session_id,
@@ -332,32 +367,66 @@ async def get_session_info(user_id: str = None):
         "prolific_pid": user.prolific_pid,
         "study_id": user.study_id,
         "current_session_id": user.current_session_id,
-        "session_number": user.session_number,
+        "session_id": user.current_session_id,
     }
-
-
-CONSENT_TEXTS_DIR = Path(__file__).resolve().parent.parent.parent / "consent_texts"
 
 
 @router.get("/consent-text")
 async def get_consent_text(study_id: Optional[str] = None):
     """
     Return consent body HTML for the given study_id.
-    Reads .html files from backend/consent_texts/. Each file's first line
-    is a comma-separated list of study IDs; the rest is HTML content.
+    Looks up the active consent form from the database whose study_ids
+    list contains the requested study_id.
     """
-    if not CONSENT_TEXTS_DIR.is_dir():
+    if not study_id:
         return {"content": "", "matched": False}
 
-    for html_file in CONSENT_TEXTS_DIR.glob("*.html"):
-        try:
-            text = html_file.read_text(encoding="utf-8")
-            first_newline = text.index("\n")
-            ids_line = text[:first_newline].strip()
-            study_ids = [sid.strip() for sid in ids_line.split(",")]
-            if study_id and study_id in study_ids:
-                return {"content": text[first_newline + 1 :], "matched": True}
-        except (ValueError, OSError):
-            continue
+    form = ConsentForms.get_by_study_id(study_id)
+    if form:
+        return {
+            "content": form.body_html,
+            "matched": True,
+            "version": form.version,
+            "title": form.title,
+        }
 
     return {"content": "", "matched": False}
+
+
+# ---------------------------------------------------------------------------
+# Admin CRUD for consent forms
+# ---------------------------------------------------------------------------
+
+
+@router.get("/consent-forms")
+async def list_consent_forms(user=Depends(get_admin_user)):
+    """List all consent forms (active and inactive)."""
+    return ConsentForms.get_all()
+
+
+@router.post("/consent-forms")
+async def create_consent_form(
+    form_data: ConsentFormCreate, user=Depends(get_admin_user)
+):
+    """Create a new consent form."""
+    return ConsentForms.create(form_data)
+
+
+@router.put("/consent-forms/{form_id}")
+async def update_consent_form(
+    form_id: str, form_data: ConsentFormUpdate, user=Depends(get_admin_user)
+):
+    """Update an existing consent form."""
+    updated = ConsentForms.update(form_id, form_data)
+    if not updated:
+        raise HTTPException(404, detail="Consent form not found")
+    return updated
+
+
+@router.delete("/consent-forms/{form_id}")
+async def delete_consent_form(form_id: str, user=Depends(get_admin_user)):
+    """Deactivate a consent form. Never hard-deleted — audit records reference these."""
+    success = ConsentForms.deactivate(form_id)
+    if not success:
+        raise HTTPException(404, detail="Consent form not found")
+    return {"success": True}

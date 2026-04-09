@@ -15,7 +15,8 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import { getUserType } from '$lib/utils';
 	import { getWorkflowState } from '$lib/apis/workflow';
-	import { getStepFromRoute } from '$lib/utils/workflow';
+	import { canAccessStep, getStepFromRoute } from '$lib/utils/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -325,30 +326,32 @@
 
 		try {
 			const currentPath = $page.url.pathname;
+			const workflowRoutes = ['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion'];
+			const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
 
 			// Get workflow state from backend API (single source of truth)
 			let workflowState = null;
 			try {
 				if (localStorage.token) {
-					workflowState = await getWorkflowState(localStorage.token);
+					const activeChildId = childProfileSync.getCurrentChildId();
+					workflowState = await getWorkflowState(localStorage.token, {
+						childId: activeChildId
+					});
 				}
 			} catch (error) {
 				console.error('Failed to fetch workflow state:', error);
-				// Continue with navigation logic even if API fails
 			}
 
 			// Check if this is a Prolific user (use server-derived `user_type` or DB role — do not rely on prolific_pid/localStorage)
 			const isProlificUser = $user?.user_type === 'prolific' || $user?.role === 'prolific';
 			const prolificSessionId = localStorage.getItem('prolificSessionId');
-			const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
 
 			// Get completion status from backend workflow state
-			const assignmentCompleted =
-				workflowState?.progress_by_section?.exit_survey_completed || false;
+			const assignmentCompleted = workflowState ? canAccessStep(4, workflowState) : false;
 			const instructionsCompleted =
 				workflowState?.progress_by_section?.instructions_completed || false;
 
-			// For Prolific users on new sessions, call reset API and redirect to instructions
+			// Track known session id for Prolific users; backend owns reset/attempt logic.
 			if (isProlificUser) {
 				const urlSessionId = $page.url.searchParams.get('SESSION_ID');
 				const storageSessionId = localStorage.getItem('prolificSessionId');
@@ -356,25 +359,8 @@
 
 				if (sessionIdToCheck) {
 					const lastSessionId = localStorage.getItem('lastProlificSessionId');
-					const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
 
-					if (isNewSession) {
-						console.log('🔄 New Prolific session detected, resetting workflow via API');
-						localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
-						try {
-							const { resetUserWorkflow } = await import('$lib/apis/workflow');
-							await resetUserWorkflow(localStorage.token);
-							// Dispatch reset event so all components can clear their state
-							window.dispatchEvent(new Event('workflow-reset'));
-							window.dispatchEvent(new Event('workflow-updated'));
-						} catch (e) {
-							console.error('Failed to reset workflow for new Prolific session:', e);
-						}
-						if (currentPath !== '/assignment-instructions') {
-							await goto('/assignment-instructions');
-							return;
-						}
-					} else if (!lastSessionId && sessionIdToCheck) {
+					if (!lastSessionId && sessionIdToCheck) {
 						localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 					}
 				}
@@ -435,21 +421,18 @@
 				return;
 			}
 
+			// Fail closed for interviewee workflow routes when workflow state is unavailable.
+			if (!workflowState && isWorkflowRoute) {
+				await goto('/assignment-instructions');
+				return;
+			}
+
 			// Use backend workflow state to determine navigation
 			// Never redirect away from assignment-instructions (user chose "Survey View" to start there)
 			if (workflowState?.next_route && !currentPath.startsWith('/assignment-instructions')) {
 				const nextRoute = workflowState.next_route;
 				const currentStep = getStepFromRoute(currentPath);
 				const nextStep = getStepFromRoute(nextRoute);
-
-				// Define valid workflow routes (excluding assignment-instructions - handled above)
-				const workflowRoutes = [
-					'/kids/profile',
-					'/moderation-scenario',
-					'/exit-survey',
-					'/completion'
-				];
-				const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
 
 				// If user is on a workflow route but not the correct one, redirect
 				if (isWorkflowRoute && currentPath !== nextRoute && !currentPath.startsWith(nextRoute)) {

@@ -79,8 +79,18 @@ export interface WorkflowStateResponse {
 	};
 }
 
-export const getWorkflowState = async (token: string): Promise<WorkflowStateResponse> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/state`, {
+export const getWorkflowState = async (
+	token: string,
+	options?: { childId?: string | null }
+): Promise<WorkflowStateResponse> => {
+	const params = new URLSearchParams();
+	if (options?.childId) {
+		params.set('child_id', options.childId);
+	}
+
+	const endpoint = `${WEBUI_API_BASE_URL}/workflow/state${params.toString() ? `?${params.toString()}` : ''}`;
+
+	const res = await fetch(endpoint, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -197,7 +207,7 @@ export const deleteWorkflowDraft = async (
 
 export const finalizeModeration = async (
 	token: string,
-	payload: { child_id?: string; session_number?: number }
+	payload: { child_id?: string; session_id?: string }
 ): Promise<{ updated: number }> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/moderation/finalize`, {
 		method: 'POST',

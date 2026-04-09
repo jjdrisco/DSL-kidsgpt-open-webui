@@ -139,14 +139,14 @@ def main():
             cp.child_internet_use_frequency,
             cp.attempt_number,
             cp.is_current,
-            cp.session_number,
+            cp.session_id,
             cp.created_at,
             cp.updated_at,
             u.name AS user_name,
             u.email AS user_email,
             u.role AS user_role,
             u.prolific_pid,
-            u.session_number AS user_session_number,
+            u.current_session_id AS user_session_id,
             u.consent_given
         FROM child_profile cp
         LEFT JOIN "user" u ON cp.user_id = u.id
@@ -161,7 +161,7 @@ def main():
             ms.scenario_index,
             ms.attempt_number,
             ms.version_number,
-            ms.session_number,
+            ms.session_id,
             ms.scenario_prompt,
             COALESCE(NULLIF(ms.scenario_id, ''), sa.scenario_id, 'scenario_' || ms.scenario_index::text) AS scenario_id,
             ms.original_response,
@@ -230,7 +230,7 @@ def main():
         SELECT
             ata.id,
             ata.user_id,
-            ata.session_number,
+            ata.session_id,
             ata.active_ms_delta,
             ata.cumulative_ms,
             ata.created_at,
@@ -240,7 +240,7 @@ def main():
             u.prolific_pid
         FROM assignment_session_activity ata
         LEFT JOIN "user" u ON ata.user_id = u.id
-        ORDER BY ata.user_id, ata.session_number, ata.created_at;
+        ORDER BY ata.user_id, ata.session_id, ata.created_at;
     """
 
     try:

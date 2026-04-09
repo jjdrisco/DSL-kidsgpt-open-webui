@@ -30,6 +30,9 @@
 			if (res.ok) {
 				const data = await res.json();
 				consentContent = data.content || '';
+				if (data.version) {
+					consentVersion = data.version;
+				}
 			}
 		} catch (err) {
 			console.error('[CONSENT MODAL] Failed to fetch consent text:', err);

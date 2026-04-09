@@ -24,22 +24,26 @@
 	// Custom scenario detection
 	const CUSTOM_SCENARIO_MARKER = '[Create Your Own Scenario]';
 
-	// Helpers to support multi-session displays (session_number optional)
-	const getSessionNumber = (obj: any) => Number(obj?.session_number);
+	// Helpers to support multi-session displays (session_id optional)
+	const getSessionId = (obj: any) => String(obj?.session_id || 'unknown');
 
 	const groupModerationBySession = (sessions: any[]) => {
 		const bySession: Record<string, any[]> = {};
 		for (const s of sessions || []) {
-			const sn = getSessionNumber(s);
-			if (!Number.isFinite(sn)) continue; // require session_number
-			const key = String(sn);
+			const sid = getSessionId(s);
+			if (!sid) continue;
+			const key = sid;
 			(bySession[key] ||= []).push(s);
 		}
-		// Sort sessions numerically descending (latest first)
+		// Sort sessions by newest activity first.
 		return Object.entries(bySession)
-			.sort((a, b) => Number(b[0]) - Number(a[0]))
+			.sort(
+				(a, b) =>
+					Math.max(...b[1].map((x: any) => Number(x.created_at || 0))) -
+					Math.max(...a[1].map((x: any) => Number(x.created_at || 0)))
+			)
 			.map(([sessionKey, list]) => ({
-				session_number: Number(sessionKey),
+				session_id: sessionKey,
 				items: list.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
 			}));
 	};
@@ -253,9 +257,9 @@
 		}
 	};
 
-	const getSessionTime = (userId: string, childId: string, sessionNumber: number) => {
+	const getSessionTime = (userId: string, childId: string, sessionId: string) => {
 		if (!submissionsData?.session_activity_totals) return 0;
-		const key = `${userId}::${childId}::${sessionNumber}`;
+		const key = `${userId}::${childId}::${sessionId}`;
 		return submissionsData.session_activity_totals[key] || 0;
 	};
 
@@ -265,7 +269,7 @@
 		return submissionsData.assignment_time_totals[key] || 0;
 	};
 
-	const getTotalSessionAssignmentTime = (sessionNumber: number) => {
+	const getTotalSessionAssignmentTime = (sessionId: string) => {
 		if (!submissionsData?.assignment_time_totals || !submissionsData?.user_info?.id) {
 			console.log('[Assignment Time] Missing data:', {
 				hasTotals: !!submissionsData?.assignment_time_totals,
@@ -275,43 +279,22 @@
 		}
 		const userId = submissionsData.user_info.id;
 
-		// After migration, assignment time is tracked by session_number directly
-		// The backend returns keys as: {user_id}::{session_number}
-		// So we can do a direct lookup!
-		// Ensure sessionNumber is a number for consistent key matching
-		const sessionNum = Number(sessionNumber);
-		const key = `${userId}::${sessionNum}`;
+		// Assignment time is keyed as {user_id}::{session_id}
+		const key = `${userId}::${sessionId}`;
 
 		// Try direct lookup first
 		let value = submissionsData.assignment_time_totals[key];
 
-		// If not found, try with session_number as string (defensive)
-		if (value === undefined || value === null) {
-			const keyAsString = `${userId}::${String(sessionNum)}`;
-			value = submissionsData.assignment_time_totals[keyAsString];
-		}
-
-		// If still not found, try all keys to see if there's a match with different format
 		if (value === undefined || value === null) {
 			const allKeys = Object.keys(submissionsData.assignment_time_totals);
-			const matchingKey = allKeys.find((k) => {
-				const parts = k.split('::');
-				return parts.length === 2 && parts[0] === userId && Number(parts[1]) === sessionNum;
-			});
-			if (matchingKey) {
-				value = submissionsData.assignment_time_totals[matchingKey];
-				console.log('[Assignment Time] Found match with different key format:', {
-					matchingKey,
-					value
-				});
-			}
+			const matchingKey = allKeys.find((k) => k === key);
+			if (matchingKey) value = submissionsData.assignment_time_totals[matchingKey];
 		}
 
 		const finalValue = value || 0;
 
-		console.log('[Assignment Time] Direct lookup by session_number:', {
-			sessionNumber,
-			sessionNum,
+		console.log('[Assignment Time] Direct lookup by session_id:', {
+			sessionId,
 			userId,
 			key,
 			value: finalValue,
@@ -325,7 +308,7 @@
 		return finalValue;
 	};
 
-	const getSessionAssignmentTimeByChild = (sessionNumber: number) => {
+	const getSessionAssignmentTimeByChild = (sessionId: string) => {
 		// Assignment time is tracked at the user/attempt level, not per child
 		// So we cannot provide a per-child breakdown
 		// Return empty object - the UI will handle this gracefully
@@ -335,69 +318,63 @@
 	const groupAllDataBySession = () => {
 		if (!submissionsData) return [];
 
-		// Get all unique session numbers from moderation sessions
-		const sessionNumbers = new Set<number>();
+		// Get all unique session ids from moderation sessions
+		const sessionIds = new Set<string>();
 		submissionsData.moderation_sessions.forEach((s) => {
-			const sn = getSessionNumber(s);
-			if (Number.isFinite(sn)) sessionNumbers.add(sn);
+			const sid = getSessionId(s);
+			if (sid) sessionIds.add(sid);
 		});
 
-		// Also check child profiles and exit quiz for session numbers
+		// Also check child profiles for session ids
 		submissionsData.child_profiles.forEach((p) => {
-			if (p.session_number) sessionNumbers.add(Number(p.session_number));
+			if (p.session_id) sessionIds.add(String(p.session_id));
 		});
 
-		// IMPORTANT: Also include session numbers from assignment_time_totals
+		// Also include session ids from assignment_time_totals
 		// This ensures sessions with only assignment time data (but no moderation/child profiles yet) are shown
 		if (submissionsData.assignment_time_totals) {
 			Object.keys(submissionsData.assignment_time_totals).forEach((key) => {
 				const parts = key.split('::');
 				if (parts.length === 2 && parts[0] === submissionsData.user_info?.id) {
-					const sessionNum = Number(parts[1]);
-					if (Number.isFinite(sessionNum)) {
-						sessionNumbers.add(sessionNum);
-					}
+					sessionIds.add(parts[1]);
 				}
 			});
 		}
 
-		// Sort sessions descending (latest first)
-		const sortedSessions = Array.from(sessionNumbers).sort((a, b) => b - a);
+		const sortedSessions = Array.from(sessionIds);
 
 		console.log('[Session Grouping] All sessions found:', {
 			fromModeration: Array.from(
 				new Set(
 					submissionsData.moderation_sessions
-						.map((s) => getSessionNumber(s))
-						.filter(Number.isFinite)
+						.map((s) => getSessionId(s))
+						.filter(Boolean)
 				)
 			),
 			fromChildProfiles: Array.from(
-				new Set(submissionsData.child_profiles.map((p) => p.session_number).filter(Boolean))
+				new Set(submissionsData.child_profiles.map((p) => p.session_id).filter(Boolean))
 			),
 			fromAssignmentTime: submissionsData.assignment_time_totals
 				? Object.keys(submissionsData.assignment_time_totals)
 						.map((k) => {
 							const parts = k.split('::');
-							return parts.length === 2 && parts[0] === submissionsData.user_info?.id
-								? Number(parts[1])
-								: null;
+							return parts.length === 2 && parts[0] === submissionsData.user_info?.id ? parts[1] : null;
 						})
-						.filter(Number.isFinite)
+						.filter(Boolean)
 				: [],
 			allUniqueSessions: sortedSessions,
 			totalSessions: sortedSessions.length
 		});
 
-		return sortedSessions.map((sessionNum) => {
+		return sortedSessions.map((sessionId) => {
 			// Get child profiles for this session
 			const childProfiles = submissionsData.child_profiles.filter(
-				(p) => Number(p.session_number) === sessionNum
+				(p) => String(p.session_id || '') === sessionId
 			);
 
 			// Get moderation sessions for this session
 			const moderationSessions = submissionsData.moderation_sessions.filter(
-				(s) => getSessionNumber(s) === sessionNum
+				(s) => getSessionId(s) === sessionId
 			);
 
 			// Get exit quiz responses for this session (match by child_id and attempt_number)
@@ -409,7 +386,7 @@
 			});
 
 			return {
-				session_number: sessionNum,
+				session_id: sessionId,
 				child_profiles: childProfiles,
 				moderation_sessions: moderationSessions,
 				exit_quiz_responses: exitQuizResponses
@@ -512,13 +489,13 @@
 			<!-- Sessions Grouped View -->
 			<div class="space-y-6">
 				{#each groupAllDataBySession() as sessionData}
-					{@const totalAssignmentTime = getTotalSessionAssignmentTime(sessionData.session_number)}
+					{@const totalAssignmentTime = getTotalSessionAssignmentTime(sessionData.session_id)}
 					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(
-						sessionData.session_number
+						sessionData.session_id
 					)}
 					{@const _debug =
 						console.log('[Assignment Time Display]', {
-							sessionNumber: sessionData.session_number,
+							sessionId: sessionData.session_id,
 							totalAssignmentTime,
 							formatted: formatTimeSpent(totalAssignmentTime)
 						}) || true}
@@ -530,7 +507,7 @@
 						>
 							<div class="flex items-center justify-between">
 								<h2 class="text-xl font-bold text-gray-900 dark:text-white">
-									Session {sessionData.session_number}
+									Session {sessionData.session_id}
 								</h2>
 								<div class="flex items-center gap-3">
 									<!-- Total Assignment Time Badge -->
@@ -595,7 +572,7 @@
 													</div>
 													<div>
 														<span class="text-sm text-gray-600 dark:text-gray-400">Session:</span>
-														<p class="text-gray-900 dark:text-white">{profile.session_number}</p>
+														<p class="text-gray-900 dark:text-white">{profile.session_id}</p>
 													</div>
 													<div>
 														<span class="text-sm text-gray-600 dark:text-gray-400">Only Child:</span
@@ -670,7 +647,7 @@
 											{@const timeSpent = getSessionTime(
 												submissionsData.user_info.id,
 												childGroup.child_id,
-												sessionData.session_number
+													sessionData.session_id
 											)}
 											<div class="rounded border border-gray-200 dark:border-gray-700">
 												<div

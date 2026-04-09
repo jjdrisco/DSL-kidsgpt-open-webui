@@ -35,6 +35,7 @@ from open_webui.models.scenarios import (
     Scenario,
 )
 from open_webui.internal.db import get_db
+from sqlalchemy.exc import IntegrityError
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,6 @@ class ModerationSessionPayload(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
-    session_number: int = 1
     scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
@@ -89,7 +89,6 @@ async def create_or_update_session(
             scenario_index=form_data.scenario_index,
             attempt_number=form_data.attempt_number,
             version_number=form_data.version_number,
-            session_number=form_data.session_number,
             scenario_id=form_data.scenario_id,
             scenario_prompt=form_data.scenario_prompt,
             original_response=form_data.original_response,
@@ -150,7 +149,7 @@ async def get_concern_items(
     scenario_index: int,
     attempt_number: int,
     version_number: int,
-    session_number: int = 1,
+    session_id: str,
     user: UserModel = Depends(get_verified_user),
 ):
     """Return all concern items for a session context, ordered by position."""
@@ -163,7 +162,7 @@ async def get_concern_items(
             scenario_index=scenario_index,
             attempt_number=attempt_number,
             version_number=version_number,
-            session_number=session_number,
+            session_id=session_id,
         )
     except HTTPException:
         raise
@@ -204,45 +203,64 @@ async def assign_scenario(
         if user.id != request.participant_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        # Perform weighted sampling
-        result = Scenarios.weighted_sample(
-            participant_id=request.participant_id,
-            alpha=request.alpha or 1.0,
-            is_active=True,
-        )
+        attempt_number = get_current_attempt_number(request.participant_id)
 
-        if not result:
-            raise HTTPException(
-                status_code=404, detail="No eligible scenarios available"
-            )
-
-        selected_scenario, sampling_audit = result
-
-        # Create assignment atomically (in a transaction)
-        with get_db() as db:
-            # Create assignment
-            form = ScenarioAssignmentForm(
+        # Retry a few times in case a concurrent request wins the same scenario_id.
+        for _ in range(5):
+            result = Scenarios.weighted_sample(
                 participant_id=request.participant_id,
-                child_profile_id=request.child_profile_id,
-                assignment_position=request.assignment_position,
-                alpha=request.alpha,
-            )
-            assignment = ScenarioAssignments.create(
-                form, selected_scenario.scenario_id, sampling_audit
+                alpha=request.alpha or 1.0,
+                is_active=True,
             )
 
-            # Increment n_assigned counter
-            Scenarios.increment_counter(selected_scenario.scenario_id, "n_assigned")
+            if not result:
+                raise HTTPException(
+                    status_code=404, detail="No eligible scenarios available"
+                )
 
-            db.commit()
+            selected_scenario, sampling_audit = result
 
-        return ScenarioAssignResponse(
-            assignment_id=assignment.assignment_id,
-            scenario_id=selected_scenario.scenario_id,
-            prompt_text=selected_scenario.prompt_text,
-            response_text=selected_scenario.response_text,
-            assignment_position=assignment.assignment_position,
-            sampling_audit=sampling_audit,
+            with get_db() as db:
+                try:
+                    form = ScenarioAssignmentForm(
+                        participant_id=request.participant_id,
+                        child_profile_id=request.child_profile_id,
+                        assignment_position=request.assignment_position,
+                        attempt_number=attempt_number,
+                        alpha=request.alpha,
+                    )
+                    assignment = ScenarioAssignments.create(
+                        form,
+                        selected_scenario.scenario_id,
+                        sampling_audit,
+                        db_session=db,
+                        commit=False,
+                    )
+
+                    Scenarios.increment_counter(
+                        selected_scenario.scenario_id,
+                        "n_assigned",
+                        db_session=db,
+                        commit=False,
+                    )
+
+                    db.commit()
+
+                    return ScenarioAssignResponse(
+                        assignment_id=assignment.assignment_id,
+                        scenario_id=selected_scenario.scenario_id,
+                        prompt_text=selected_scenario.prompt_text,
+                        response_text=selected_scenario.response_text,
+                        assignment_position=assignment.assignment_position,
+                        sampling_audit=sampling_audit,
+                    )
+                except IntegrityError:
+                    db.rollback()
+                    continue
+
+        raise HTTPException(
+            status_code=409,
+            detail="Could not assign a unique scenario. Please retry.",
         )
     except HTTPException:
         raise
@@ -321,13 +339,19 @@ async def complete_scenario(
                 ended_at=ts,
                 issue_any=issue_any,
                 duration_seconds=request.duration_seconds,
+                db_session=db,
+                commit=False,
             )
 
             if not updated:
                 raise HTTPException(status_code=404, detail="Assignment not found")
 
-            # Increment n_completed counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_completed")
+            Scenarios.increment_counter(
+                assignment.scenario_id,
+                "n_completed",
+                db_session=db,
+                commit=False,
+            )
             db.commit()
 
         return {
@@ -369,13 +393,19 @@ async def skip_scenario(
                 skip_reason=request.skip_reason,
                 skip_reason_text=request.skip_reason_text,
                 duration_seconds=request.duration_seconds,
+                db_session=db,
+                commit=False,
             )
 
             if not updated:
                 raise HTTPException(status_code=404, detail="Assignment not found")
 
-            # Increment n_skipped counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_skipped")
+            Scenarios.increment_counter(
+                assignment.scenario_id,
+                "n_skipped",
+                db_session=db,
+                commit=False,
+            )
             db.commit()
 
         return {"status": "skipped", "assignment_id": request.assignment_id}
@@ -410,13 +440,19 @@ async def abandon_scenario(
                 ended_at=ts,
                 issue_any=None,
                 duration_seconds=request.duration_seconds,
+                db_session=db,
+                commit=False,
             )
 
             if not updated:
                 raise HTTPException(status_code=404, detail="Assignment not found")
 
-            # Increment n_abandoned counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_abandoned")
+            Scenarios.increment_counter(
+                assignment.scenario_id,
+                "n_abandoned",
+                db_session=db,
+                commit=False,
+            )
             db.commit()
 
         # Trigger reassignment (create new assignment in same session slot)
@@ -437,13 +473,29 @@ async def abandon_scenario(
         if result:
             new_scenario, sampling_audit = result
             with get_db() as db:
-                new_assignment = ScenarioAssignments.create(
-                    reassign_form,
-                    new_scenario.scenario_id,
-                    sampling_audit,
-                )
-                Scenarios.increment_counter(new_scenario.scenario_id, "n_assigned")
-                db.commit()
+                try:
+                    new_assignment = ScenarioAssignments.create(
+                        reassign_form,
+                        new_scenario.scenario_id,
+                        sampling_audit,
+                        db_session=db,
+                        commit=False,
+                    )
+                    Scenarios.increment_counter(
+                        new_scenario.scenario_id,
+                        "n_assigned",
+                        db_session=db,
+                        commit=False,
+                    )
+                    db.commit()
+                except IntegrityError:
+                    db.rollback()
+                    return {
+                        "status": "abandoned",
+                        "assignment_id": request.assignment_id,
+                        "reassigned": False,
+                        "message": "Concurrent reassignment conflict. Please retry.",
+                    }
 
             return {
                 "status": "abandoned",
@@ -649,7 +701,8 @@ async def get_assignments_for_child(
 ):
     """
     Get existing scenario assignments for a child profile.
-    Returns assignments with status 'assigned' or 'started', ordered by assignment_position.
+    Returns current-attempt assignments for restore, including in-progress and terminal
+    states, ordered by assignment_position.
     """
     try:
         # Verify the child profile belongs to the user
@@ -665,12 +718,15 @@ async def get_assignments_for_child(
             f"current_attempt: {current_attempt}"
         )
 
-        # Get assignments for this child, filtered to assigned/started status and current attempt
+        # Get assignments for this child in current attempt. Include completed/skipped
+        # so page restores the existing attempt set instead of creating new assignments.
         assignments = ScenarioAssignments.get_assignments_by_child(
             child_id,
             status_filter=[
                 AssignmentStatus.ASSIGNED.value,
                 AssignmentStatus.STARTED.value,
+                AssignmentStatus.COMPLETED.value,
+                AssignmentStatus.SKIPPED.value,
             ],
             attempt_number=current_attempt,
         )
@@ -966,7 +1022,7 @@ async def update_scenario_admin(
 class SessionActivityPayload(BaseModel):
     user_id: str
     child_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
@@ -984,7 +1040,7 @@ async def post_session_activity(
         form = ModerationSessionActivityForm(
             user_id=payload.user_id,
             child_id=payload.child_id,
-            session_number=payload.session_number,
+            session_id=payload.session_id,
             attempt_number=payload.attempt_number or 1,
             active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
         )
@@ -1093,7 +1149,7 @@ async def get_available_scenarios(
             "available_scenarios": unseen_scenarios,
             "total_seen": len(seen_scenario_indices),
             "total_available": len(unseen_scenarios),
-            "session_number": user.session_number,
+            "session_id": user.current_session_id,
         }
 
     except HTTPException:

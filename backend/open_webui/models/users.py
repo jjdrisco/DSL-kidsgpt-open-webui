@@ -76,7 +76,6 @@ class User(Base):
     prolific_pid = Column(String, nullable=True, unique=True)
     study_id = Column(String, nullable=True)
     current_session_id = Column(String, nullable=True)
-    session_number = Column(BigInteger, nullable=False, default=1)
     consent_given = Column(Boolean, nullable=True, default=False)
 
     # Parent-child account linking
@@ -129,7 +128,6 @@ class UserModel(BaseModel):
     prolific_pid: Optional[str] = None
     study_id: Optional[str] = None
     current_session_id: Optional[str] = None
-    session_number: int = 1
     consent_given: Optional[bool] = None
 
     # Parent-child account linking
@@ -797,7 +795,6 @@ class UsersTable:
         self,
         user_id: str,
         session_id: str,
-        session_number: int,
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
         try:
@@ -805,8 +802,6 @@ class UsersTable:
                 db.query(User).filter_by(id=user_id).update(
                     {
                         "current_session_id": session_id,
-                        "session_number": session_number,
-                        "current_attempt_number": 1,
                         "updated_at": int(time.time()),
                     }
                 )

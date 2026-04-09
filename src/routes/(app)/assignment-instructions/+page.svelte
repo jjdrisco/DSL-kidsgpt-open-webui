@@ -12,6 +12,7 @@
 		markInstructionsComplete,
 		getCurrentAttempt
 	} from '$lib/apis/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
@@ -22,14 +23,16 @@
 
 	// Assignment time tracking
 	let trackingEnabled: boolean = false;
-	$: sessionNumber = $user?.session_number || 1;
+	$: sessionId = $user?.current_session_id || 'unknown';
 	let attemptNumber: number = 1;
 
 	async function fetchInstructionsStatus() {
 		try {
 			const token = (typeof window !== 'undefined' && localStorage.token) || '';
 			if (token) {
-				const state = await getWorkflowState(token);
+				const state = await getWorkflowState(token, {
+					childId: childProfileSync.getCurrentChildId()
+				});
 				instructionsCompleted = state?.progress_by_section?.instructions_completed || false;
 				if (instructionsCompleted) {
 					trackingEnabled = true;
@@ -275,7 +278,7 @@
 	{#if trackingEnabled}
 		<AssignmentTimeTracker
 			userId={get(user)?.id || ''}
-			{sessionNumber}
+			{sessionId}
 			{attemptNumber}
 			enabled={trackingEnabled}
 		/>

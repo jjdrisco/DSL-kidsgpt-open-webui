@@ -2,7 +2,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export interface AssignmentSessionActivityPayload {
 	user_id: string;
-	session_number: number;
+	session_id: string;
 	attempt_number: number;
 	active_ms_cumulative: number;
 }
@@ -10,7 +10,7 @@ export interface AssignmentSessionActivityPayload {
 export interface AssignmentSessionActivityResponse {
 	id: string;
 	user_id: string;
-	session_number: number;
+	session_id: string;
 	attempt_number: number;
 	active_ms_delta: number;
 	cumulative_ms: number;

@@ -3,7 +3,7 @@ import time
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func
 
@@ -92,6 +92,7 @@ def _default_progress() -> dict:
 
 @router.get("/workflow/state")
 async def get_workflow_state(
+    child_id: str | None = Query(default=None),
     user: UserModel = Depends(get_verified_user),
 ) -> WorkflowStateResponse:
     """
@@ -107,10 +108,19 @@ async def get_workflow_state(
             progress["instructions_completed"] = instructions_at is not None
 
             # Child profiles
+            selected_child = None
             try:
                 latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
                 if latest_child:
                     progress["has_child_profile"] = True
+
+                if child_id:
+                    selected_child = ChildProfiles.get_child_profile_by_id(
+                        child_id, user.id
+                    )
+
+                if selected_child is None:
+                    selected_child = latest_child
             except Exception as e:
                 log.warning(f"Failed to get child profiles for user {user.id}: {e}")
 
@@ -119,8 +129,7 @@ async def get_workflow_state(
             # Exclude sessions created before last workflow reset.
             # Filter sessions by latest_child so count and total refer to the same child.
             try:
-                latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
-                child_id_for_mod = latest_child.id if latest_child else None
+                child_id_for_mod = selected_child.id if selected_child else None
                 sessions = ModerationSessions.get_sessions_by_user(
                     user.id, child_id=child_id_for_mod
                 )
@@ -138,11 +147,11 @@ async def get_workflow_state(
                 progress["moderation_completed_count"] = len(decided)
 
                 # moderation_total: use assignment count when available, else 12
-                if latest_child:
+                if selected_child:
                     try:
                         current_attempt = get_current_attempt_number(user.id)
                         assignments = ScenarioAssignments.get_assignments_by_child(
-                            latest_child.id,
+                            selected_child.id,
                             attempt_number=current_attempt,
                         )
                         if assignments:
@@ -158,11 +167,10 @@ async def get_workflow_state(
 
             # Check if moderation has been finalized (user clicked "Done")
             try:
-                latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
-                if latest_child:
+                if selected_child:
                     from open_webui.models.workflow_draft import get_draft
 
-                    draft = get_draft(user.id, latest_child.id, "moderation")
+                    draft = get_draft(user.id, selected_child.id, "moderation")
                     if draft and draft.data:
                         progress["moderation_finalized"] = draft.data.get(
                             "moderation_finalized", False
@@ -172,16 +180,22 @@ async def get_workflow_state(
                     f"Failed to check moderation finalized status for user {user.id}: {e}"
                 )
 
-            # Exit survey completion — any submission counts (same pattern as has_child_profile).
-            # Explicit reset (Reset Survey button) deletes rows; full workflow reset leaves rows
-            # but the user can re-submit or use the reset button.
+            # Exit survey completion: scope to current reset boundary and current attempt
+            # so historical submissions from prior sessions/studies do not unlock completion.
             try:
-                latest_exit = (
-                    db.query(ExitQuizResponse)
-                    .filter(ExitQuizResponse.user_id == user.id)
-                    .order_by(ExitQuizResponse.created_at.desc())
-                    .first()
+                current_attempt = get_current_attempt_number(user.id)
+                latest_exit_query = db.query(ExitQuizResponse).filter(
+                    ExitQuizResponse.user_id == user.id,
+                    ExitQuizResponse.attempt_number == current_attempt,
                 )
+                workflow_reset_at = getattr(user, "workflow_reset_at", None)
+                if workflow_reset_at:
+                    latest_exit_query = latest_exit_query.filter(
+                        ExitQuizResponse.created_at > workflow_reset_at
+                    )
+                latest_exit = latest_exit_query.order_by(
+                    ExitQuizResponse.created_at.desc()
+                ).first()
                 progress["exit_survey_completed"] = latest_exit is not None
             except Exception as e:
                 log.warning(f"Failed to get exit survey status for user {user.id}: {e}")
@@ -521,7 +535,7 @@ async def get_session_info(
             "prolific_pid": user.prolific_pid,
             "study_id": user.study_id,
             "current_session_id": user.current_session_id,
-            "session_number": user.session_number,
+            "session_id": user.current_session_id,
             "is_prolific_user": user.prolific_pid is not None,
         }
 
@@ -687,12 +701,12 @@ async def get_user_submissions(
         # Aggregate session activity totals per (user, child, session)
         session_activity_totals = {}
         with get_db() as db:
-            # Group by user_id, child_id, session_number and sum the deltas
+            # Group by user_id, child_id, session_id and sum the deltas
             results = (
                 db.query(
                     ModerationSessionActivity.user_id,
                     ModerationSessionActivity.child_id,
-                    ModerationSessionActivity.session_number,
+                    ModerationSessionActivity.session_id,
                     func.sum(ModerationSessionActivity.active_ms_delta).label(
                         "total_active_ms"
                     ),
@@ -701,22 +715,22 @@ async def get_user_submissions(
                 .group_by(
                     ModerationSessionActivity.user_id,
                     ModerationSessionActivity.child_id,
-                    ModerationSessionActivity.session_number,
+                    ModerationSessionActivity.session_id,
                 )
                 .all()
             )
             for row in results:
-                key = f"{row.user_id}::{row.child_id}::{row.session_number}"
+                key = f"{row.user_id}::{row.child_id}::{row.session_id}"
                 session_activity_totals[key] = int(row.total_active_ms or 0)
 
         # Aggregate assignment time totals per (user, session)
         assignment_time_totals = {}
         with get_db() as db:
-            # Group by user_id, session_number and sum the deltas
+            # Group by user_id, session_id and sum the deltas
             results = (
                 db.query(
                     AssignmentSessionActivity.user_id,
-                    AssignmentSessionActivity.session_number,
+                    AssignmentSessionActivity.session_id,
                     func.sum(AssignmentSessionActivity.active_ms_delta).label(
                         "total_active_ms"
                     ),
@@ -724,12 +738,12 @@ async def get_user_submissions(
                 .filter(AssignmentSessionActivity.user_id == user_id)
                 .group_by(
                     AssignmentSessionActivity.user_id,
-                    AssignmentSessionActivity.session_number,
+                    AssignmentSessionActivity.session_id,
                 )
                 .all()
             )
             for row in results:
-                key = f"{row.user_id}::{row.session_number}"
+                key = f"{row.user_id}::{row.session_id}"
                 assignment_time_totals[key] = int(row.total_active_ms or 0)
 
         return {
@@ -758,7 +772,7 @@ async def get_user_submissions(
 
 class FinalizeModerationForm(BaseModel):
     child_id: str | None = None
-    session_number: int | None = None
+    session_id: str | None = None
 
 
 @router.post("/workflow/moderation/finalize")
@@ -767,8 +781,8 @@ async def finalize_moderation(
 ) -> Dict[str, Any]:
     """
     Mark the last-chosen (latest) submission per scenario as final for the current user.
-    Optional filters: child_id, session_number.
-    Groups by (child_id, scenario_index, attempt_number[, session_number]) and sets the latest created row final.
+    Optional filters: child_id, session_id.
+    Groups by (child_id, scenario_index, attempt_number[, session_id]) and sets the latest created row final.
     """
     try:
         updated = 0
@@ -778,14 +792,13 @@ async def finalize_moderation(
             )
             if form.child_id:
                 query = query.filter(ModerationSession.child_id == form.child_id)
-            # Only filter by session_number if column exists and form provides it
-            if form.session_number is not None:
+            if form.session_id is not None:
                 try:
                     query = query.filter(
-                        ModerationSession.session_number == form.session_number
+                        ModerationSession.session_id == form.session_id
                     )
                 except Exception:
-                    # Older schemas may not have session_number; ignore filter
+                    # Older schemas may not have session_id; ignore filter
                     pass
 
             rows: list[ModerationSession] = query.all()
@@ -797,14 +810,14 @@ async def finalize_moderation(
 
             for r in rows:
                 try:
-                    sn = getattr(r, "session_number", None)
+                    sid = getattr(r, "session_id", None)
                 except Exception:
-                    sn = None
+                    sid = None
                 key = (
                     r.child_id,
                     r.scenario_index,
                     r.attempt_number,
-                    sn if form.session_number is not None else None,
+                    sid if form.session_id is not None else None,
                 )
                 groups[key].append(r)
 

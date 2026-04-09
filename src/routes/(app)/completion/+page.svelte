@@ -8,7 +8,7 @@
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import { getCurrentAttempt } from '$lib/apis/workflow';
 
-	$: sessionNumber = $user?.session_number || 1;
+	$: sessionId = $user?.current_session_id || 'unknown';
 	let attemptNumber: number = 1;
 	let trackingEnabled: boolean = true;
 
@@ -132,7 +132,7 @@
 	<!-- Assignment Time Tracker (stops tracking after delay) -->
 	<AssignmentTimeTracker
 		userId={get(user)?.id || ''}
-		{sessionNumber}
+		{sessionId}
 		{attemptNumber}
 		enabled={trackingEnabled}
 	/>
