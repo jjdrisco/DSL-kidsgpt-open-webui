@@ -48,7 +48,6 @@ class ModerationSessionPayload(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
-    session_number: int = 1
     scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
@@ -89,7 +88,6 @@ async def create_or_update_session(
             scenario_index=form_data.scenario_index,
             attempt_number=form_data.attempt_number,
             version_number=form_data.version_number,
-            session_number=form_data.session_number,
             scenario_id=form_data.scenario_id,
             scenario_prompt=form_data.scenario_prompt,
             original_response=form_data.original_response,
@@ -150,7 +148,7 @@ async def get_concern_items(
     scenario_index: int,
     attempt_number: int,
     version_number: int,
-    session_number: int = 1,
+    session_id: str,
     user: UserModel = Depends(get_verified_user),
 ):
     """Return all concern items for a session context, ordered by position."""
@@ -163,7 +161,7 @@ async def get_concern_items(
             scenario_index=scenario_index,
             attempt_number=attempt_number,
             version_number=version_number,
-            session_number=session_number,
+            session_id=session_id,
         )
     except HTTPException:
         raise
@@ -966,7 +964,7 @@ async def update_scenario_admin(
 class SessionActivityPayload(BaseModel):
     user_id: str
     child_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
@@ -984,7 +982,7 @@ async def post_session_activity(
         form = ModerationSessionActivityForm(
             user_id=payload.user_id,
             child_id=payload.child_id,
-            session_number=payload.session_number,
+            session_id=payload.session_id,
             attempt_number=payload.attempt_number or 1,
             active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
         )
@@ -1093,7 +1091,7 @@ async def get_available_scenarios(
             "available_scenarios": unseen_scenarios,
             "total_seen": len(seen_scenario_indices),
             "total_available": len(unseen_scenarios),
-            "session_number": user.session_number,
+            "session_id": user.current_session_id,
         }
 
     except HTTPException:

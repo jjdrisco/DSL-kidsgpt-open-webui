@@ -207,6 +207,8 @@
 				// Determine if this is a different user or a new session for same user
 				const lastUserId = localStorage.getItem('lastUserId');
 				const lastSessionId = localStorage.getItem('lastProlificSessionId');
+				const lastStudyId = localStorage.getItem('prolificStudyId');
+				const isStudyChanged = !!lastStudyId && lastStudyId !== studyId;
 
 				// If brand new user (or switching users), clear ALL workflow keys
 				if (authResponse.is_new_user || !lastUserId || lastUserId !== authResponse.user.id) {
@@ -215,9 +217,14 @@
 					localStorage.removeItem('prolificPid');
 					localStorage.removeItem('prolificStudyId');
 					localStorage.removeItem('prolificSessionId');
-				} else if (lastSessionId !== sessionId) {
-					// Same user but new SESSION_ID ⇒ reset moderation-only keys
-					resetModerationKeysForNewSession();
+				} else if (isStudyChanged) {
+					// Same user but new STUDY_ID => hard reset local workflow state
+					// so client state matches backend reset_workflow_for_new_study behavior.
+					clearAllWorkflowKeysForNewUser();
+				} else if (lastSessionId && lastSessionId !== sessionId) {
+					// Same user but new SESSION_ID => hard reset local workflow state
+					// so client state matches backend reset_workflow_for_new_session behavior.
+					clearAllWorkflowKeysForNewUser();
 				}
 
 				// Persist token and hydrate full session user
@@ -230,20 +237,19 @@
 					return false;
 				}
 
-				// Determine redirect path based on Prolific response
-				// Prolific users go to assignment-instructions (consent modal shows on top)
+				// Determine redirect path from backend workflow state so reset semantics stay authoritative.
 				let prolificRedirectPath = '/assignment-instructions';
-				if (authResponse.new_child_id) {
-					prolificRedirectPath = '/kids/profile';
+				try {
+					const state = await getWorkflowState(authResponse.token);
+					prolificRedirectPath = state?.next_route || '/assignment-instructions';
+				} catch {
+					prolificRedirectPath = '/assignment-instructions';
 				}
-				// Ignore redirect param for Prolific users - it's just used to pass params around
-				// Always send Prolific users to assignment-instructions (unless new_child_id)
 
 				// Store Prolific metadata BEFORE setSessionUser (which clears localStorage)
 				localStorage.setItem('prolificPid', prolificPid);
 				localStorage.setItem('prolificSessionId', sessionId);
 				localStorage.setItem('prolificStudyId', studyId);
-				localStorage.setItem('prolificSessionNumber', authResponse.session_number.toString());
 				localStorage.setItem('lastProlificSessionId', sessionId);
 				localStorage.setItem('lastUserId', authResponse.user.id);
 
@@ -328,7 +334,6 @@
 		localStorage.removeItem('lastUserId');
 		localStorage.removeItem('prolificSessionId');
 		localStorage.removeItem('prolificStudyId');
-		localStorage.removeItem('prolificSessionNumber');
 	};
 
 	const resetModerationKeysForNewSession = () => {
@@ -360,6 +365,7 @@
 		const prolificPid = localStorage.getItem('prolificPid');
 		const prolificStudyId = localStorage.getItem('prolificStudyId');
 		const prolificSessionId = localStorage.getItem('prolificSessionId');
+		const lastProlificSessionId = localStorage.getItem('lastProlificSessionId');
 		try {
 			localStorage.clear();
 		} catch {}
@@ -369,6 +375,8 @@
 		if (prolificPid) localStorage.setItem('prolificPid', prolificPid);
 		if (prolificStudyId) localStorage.setItem('prolificStudyId', prolificStudyId);
 		if (prolificSessionId) localStorage.setItem('prolificSessionId', prolificSessionId);
+		if (lastProlificSessionId)
+			localStorage.setItem('lastProlificSessionId', lastProlificSessionId);
 	}
 
 	async function setLogoImage() {

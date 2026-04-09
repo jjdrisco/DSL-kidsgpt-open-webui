@@ -17,9 +17,9 @@ export interface ProlificAuthResponse {
 		prolific_pid?: string;
 		study_id?: string;
 		current_session_id?: string;
-		session_number: number;
+		session_id?: string;
 	};
-	session_number: number;
+	session_id: string;
 	is_new_user: boolean;
 	new_child_id?: string | null;
 	has_exit_quiz?: boolean;
@@ -29,7 +29,7 @@ export interface SessionInfo {
 	prolific_pid?: string;
 	study_id?: string;
 	current_session_id?: string;
-	session_number: number;
+	session_id?: string;
 	is_prolific_user: boolean;
 }
 
@@ -37,7 +37,7 @@ export interface AvailableScenariosResponse {
 	available_scenarios: number[];
 	total_seen: number;
 	total_available: number;
-	session_number: number;
+	session_id?: string;
 }
 
 export const authenticateWithProlific = async (
@@ -47,6 +47,16 @@ export const authenticateWithProlific = async (
 	name?: string
 ): Promise<ProlificAuthResponse> => {
 	let error = null;
+
+	const parseErrorResponse = async (res: Response) => {
+		try {
+			const data = await res.json();
+			return data?.detail || data?.message || `HTTP ${res.status}`;
+		} catch {
+			const text = await res.text();
+			return text || `HTTP ${res.status}`;
+		}
+	};
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prolific/auth`, {
 		method: 'POST',
@@ -61,12 +71,12 @@ export const authenticateWithProlific = async (
 		})
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) throw new Error(await parseErrorResponse(res));
 			return res.json();
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail || err.message || 'Authentication failed';
+			error = err?.message || err?.detail || 'Authentication failed';
 			return null;
 		});
 

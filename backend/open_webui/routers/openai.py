@@ -888,7 +888,7 @@ async def generate_chat_completion(
                                 concerns=comparison_result["concerns"],
                                 reasoning=comparison_result["reasoning"],
                                 model_used=comparison_result["model_used"],
-                                session_number=getattr(user, "session_number", None),
+                                session_id=getattr(user, "current_session_id", None),
                             )
 
                             # Log high-concern prompts
@@ -1097,7 +1097,7 @@ async def generate_chat_completion(
                             should_block=should_block,
                             was_blocked=should_block,  # Will match should_block
                             model_used=validation_result["model_used"],
-                            session_number=getattr(user, "session_number", None),
+                            session_id=getattr(user, "current_session_id", None),
                         )
 
                         # Log violations

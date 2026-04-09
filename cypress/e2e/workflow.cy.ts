@@ -245,7 +245,7 @@ describe('Workflow API Endpoints', () => {
 					expect(response.body).to.have.property('prolific_pid');
 					expect(response.body).to.have.property('study_id');
 					expect(response.body).to.have.property('current_session_id');
-					expect(response.body).to.have.property('session_number');
+						expect(response.body).to.have.property('session_id');
 					expect(response.body).to.have.property('is_prolific_user');
 					expect(response.body.is_prolific_user).to.be.a('boolean');
 				});
@@ -489,7 +489,7 @@ describe('Workflow API Endpoints', () => {
 			});
 		});
 
-		it('should finalize moderation with session_number filter', function () {
+		it('should finalize moderation with session_id filter', function () {
 			const credentials = getCredentials();
 			if (!credentials.email || !credentials.password) {
 				this.skip();
@@ -505,7 +505,7 @@ describe('Workflow API Endpoints', () => {
 						'Content-Type': 'application/json'
 					},
 					body: {
-						session_number: 1
+						session_id: 'session-test'
 					}
 				}).then((response) => {
 					expect(response.status).to.eq(200);

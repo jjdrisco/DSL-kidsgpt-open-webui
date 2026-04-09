@@ -15,7 +15,7 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import { getUserType } from '$lib/utils';
 	import { getWorkflowState } from '$lib/apis/workflow';
-	import { getStepFromRoute } from '$lib/utils/workflow';
+	import { canAccessStep, getStepFromRoute } from '$lib/utils/workflow';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -340,15 +340,13 @@
 			// Check if this is a Prolific user (use server-derived `user_type` or DB role — do not rely on prolific_pid/localStorage)
 			const isProlificUser = $user?.user_type === 'prolific' || $user?.role === 'prolific';
 			const prolificSessionId = localStorage.getItem('prolificSessionId');
-			const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
 
 			// Get completion status from backend workflow state
-			const assignmentCompleted =
-				workflowState?.progress_by_section?.exit_survey_completed || false;
+			const assignmentCompleted = workflowState ? canAccessStep(4, workflowState) : false;
 			const instructionsCompleted =
 				workflowState?.progress_by_section?.instructions_completed || false;
 
-			// For Prolific users on new sessions, call reset API and redirect to instructions
+			// Track known session id for Prolific users; backend owns reset/attempt logic.
 			if (isProlificUser) {
 				const urlSessionId = $page.url.searchParams.get('SESSION_ID');
 				const storageSessionId = localStorage.getItem('prolificSessionId');
@@ -356,25 +354,8 @@
 
 				if (sessionIdToCheck) {
 					const lastSessionId = localStorage.getItem('lastProlificSessionId');
-					const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
 
-					if (isNewSession) {
-						console.log('🔄 New Prolific session detected, resetting workflow via API');
-						localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
-						try {
-							const { resetUserWorkflow } = await import('$lib/apis/workflow');
-							await resetUserWorkflow(localStorage.token);
-							// Dispatch reset event so all components can clear their state
-							window.dispatchEvent(new Event('workflow-reset'));
-							window.dispatchEvent(new Event('workflow-updated'));
-						} catch (e) {
-							console.error('Failed to reset workflow for new Prolific session:', e);
-						}
-						if (currentPath !== '/assignment-instructions') {
-							await goto('/assignment-instructions');
-							return;
-						}
-					} else if (!lastSessionId && sessionIdToCheck) {
+					if (!lastSessionId && sessionIdToCheck) {
 						localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 					}
 				}

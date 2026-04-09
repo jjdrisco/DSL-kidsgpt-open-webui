@@ -50,7 +50,7 @@ class ProlificAuthRequest(BaseModel):
 class ProlificAuthResponse(BaseModel):
     token: str
     user: UserModel
-    session_number: int
+    session_id: str
     is_new_user: bool
     new_child_id: str | None = None
     has_exit_quiz: bool = False
@@ -66,8 +66,7 @@ class ConsentForm(BaseModel):
 def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
     """
     Reset a user's workflow when they return with a new Prolific study ID.
-    Resets session_number to 1, resets attempt_number to 1 (attempt only
-    increments on explicit Restart Survey), and updates study_id.
+    Resets attempt_number to 1 and updates study/session metadata.
     """
     with get_db() as db:
         reset_ts = int(time.time() * 1000)
@@ -78,7 +77,6 @@ def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
                 "workflow_reset_at": reset_ts,
                 "instructions_completed_at": None,
                 "current_attempt_number": 1,
-                "session_number": 1,
             }
         )
         db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user_id).delete()
@@ -89,13 +87,35 @@ def reset_workflow_for_new_study(user_id: str, new_study_id: str) -> None:
         )
 
 
+def reset_workflow_for_new_session(user_id: str, new_session_id: str) -> None:
+    """
+    Reset a user's workflow when they return with a new Prolific session ID.
+    """
+    with get_db() as db:
+        reset_ts = int(time.time() * 1000)
+
+        db.query(User).filter(User.id == user_id).update(
+            {
+                "workflow_reset_at": reset_ts,
+                "instructions_completed_at": None,
+                "current_attempt_number": 1,
+            }
+        )
+        db.query(WorkflowDraft).filter(WorkflowDraft.user_id == user_id).delete()
+        db.commit()
+        log.info(
+            f"Auto-reset workflow for user {user_id} on new session_id '{new_session_id}' "
+            f"(attempt reset to 1)"
+        )
+
+
 @router.post("/auth", response_model=ProlificAuthResponse)
 async def prolific_auth(
     request: Request, response: Response, form_data: ProlificAuthRequest
 ):
     """
     Authenticate or create user based on Prolific parameters.
-    - If user with PROLIFIC_PID exists, check SESSION_ID to determine session_number
+    - If user with PROLIFIC_PID exists, check SESSION_ID string
     - If user doesn't exist, create new user with generated credentials
     - Return JWT token and session metadata
     """
@@ -121,7 +141,6 @@ async def prolific_auth(
                     "prolific_pid": form_data.prolific_pid,
                     "study_id": form_data.study_id,
                     "current_session_id": form_data.session_id,
-                    "session_number": 1,
                     "updated_at": int(time.time()),
                 },
             )
@@ -144,15 +163,21 @@ async def prolific_auth(
                 "resetting workflow."
             )
             reset_workflow_for_new_study(existing_user.id, form_data.study_id)
-            # Re-fetch user so we have the updated state (session_number=1, etc.)
+            # Re-fetch user so we have the updated reset state.
             existing_user = Users.get_user_by_email(prolific_email) or existing_user
             is_new_session = True  # Treat as new session after reset
 
+        if is_new_session and not study_changed:
+            log.info(
+                f"User {existing_user.id} returned with new session_id "
+                f"'{form_data.session_id}' (was '{existing_user.current_session_id}') — "
+                "resetting workflow."
+            )
+            reset_workflow_for_new_session(existing_user.id, form_data.session_id)
+
         if is_new_session:
-            # New session - increment session_number
-            new_session_number = (existing_user.session_number or 1) + 1
             updated_user = Users.update_user_session(
-                existing_user.id, form_data.session_id, new_session_number
+                existing_user.id, form_data.session_id
             )
             if not updated_user:
                 raise HTTPException(500, detail="Failed to update user session")
@@ -161,9 +186,7 @@ async def prolific_auth(
             latest_profile = ChildProfiles.get_latest_child_profile_any(user.id)
             new_child_id = latest_profile.id if latest_profile else None
         else:
-            # Same session - use existing session_number
             user = existing_user
-            new_session_number = user.session_number or 1
             new_child_id = None
 
         is_new_user = False
@@ -202,12 +225,10 @@ async def prolific_auth(
                 "prolific_pid": form_data.prolific_pid,
                 "study_id": form_data.study_id,
                 "current_session_id": form_data.session_id,
-                "session_number": 1,
                 "updated_at": int(time.time()),
             },
         )
         user = updated_user or auth_user
-        new_session_number = 1
         is_new_user = True
         # No child to reuse yet for first-time user
         new_child_id = None
@@ -244,7 +265,7 @@ async def prolific_auth(
     return ProlificAuthResponse(
         token=token,
         user=user,
-        session_number=new_session_number,
+        session_id=form_data.session_id,
         is_new_user=is_new_user,
         new_child_id=new_child_id,
         has_exit_quiz=has_exit,
@@ -274,18 +295,15 @@ async def submit_consent(
                     "prolific_pid": form_data.prolific_pid,
                     "study_id": form_data.study_id,
                     "current_session_id": form_data.session_id,
-                    "session_number": 1,
                     "role": role,
                 }
             )
         else:
             # Prolific IDs already stored — just update session if it changed
             if form_data.session_id and form_data.session_id != user.current_session_id:
-                new_session_number = (user.session_number or 1) + 1
                 update_data.update(
                     {
                         "current_session_id": form_data.session_id,
-                        "session_number": new_session_number,
                     }
                 )
 
@@ -349,7 +367,7 @@ async def get_session_info(user_id: str = None):
         "prolific_pid": user.prolific_pid,
         "study_id": user.study_id,
         "current_session_id": user.current_session_id,
-        "session_number": user.session_number,
+        "session_id": user.current_session_id,
     }
 
 

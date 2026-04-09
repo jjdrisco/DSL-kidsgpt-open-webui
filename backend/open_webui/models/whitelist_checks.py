@@ -42,7 +42,7 @@ class PromptComparisonCheck(Base):
     model_used = Column(Text, nullable=True)  # Model used for analysis
 
     # Metadata
-    session_number = Column(BigInteger, nullable=True)
+    session_id = Column(Text, nullable=True)
     created_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
@@ -84,7 +84,7 @@ class ResponseValidationCheck(Base):
     model_used = Column(Text, nullable=True)  # Model used for validation
 
     # Metadata
-    session_number = Column(BigInteger, nullable=True)
+    session_id = Column(Text, nullable=True)
     created_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
@@ -110,7 +110,7 @@ class PromptComparisonCheckModel(BaseModel):
     concerns: Optional[List[str]] = None
     reasoning: Optional[str] = None
     model_used: Optional[str] = None
-    session_number: Optional[int] = None
+    session_id: Optional[str] = None
     created_at: int
 
 
@@ -130,7 +130,7 @@ class ResponseValidationCheckModel(BaseModel):
     should_block: bool
     was_blocked: bool
     model_used: Optional[str] = None
-    session_number: Optional[int] = None
+    session_id: Optional[str] = None
     created_at: int
 
 
@@ -149,7 +149,7 @@ class PromptComparisonChecks:
         reasoning: str,
         model_used: str,
         child_id: Optional[str] = None,
-        session_number: Optional[int] = None,
+        session_id: Optional[str] = None,
     ) -> Optional[PromptComparisonCheckModel]:
         """Insert a new prompt comparison check"""
         with get_db() as db:
@@ -167,7 +167,7 @@ class PromptComparisonChecks:
                 concerns=concerns,
                 reasoning=reasoning,
                 model_used=model_used,
-                session_number=session_number,
+                session_id=session_id,
                 created_at=ts,
             )
 
@@ -210,7 +210,7 @@ class ResponseValidationChecks:
         model_used: str,
         original_child_prompt: Optional[str] = None,
         child_id: Optional[str] = None,
-        session_number: Optional[int] = None,
+        session_id: Optional[str] = None,
     ) -> Optional[ResponseValidationCheckModel]:
         """Insert a new response validation check"""
         with get_db() as db:
@@ -231,7 +231,7 @@ class ResponseValidationChecks:
                 should_block=should_block,
                 was_blocked=was_blocked,
                 model_used=model_used,
-                session_number=session_number,
+                session_id=session_id,
                 created_at=ts,
             )
 

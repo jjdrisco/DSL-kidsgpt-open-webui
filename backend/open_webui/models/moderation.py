@@ -20,7 +20,7 @@ class ModerationSession(Base):
     scenario_index = Column(Integer, nullable=False, default=0)
     attempt_number = Column(Integer, nullable=False, default=1)
     version_number = Column(Integer, nullable=False, default=0)
-    session_number = Column(BigInteger, nullable=False, default=1)
+    session_id = Column(Text, nullable=False, default="unknown")
 
     scenario_prompt = Column(Text, nullable=False)
     # link back to the canonical scenario record (from scenarios table)
@@ -86,10 +86,10 @@ class ModerationSession(Base):
             "child_id",
             "scenario_index",
             "attempt_number",
-            "session_number",
+            "session_id",
         ),
         Index("idx_mod_session_final", "user_id", "child_id", "is_final_version"),
-        Index("idx_mod_session_user_session", "user_id", "session_number"),
+        Index("idx_mod_session_user_session", "user_id", "session_id"),
     )
 
 
@@ -102,7 +102,7 @@ class ModerationSessionModel(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
-    session_number: int
+    session_id: str
     scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
@@ -130,13 +130,12 @@ class ModerationSessionModel(BaseModel):
 
 
 class ModerationSessionForm(BaseModel):
-    session_id: Optional[str] = None
     user_id: str
     child_id: str
     scenario_index: int
     attempt_number: int
     version_number: int
-    session_number: Optional[int] = None
+    session_id: Optional[str] = None
     scenario_id: Optional[str] = None
     scenario_prompt: str
     original_response: str
@@ -172,25 +171,13 @@ class ModerationSessionTable:
         with get_db() as db:
             ts = int(time.time() * 1000)
 
-            # Resolve session number: prefer form, then user's session_number, fallback to 1
+            # Resolve session id from form, user profile, or fallback.
             user = Users.get_user_by_id(form.user_id)
-            resolved_session_number = None
-            if form.session_number is not None:
-                try:
-                    resolved_session_number = int(form.session_number)
-                except Exception:
-                    resolved_session_number = None
-            if (
-                resolved_session_number is None
-                and user
-                and getattr(user, "session_number", None) is not None
-            ):
-                try:
-                    resolved_session_number = int(user.session_number)
-                except Exception:
-                    resolved_session_number = None
-            if resolved_session_number is None:
-                resolved_session_number = 1
+            resolved_session_id = (
+                form.session_id
+                or (getattr(user, "current_session_id", None) if user else None)
+                or "unknown"
+            )
 
             # make sure we have a scenario_id; if client didn't supply one, try
             # looking up the assignment record directly by participant/position/attempt.
@@ -227,7 +214,7 @@ class ModerationSessionTable:
                     ModerationSession.scenario_index == form.scenario_index,
                     ModerationSession.attempt_number == form.attempt_number,
                     ModerationSession.version_number == form.version_number,
-                    ModerationSession.session_number == resolved_session_number,
+                    ModerationSession.session_id == resolved_session_id,
                 )
                 .first()
             )
@@ -327,8 +314,8 @@ class ModerationSessionTable:
                         obj.session_metadata = merged_metadata
                     else:
                         obj.session_metadata = form.session_metadata
-                # Ensure session_number remains consistent for this update
-                obj.session_number = resolved_session_number
+                # Ensure session_id remains consistent for this update
+                obj.session_id = resolved_session_id
                 obj.updated_at = ts
             else:
                 # Create a new row for this version; generate a fresh id to avoid overwriting prior versions
@@ -345,7 +332,7 @@ class ModerationSessionTable:
                     scenario_index=form.scenario_index,
                     attempt_number=form.attempt_number,
                     version_number=form.version_number,
-                    session_number=resolved_session_number,
+                    session_id=resolved_session_id,
                     scenario_id=effective_scenario_id,
                     scenario_prompt=form.scenario_prompt,
                     original_response=form.original_response,
@@ -391,7 +378,10 @@ class ModerationSessionTable:
             return ModerationSessionModel.model_validate(obj)
 
     def get_sessions_by_user(
-        self, user_id: str, child_id: Optional[str] = None
+        self,
+        user_id: str,
+        child_id: Optional[str] = None,
+        attempt_number: Optional[int] = None,
     ) -> List[ModerationSessionModel]:
         """Get all sessions for a user, optionally filtered by child_id"""
         with get_db() as db:
@@ -400,6 +390,8 @@ class ModerationSessionTable:
             )
             if child_id:
                 query = query.filter(ModerationSession.child_id == child_id)
+            if attempt_number is not None:
+                query = query.filter(ModerationSession.attempt_number == attempt_number)
             rows = query.order_by(ModerationSession.created_at.desc()).all()
             return [ModerationSessionModel.model_validate(row) for row in rows]
 
@@ -458,7 +450,7 @@ class ModerationSessionActivity(Base):
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
     child_id = Column(Text, nullable=False)
-    session_number = Column(BigInteger, nullable=False, default=1)
+    session_id = Column(Text, nullable=False, default="unknown")
     attempt_number = Column(BigInteger, nullable=True, default=1)
     active_ms_delta = Column(BigInteger, nullable=False, default=0)
     cumulative_ms = Column(BigInteger, nullable=False, default=0)
@@ -469,7 +461,7 @@ class ModerationSessionActivity(Base):
             "idx_mod_activity_user_child_session_attempt",
             "user_id",
             "child_id",
-            "session_number",
+            "session_id",
             "attempt_number",
         ),
         Index("idx_mod_activity_created_at", "created_at"),
@@ -479,7 +471,7 @@ class ModerationSessionActivity(Base):
 class ModerationSessionActivityForm(BaseModel):
     user_id: str
     child_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
@@ -490,7 +482,7 @@ class ModerationSessionActivityModel(BaseModel):
     id: str
     user_id: str
     child_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_delta: int
     cumulative_ms: int
@@ -510,7 +502,7 @@ class ModerationSessionActivityTable:
                 .filter(
                     ModerationSessionActivity.user_id == form.user_id,
                     ModerationSessionActivity.child_id == form.child_id,
-                    ModerationSessionActivity.session_number == form.session_number,
+                    ModerationSessionActivity.session_id == form.session_id,
                     ModerationSessionActivity.attempt_number == attempt,
                 )
                 .order_by(ModerationSessionActivity.created_at.desc())
@@ -523,7 +515,7 @@ class ModerationSessionActivityTable:
                 id=str(uuid.uuid4()),
                 user_id=form.user_id,
                 child_id=form.child_id,
-                session_number=int(form.session_number),
+                session_id=form.session_id,
                 attempt_number=attempt,
                 active_ms_delta=delta,
                 cumulative_ms=incoming,
@@ -553,7 +545,6 @@ class ConcernItemRow(Base):
     scenario_index = Column(Integer, nullable=False)
     attempt_number = Column(Integer, nullable=False)
     version_number = Column(Integer, nullable=False)
-    session_number = Column(Integer, nullable=False, default=1)
     scenario_id = Column(Text, nullable=True)
     position = Column(Integer, nullable=False, default=0)
     text = Column(Text, nullable=False, default="")
@@ -571,7 +562,7 @@ class ConcernItemRow(Base):
             "scenario_index",
             "attempt_number",
             "version_number",
-            "session_number",
+            "session_id",
         ),
     )
 
@@ -586,7 +577,6 @@ class ConcernItemModel(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
-    session_number: int
     scenario_id: Optional[str] = None
     position: int
     text: str
@@ -613,7 +603,6 @@ class ConcernItemBatchForm(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
-    session_number: int = 1
     scenario_id: Optional[str] = None
     items: List[ConcernItemForm]
 
@@ -623,7 +612,7 @@ class ConcernItemTable:
         """Insert or replace all concern items for a given session context.
 
         Existing rows that belong to the same
-        (user_id, child_id, scenario_index, attempt_number, version_number, session_number)
+        (user_id, child_id, scenario_index, attempt_number, version_number, session_id)
         but whose ids are **not** present in the new batch are deleted first so that
         removed concerns don't linger.
         """
@@ -640,7 +629,7 @@ class ConcernItemTable:
                 ConcernItemRow.scenario_index == form.scenario_index,
                 ConcernItemRow.attempt_number == form.attempt_number,
                 ConcernItemRow.version_number == form.version_number,
-                ConcernItemRow.session_number == form.session_number,
+                ConcernItemRow.session_id == form.session_id,
                 ConcernItemRow.id.notin_(incoming_ids),
             ).delete(synchronize_session=False)
 
@@ -670,7 +659,6 @@ class ConcernItemTable:
                         scenario_index=form.scenario_index,
                         attempt_number=form.attempt_number,
                         version_number=form.version_number,
-                        session_number=form.session_number,
                         scenario_id=form.scenario_id,
                         position=item.position,
                         text=item.text,
@@ -694,7 +682,7 @@ class ConcernItemTable:
         scenario_index: int,
         attempt_number: int,
         version_number: int,
-        session_number: int,
+        session_id: str,
     ) -> List[ConcernItemModel]:
         """Return all concern items for a session context, ordered by position."""
         with get_db() as db:
@@ -706,7 +694,7 @@ class ConcernItemTable:
                     ConcernItemRow.scenario_index == scenario_index,
                     ConcernItemRow.attempt_number == attempt_number,
                     ConcernItemRow.version_number == version_number,
-                    ConcernItemRow.session_number == session_number,
+                    ConcernItemRow.session_id == session_id,
                 )
                 .order_by(ConcernItemRow.position)
                 .all()

@@ -22,7 +22,7 @@
 
 	// Assignment time tracking
 	let trackingEnabled: boolean = false;
-	$: sessionNumber = $user?.session_number || 1;
+	$: sessionId = $user?.current_session_id || 'unknown';
 	let attemptNumber: number = 1;
 
 	async function fetchInstructionsStatus() {
@@ -275,7 +275,7 @@
 	{#if trackingEnabled}
 		<AssignmentTimeTracker
 			userId={get(user)?.id || ''}
-			{sessionNumber}
+			{sessionId}
 			{attemptNumber}
 			enabled={trackingEnabled}
 		/>

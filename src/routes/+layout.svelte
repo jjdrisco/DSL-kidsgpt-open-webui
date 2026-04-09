@@ -827,13 +827,30 @@
 					});
 
 					if (sessionUser) {
+						const urlProlificPid = $page.url.searchParams.get('PROLIFIC_PID');
+						const urlStudyId = $page.url.searchParams.get('STUDY_ID');
+						const urlSessionId = $page.url.searchParams.get('SESSION_ID');
+
+						const hasCompleteProlificParams =
+							!!urlProlificPid && !!urlStudyId && !!urlSessionId;
+						const prolificContextChanged =
+							hasCompleteProlificParams &&
+							(urlProlificPid !== sessionUser.prolific_pid ||
+								urlStudyId !== sessionUser.study_id ||
+								urlSessionId !== sessionUser.current_session_id);
+
+						if (prolificContextChanged && $page.url.pathname !== '/auth') {
+							const redirectTarget = `${$page.url.pathname}${$page.url.search}`;
+							await goto(`/auth?redirect=${encodeURIComponent(redirectTarget)}`);
+							return;
+						}
+
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 
 						// Check if Prolific user needs to consent
 						// Check by prolific_pid in user object OR by localStorage (for new users without prolific_pid stored yet)
 						// Also check URL params directly in case localStorage was cleared
-						const urlProlificPid = $page.url.searchParams.get('PROLIFIC_PID');
 						const prolificPidFromUser = sessionUser.prolific_pid;
 						const prolificPidFromStorage = localStorage.getItem('prolificPid');
 

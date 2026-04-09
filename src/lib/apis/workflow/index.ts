@@ -197,7 +197,7 @@ export const deleteWorkflowDraft = async (
 
 export const finalizeModeration = async (
 	token: string,
-	payload: { child_id?: string; session_number?: number }
+	payload: { child_id?: string; session_id?: string }
 ): Promise<{ updated: number }> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/moderation/finalize`, {
 		method: 'POST',

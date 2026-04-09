@@ -62,7 +62,7 @@
 	let currentChildProfile: any = null;
 
 	// Assignment time tracking
-	$: sessionNumber = $user?.session_number || 1;
+	$: sessionId = $user?.current_session_id || 'unknown';
 
 	// Debounce helper
 
@@ -1826,7 +1826,7 @@
 	<!-- Assignment Time Tracker -->
 	<AssignmentTimeTracker
 		userId={get(user)?.id || ''}
-		{sessionNumber}
+		{sessionId}
 		{attemptNumber}
 		enabled={true}
 	/>

@@ -97,7 +97,7 @@ SELECT
     u.prolific_pid,
     u.study_id,
     u.current_session_id,
-    u.session_number,
+    u.current_session_id AS session_id,
     u.consent_given,
     u.parent_id,
     u.last_active_at,
@@ -125,14 +125,14 @@ SELECT
     cp.parent_llm_monitoring_level,
     cp.attempt_number,
     cp.is_current,
-    cp.session_number,
+    cp.session_id,
     cp.created_at,
     cp.updated_at,
     u.name             AS user_name,
     u.email            AS user_email,
     u.role             AS user_role,
     u.prolific_pid,
-    u.session_number   AS user_session_number,
+    u.current_session_id AS user_session_id,
     u.consent_given
 FROM child_profile cp
 LEFT JOIN "user" u ON cp.user_id = u.id
@@ -148,7 +148,7 @@ SELECT
     ms.scenario_index,
     ms.attempt_number,
     ms.version_number,
-    ms.session_number,
+    ms.session_id,
     ms.scenario_prompt,
     ms.original_response,
     ms.initial_decision,
@@ -246,7 +246,7 @@ SELECT
     ci.scenario_index,
     ci.attempt_number,
     ci.version_number,
-    ci.session_number,
+    ci.session_id,
     ci.scenario_id,
     ci.position,
     ci.text,
@@ -293,7 +293,7 @@ ASSIGNMENT_TIME_QUERY = """
 SELECT
     ata.id,
     ata.user_id,
-    ata.session_number,
+    ata.session_id,
     ata.attempt_number,
     ata.active_ms_delta,
     ata.cumulative_ms,
@@ -304,7 +304,7 @@ SELECT
     u.prolific_pid
 FROM assignment_session_activity ata
 LEFT JOIN "user" u ON ata.user_id = u.id
-ORDER BY ata.user_id, ata.session_number, ata.created_at;
+ORDER BY ata.user_id, ata.session_id, ata.created_at;
 """
 
 CONCERN_ITEM_QUERY = """
@@ -317,7 +317,7 @@ SELECT
     ci.scenario_index,
     ci.attempt_number,
     ci.version_number,
-    ci.session_number,
+    ci.session_id,
     ci.position,
     ci.text,
     ci.concern_level,
