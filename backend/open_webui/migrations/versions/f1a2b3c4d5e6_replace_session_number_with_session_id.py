@@ -47,7 +47,9 @@ def _index_names(table_name: str) -> set[str]:
     bind = op.get_bind()
     inspector = inspect(bind)
     try:
-        return {i.get("name") for i in inspector.get_indexes(table_name) if i.get("name")}
+        return {
+            i.get("name") for i in inspector.get_indexes(table_name) if i.get("name")
+        }
     except Exception:
         return set()
 
@@ -89,7 +91,9 @@ def upgrade() -> None:
     inspector = inspect(bind)
 
     # user table no longer keeps a separate session_number counter.
-    if "user" in inspector.get_table_names() and "session_number" in _columns(inspector, "user"):
+    if "user" in inspector.get_table_names() and "session_number" in _columns(
+        inspector, "user"
+    ):
         with op.batch_alter_table("user") as batch_op:
             batch_op.drop_column("session_number")
 
@@ -99,7 +103,9 @@ def upgrade() -> None:
     _add_and_backfill_session_id("assignment_session_activity", nullable=False)
 
     # concern_item already has session_id in this codebase; only drop legacy column.
-    if "concern_item" in inspector.get_table_names() and "session_number" in _columns(inspector, "concern_item"):
+    if "concern_item" in inspector.get_table_names() and "session_number" in _columns(
+        inspector, "concern_item"
+    ):
         _drop_indexes_with_session_number("concern_item")
         bind.execute(
             text(
@@ -114,10 +120,14 @@ def upgrade() -> None:
 
     # Whitelist check tables are nullable by design.
     for table_name in ("prompt_comparison_check", "response_validation_check"):
-        if table_name in inspector.get_table_names() and "session_number" in _columns(inspector, table_name):
+        if table_name in inspector.get_table_names() and "session_number" in _columns(
+            inspector, table_name
+        ):
             if "session_id" not in _columns(inspector, table_name):
                 with op.batch_alter_table(table_name) as batch_op:
-                    batch_op.add_column(sa.Column("session_id", sa.Text(), nullable=True))
+                    batch_op.add_column(
+                        sa.Column("session_id", sa.Text(), nullable=True)
+                    )
             bind.execute(
                 text(
                     f"UPDATE {table_name} "
@@ -135,17 +145,17 @@ def upgrade() -> None:
             batch_op.drop_index("idx_mod_session_user_session")
     if "idx_mod_session_user_session" not in _index_names("moderation_session"):
         with op.batch_alter_table("moderation_session") as batch_op:
-            batch_op.create_index("idx_mod_session_user_session", ["user_id", "session_id"])
+            batch_op.create_index(
+                "idx_mod_session_user_session", ["user_id", "session_id"]
+            )
 
-    if (
-        "idx_mod_activity_user_child_session_attempt"
-        in _index_names("moderation_session_activity")
+    if "idx_mod_activity_user_child_session_attempt" in _index_names(
+        "moderation_session_activity"
     ):
         with op.batch_alter_table("moderation_session_activity") as batch_op:
             batch_op.drop_index("idx_mod_activity_user_child_session_attempt")
-    if (
-        "idx_mod_activity_user_child_session_attempt"
-        not in _index_names("moderation_session_activity")
+    if "idx_mod_activity_user_child_session_attempt" not in _index_names(
+        "moderation_session_activity"
     ):
         with op.batch_alter_table("moderation_session_activity") as batch_op:
             batch_op.create_index(

@@ -67,11 +67,7 @@ class ConsentFormTable:
     def get_by_study_id(self, study_id: str) -> Optional[ConsentFormModel]:
         """Find an active consent form that includes the given study_id."""
         with get_db() as db:
-            forms = (
-                db.query(ConsentForm)
-                .filter(ConsentForm.is_active == True)
-                .all()
-            )
+            forms = db.query(ConsentForm).filter(ConsentForm.is_active == True).all()
             for form in forms:
                 ids = form.study_ids if isinstance(form.study_ids, list) else []
                 if study_id in ids:
@@ -81,11 +77,7 @@ class ConsentFormTable:
     def get_all(self) -> list[ConsentFormModel]:
         """Get all consent forms (active and inactive)."""
         with get_db() as db:
-            forms = (
-                db.query(ConsentForm)
-                .order_by(ConsentForm.created_at.desc())
-                .all()
-            )
+            forms = db.query(ConsentForm).order_by(ConsentForm.created_at.desc()).all()
             return [ConsentFormModel.model_validate(f) for f in forms]
 
     def get_by_id(self, form_id: str) -> Optional[ConsentFormModel]:

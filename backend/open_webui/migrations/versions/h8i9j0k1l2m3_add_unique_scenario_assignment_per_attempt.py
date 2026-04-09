@@ -25,7 +25,9 @@ def _index_names(table_name: str) -> set[str]:
     bind = op.get_bind()
     inspector = inspect(bind)
     try:
-        return {i.get("name") for i in inspector.get_indexes(table_name) if i.get("name")}
+        return {
+            i.get("name") for i in inspector.get_indexes(table_name) if i.get("name")
+        }
     except Exception:
         return set()
 

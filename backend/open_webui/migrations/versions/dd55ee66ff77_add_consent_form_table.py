@@ -33,9 +33,7 @@ def upgrade():
             sa.Column("id", sa.String(), nullable=False),
             sa.Column("slug", sa.String(), nullable=False),
             sa.Column("study_ids", sa.JSON(), nullable=False),
-            sa.Column(
-                "version", sa.String(), nullable=False, server_default="1.0.0"
-            ),
+            sa.Column("version", sa.String(), nullable=False, server_default="1.0.0"),
             sa.Column("title", sa.String(), nullable=False),
             sa.Column("pi_name", sa.String(), nullable=True),
             sa.Column("irb_number", sa.String(), nullable=True),

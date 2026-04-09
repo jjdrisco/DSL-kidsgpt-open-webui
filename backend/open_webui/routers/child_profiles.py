@@ -68,9 +68,7 @@ async def create_child_profile(
     try:
         # Resolve session_id from payload or current user session.
         session_id = (
-            form_data.session_id
-            or current_user.current_session_id
-            or "unknown"
+            form_data.session_id or current_user.current_session_id or "unknown"
         )
 
         child_profile = ChildProfiles.insert_new_child_profile(
