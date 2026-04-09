@@ -16,6 +16,7 @@
 	import { getUserType } from '$lib/utils';
 	import { getWorkflowState } from '$lib/apis/workflow';
 	import { canAccessStep, getStepFromRoute } from '$lib/utils/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -325,16 +326,20 @@
 
 		try {
 			const currentPath = $page.url.pathname;
+			const workflowRoutes = ['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion'];
+			const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
 
 			// Get workflow state from backend API (single source of truth)
 			let workflowState = null;
 			try {
 				if (localStorage.token) {
-					workflowState = await getWorkflowState(localStorage.token);
+					const activeChildId = childProfileSync.getCurrentChildId();
+					workflowState = await getWorkflowState(localStorage.token, {
+						childId: activeChildId
+					});
 				}
 			} catch (error) {
 				console.error('Failed to fetch workflow state:', error);
-				// Continue with navigation logic even if API fails
 			}
 
 			// Check if this is a Prolific user (use server-derived `user_type` or DB role — do not rely on prolific_pid/localStorage)
@@ -416,21 +421,18 @@
 				return;
 			}
 
+			// Fail closed for interviewee workflow routes when workflow state is unavailable.
+			if (!workflowState && isWorkflowRoute) {
+				await goto('/assignment-instructions');
+				return;
+			}
+
 			// Use backend workflow state to determine navigation
 			// Never redirect away from assignment-instructions (user chose "Survey View" to start there)
 			if (workflowState?.next_route && !currentPath.startsWith('/assignment-instructions')) {
 				const nextRoute = workflowState.next_route;
 				const currentStep = getStepFromRoute(currentPath);
 				const nextStep = getStepFromRoute(nextRoute);
-
-				// Define valid workflow routes (excluding assignment-instructions - handled above)
-				const workflowRoutes = [
-					'/kids/profile',
-					'/moderation-scenario',
-					'/exit-survey',
-					'/completion'
-				];
-				const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
 
 				// If user is on a workflow route but not the correct one, redirect
 				if (isWorkflowRoute && currentPath !== nextRoute && !currentPath.startsWith(nextRoute)) {

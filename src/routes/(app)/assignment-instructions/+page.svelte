@@ -12,6 +12,7 @@
 		markInstructionsComplete,
 		getCurrentAttempt
 	} from '$lib/apis/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
@@ -29,7 +30,9 @@
 		try {
 			const token = (typeof window !== 'undefined' && localStorage.token) || '';
 			if (token) {
-				const state = await getWorkflowState(token);
+				const state = await getWorkflowState(token, {
+					childId: childProfileSync.getCurrentChildId()
+				});
 				instructionsCompleted = state?.progress_by_section?.instructions_completed || false;
 				if (instructionsCompleted) {
 					trackingEnabled = true;

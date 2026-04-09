@@ -1498,7 +1498,15 @@
 		if (isLoadingScenario || !selectedChildId) return;
 		const token = localStorage.token || '';
 		if (!token) return;
+		if (!Array.isArray(scenarioList) || scenarioList.length === 0) return;
+		if (
+			selectedScenarioIndex < 0 ||
+			selectedScenarioIndex >= scenarioList.length ||
+			selectedScenarioIndex >= scenarioIdentifiers.length
+		)
+			return;
 		const identifier = getScenarioId(selectedScenarioIndex);
+		if (!identifier || identifier === String(selectedScenarioIndex)) return;
 		if (step2Completed) return; // Don't save drafts for completed scenarios
 
 		try {
@@ -3462,7 +3470,6 @@
 
 					const draftLookupKeys = [
 						identifier,
-						String(index), // Legacy/index-keyed fallback
 						backendSession?.scenario_id,
 						savedState?.scenario_id
 					].filter((k): k is string => typeof k === 'string' && k.length > 0);
@@ -4893,7 +4900,9 @@
 		try {
 			const token = (typeof window !== 'undefined' && localStorage.token) || '';
 			if (token) {
-				const state = await getWorkflowState(token);
+				const state = await getWorkflowState(token, {
+					childId: selectedChildId || childProfileSync.getCurrentChildId()
+				});
 				workflowStateForModeration = state;
 				// Restore moderationFinalized from persisted draft flag (via workflow state)
 				if (state?.progress_by_section?.moderation_finalized) {
@@ -4918,6 +4927,7 @@
 		// saveCurrentScenarioState() call could write a partial draft — or the $: reactive block
 		// could fire saveCurrentScenarioState() — and pollute the new attempt's draft.
 		console.log('🔄 Workflow reset detected, clearing all scenario state');
+		isLoadingScenario = true; // Prevent autosave while reset + regeneration are in progress.
 		resetAllScenarioStates(); // clears scenariosLockedForSession, steps, concerns, timers, etc.
 		scenarioList = []; // resetAllScenarioStates does not clear scenarioList itself
 
@@ -5000,7 +5010,9 @@
 
 		// Guard navigation if user tries to jump ahead (check backend workflow state)
 		try {
-			const wf = await getWorkflowState(localStorage.token);
+			const wf = await getWorkflowState(localStorage.token, {
+				childId: selectedChildId || childProfileSync.getCurrentChildId()
+			});
 			if (!wf?.progress_by_section?.instructions_completed) {
 				goto('/assignment-instructions');
 				return;

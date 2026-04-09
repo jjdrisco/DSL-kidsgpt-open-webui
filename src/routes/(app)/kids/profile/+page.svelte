@@ -104,7 +104,9 @@
 		try {
 			const token = (typeof window !== 'undefined' && localStorage.token) || '';
 			if (token) {
-				const state = await getWorkflowState(token);
+				const state = await getWorkflowState(token, {
+					childId: childProfileSync.getCurrentChildId()
+				});
 				if (!state?.progress_by_section?.instructions_completed) {
 					goto('/assignment-instructions');
 					return;

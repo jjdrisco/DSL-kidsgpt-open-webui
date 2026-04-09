@@ -3,7 +3,7 @@ import time
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func
 
@@ -92,6 +92,7 @@ def _default_progress() -> dict:
 
 @router.get("/workflow/state")
 async def get_workflow_state(
+    child_id: str | None = Query(default=None),
     user: UserModel = Depends(get_verified_user),
 ) -> WorkflowStateResponse:
     """
@@ -107,10 +108,19 @@ async def get_workflow_state(
             progress["instructions_completed"] = instructions_at is not None
 
             # Child profiles
+            selected_child = None
             try:
                 latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
                 if latest_child:
                     progress["has_child_profile"] = True
+
+                if child_id:
+                    selected_child = ChildProfiles.get_child_profile_by_id(
+                        child_id, user.id
+                    )
+
+                if selected_child is None:
+                    selected_child = latest_child
             except Exception as e:
                 log.warning(f"Failed to get child profiles for user {user.id}: {e}")
 
@@ -119,8 +129,7 @@ async def get_workflow_state(
             # Exclude sessions created before last workflow reset.
             # Filter sessions by latest_child so count and total refer to the same child.
             try:
-                latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
-                child_id_for_mod = latest_child.id if latest_child else None
+                child_id_for_mod = selected_child.id if selected_child else None
                 sessions = ModerationSessions.get_sessions_by_user(
                     user.id, child_id=child_id_for_mod
                 )
@@ -138,11 +147,11 @@ async def get_workflow_state(
                 progress["moderation_completed_count"] = len(decided)
 
                 # moderation_total: use assignment count when available, else 12
-                if latest_child:
+                if selected_child:
                     try:
                         current_attempt = get_current_attempt_number(user.id)
                         assignments = ScenarioAssignments.get_assignments_by_child(
-                            latest_child.id,
+                            selected_child.id,
                             attempt_number=current_attempt,
                         )
                         if assignments:
@@ -158,11 +167,10 @@ async def get_workflow_state(
 
             # Check if moderation has been finalized (user clicked "Done")
             try:
-                latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
-                if latest_child:
+                if selected_child:
                     from open_webui.models.workflow_draft import get_draft
 
-                    draft = get_draft(user.id, latest_child.id, "moderation")
+                    draft = get_draft(user.id, selected_child.id, "moderation")
                     if draft and draft.data:
                         progress["moderation_finalized"] = draft.data.get(
                             "moderation_finalized", False
