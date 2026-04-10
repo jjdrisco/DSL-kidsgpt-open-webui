@@ -12,7 +12,7 @@ class AssignmentSessionActivity(Base):
 
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
-    session_number = Column(BigInteger, nullable=False, default=1)
+    session_id = Column(Text, nullable=False, default="unknown")
     attempt_number = Column(BigInteger, nullable=True, default=1)
     active_ms_delta = Column(BigInteger, nullable=False, default=0)
     cumulative_ms = Column(BigInteger, nullable=False, default=0)
@@ -22,7 +22,7 @@ class AssignmentSessionActivity(Base):
         Index(
             "idx_assignment_activity_user_session_attempt",
             "user_id",
-            "session_number",
+            "session_id",
             "attempt_number",
         ),
         Index("idx_assignment_activity_created_at", "created_at"),
@@ -31,7 +31,7 @@ class AssignmentSessionActivity(Base):
 
 class AssignmentSessionActivityForm(BaseModel):
     user_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
@@ -41,7 +41,7 @@ class AssignmentSessionActivityModel(BaseModel):
 
     id: str
     user_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_delta: int
     cumulative_ms: int
@@ -60,7 +60,7 @@ class AssignmentSessionActivityTable:
                 db.query(AssignmentSessionActivity)
                 .filter(
                     AssignmentSessionActivity.user_id == form.user_id,
-                    AssignmentSessionActivity.session_number == form.session_number,
+                    AssignmentSessionActivity.session_id == form.session_id,
                     AssignmentSessionActivity.attempt_number == attempt,
                 )
                 .order_by(AssignmentSessionActivity.created_at.desc())
@@ -72,7 +72,7 @@ class AssignmentSessionActivityTable:
             obj = AssignmentSessionActivity(
                 id=str(uuid.uuid4()),
                 user_id=form.user_id,
-                session_number=int(form.session_number),
+                session_id=form.session_id,
                 attempt_number=attempt,
                 active_ms_delta=delta,
                 cumulative_ms=incoming,

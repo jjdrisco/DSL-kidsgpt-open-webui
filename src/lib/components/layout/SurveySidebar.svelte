@@ -7,6 +7,7 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getWorkflowState, type WorkflowStateResponse } from '$lib/apis/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 	import { getStepRoute, canAccessStep, getStepLabel, isStepCompleted } from '$lib/utils/workflow';
 	import { tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -29,7 +30,9 @@
 		}
 		try {
 			loadingProgress = true;
-			const state = await getWorkflowState(token);
+			const state = await getWorkflowState(token, {
+				childId: childProfileSync.getCurrentChildId()
+			});
 			workflowState = state;
 		} catch (error) {
 			console.error('Failed to fetch workflow progress:', error);

@@ -39,6 +39,7 @@
 		finalizeModeration,
 		getWorkflowState,
 		saveWorkflowDraft,
+		getWorkflowDraft,
 		deleteWorkflowDraft,
 		resetUserWorkflow,
 		getCurrentAttempt
@@ -173,9 +174,9 @@
 	let isInitialMount: boolean = true;
 
 	// Assignment time tracking (separate from moderation tracking)
-	// Get session_number - prioritize localStorage (child-specific) over user object
+	// Get session id - prioritize localStorage (child-specific) over user object
 	// This is important because enforceWorkflowNavigation increments localStorage session numbers
-	// when a new Prolific session starts, but the user's session_number in DB may not be updated yet
+	// when a new Prolific session starts, but the user's session_id in DB may not be updated yet
 	// Resolve session number as a function (not reactive) to avoid cyclical dependencies
 	// Note: This function should only be called during component initialization (onMount)
 	// to avoid accessing reactive stores outside component context
@@ -184,7 +185,7 @@
 			// Use session number from backend (user object)
 			try {
 				const userObj = $user as any;
-				const userSessionNumber = userObj?.session_number;
+				const userSessionNumber = userObj?.session_id;
 				if (userSessionNumber && Number.isFinite(userSessionNumber)) {
 					sessionNumber = Number(userSessionNumber);
 					return;
@@ -197,6 +198,24 @@
 			console.warn('Error resolving session number, using default:', e);
 			sessionNumber = 1;
 		}
+	}
+
+	function getActiveSessionId(): string {
+		try {
+			const userSessionId = ($user as any)?.current_session_id;
+			if (userSessionId && String(userSessionId).trim()) {
+				return String(userSessionId);
+			}
+		} catch {}
+
+		if (typeof window !== 'undefined') {
+			const storedSessionId = localStorage.getItem('prolificSessionId');
+			if (storedSessionId && storedSessionId.trim()) {
+				return storedSessionId;
+			}
+		}
+
+		return 'unknown';
 	}
 
 	// Default characteristics to use as fallback when no scenarios are generated
@@ -222,7 +241,7 @@
 	// Call afterNavigate at top level (not inside onMount) to avoid component initialization errors
 	afterNavigate(() => {
 		try {
-			const pageValue = get($page);
+			const pageValue = get(page);
 			// Type-safe access to page URL - check if pageValue has url property
 			if (!pageValue || typeof pageValue !== 'object' || !('url' in pageValue)) {
 				console.warn('Page URL not available in afterNavigate');
@@ -424,7 +443,7 @@
 				const payload = JSON.stringify({
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId,
-					session_number: sessionNumber,
+					session_id: getActiveSessionId(),
 					attempt_number: currentAttemptNumber,
 					scenario_id: getCurrentScenarioId(),
 					active_ms_cumulative: sessionActiveMs
@@ -440,7 +459,7 @@
 			await postSessionActivity(localStorage.token, {
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId,
-				session_number: sessionNumber,
+				session_id: getActiveSessionId(),
 				attempt_number: currentAttemptNumber,
 				scenario_id: getCurrentScenarioId(),
 				active_ms_cumulative: sessionActiveMs
@@ -524,9 +543,9 @@
 			const sessions = await getModerationSessions(localStorage.token, childId);
 			const maxSession =
 				Array.isArray(sessions) && sessions.length > 0
-					? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
+					? Math.max(...sessions.map((s: any) => Number(s.session_id || 0)))
 					: 0;
-			sessionNumber = maxSession > 0 ? maxSession : ($user?.session_number ?? 1);
+			sessionNumber = maxSession > 0 ? maxSession : Number($user?.session_id ?? 1);
 			console.log('✅ Ensured session number for child:', childId, 'session:', sessionNumber);
 		} catch (e) {
 			console.warn('Failed to ensure session number for child', childId, e);
@@ -818,13 +837,13 @@
 		}
 
 		try {
-			// Get child profile from backend to get session_number
+			// Get child profile from backend to get session_id
 			const childProfile = await getChildProfileById(token, selectedChildId);
-			if (childProfile && childProfile.session_number) {
-				sessionNumber = childProfile.session_number;
-				console.log(`✅ Got session_number ${sessionNumber} from child profile`);
+			if (childProfile && childProfile.session_id) {
+				sessionNumber = Number(childProfile.session_id);
+				console.log(`✅ Got session_id ${sessionNumber} from child profile`);
 			} else {
-				console.warn('⚠️ Could not get session_number from child profile, using default 1');
+				console.warn('⚠️ Could not get session_id from child profile, using default 1');
 				sessionNumber = 1;
 			}
 
@@ -1459,6 +1478,85 @@
 	let sidebarOpen: boolean = true;
 	// Request guard to prevent responses applying to wrong scenario
 	let currentRequestId: number = 0;
+
+	// Validation error state for Step 2 submit (Fix 3)
+	let submitValidationErrors: Record<string, { missingRating: boolean; missingConcern: boolean }> =
+		{};
+
+	// =================================================================================================
+	// AUTOSAVE: Debounced draft persistence for Step 2 progress
+	// Uses the same workflow draft API as exit-survey to survive page refreshes.
+	// =================================================================================================
+	function debounce(fn: (...args: any[]) => void, delay = 500) {
+		let t: any;
+		return (...args: any[]) => {
+			clearTimeout(t);
+			t = setTimeout(() => fn(...args), delay);
+		};
+	}
+
+	const saveModerationDraft = debounce(async () => {
+		if (isLoadingScenario || !selectedChildId) return;
+		const token = localStorage.token || '';
+		if (!token) return;
+		if (!Array.isArray(scenarioList) || scenarioList.length === 0) return;
+		if (
+			selectedScenarioIndex < 0 ||
+			selectedScenarioIndex >= scenarioList.length ||
+			selectedScenarioIndex >= scenarioIdentifiers.length
+		)
+			return;
+		const identifier = getScenarioId(selectedScenarioIndex);
+		if (!identifier || identifier === String(selectedScenarioIndex)) return;
+		if (step2Completed) return; // Don't save drafts for completed scenarios
+
+		try {
+			// Read existing draft to preserve moderation_finalized and other scenarios
+			let existingData: Record<string, any> = {};
+			try {
+				const existing = await getWorkflowDraft(token, selectedChildId, 'moderation');
+				if (existing?.data) existingData = existing.data as Record<string, any>;
+			} catch {}
+
+			const scenarioDrafts = existingData.scenario_drafts ?? {};
+			scenarioDrafts[identifier] = {
+				// Step 1 data
+				highlightedTexts1: highlightedTexts1.map((h) => ({
+					text: h.text,
+					startOffset: h.startOffset,
+					endOffset: h.endOffset
+				})),
+				responseHighlightedHTML,
+				promptHighlightedHTML,
+				step1Completed,
+				// Step 2 data
+				highlightRatings: { ...highlightRatings },
+				concernMappings: concernMappings.map((c) => ({ id: c.id, text: c.text })),
+				highlightConcerns: { ...highlightConcerns },
+				realismLevel,
+				concernReason
+			};
+
+			await saveWorkflowDraft(token, selectedChildId, 'moderation', {
+				...existingData,
+				scenario_drafts: scenarioDrafts
+			});
+			console.log('💾 Draft saved for scenario', identifier);
+		} catch (e) {
+			console.error('Draft save failed (non-blocking):', e);
+		}
+	}, 500);
+
+	// Reactive autosave trigger — fires on any Step 1 or Step 2 data change
+	$: if (!isLoadingScenario && !step2Completed) {
+		// Reference reactive deps to trigger on changes
+		void highlightedTexts1;
+		void highlightRatings;
+		void concernMappings;
+		void highlightConcerns;
+		void realismLevel;
+		saveModerationDraft();
+	}
 
 	// =================================================================================================
 	// DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION
@@ -2161,18 +2259,16 @@
 
 	// Persist the current concernMappings/highlightConcerns pool to backend
 	async function persistConcernItems() {
-		const sessionId = `scenario_${selectedScenarioIndex}`;
 		const userId = $user?.id || 'unknown';
 		const childId = selectedChildId || 'unknown';
 		try {
 			await saveConcernItemsBatch(localStorage.token, {
-				session_id: sessionId,
 				user_id: userId,
 				child_id: childId,
 				scenario_index: selectedScenarioIndex,
 				attempt_number: currentAttemptNumber,
 				version_number: 0,
-				session_number: sessionNumber,
+				session_id: getActiveSessionId(),
 				scenario_id: getCurrentScenarioId() ?? undefined,
 				items: concernMappings.map((c, idx) => {
 					const linkedHighlightTexts = Object.entries(highlightConcerns)
@@ -2218,6 +2314,15 @@
 				...highlightConcerns,
 				[highlightText]: [...current.filter((id) => id !== concernId), concernId]
 			};
+			// Clear validation error for this highlight if concern was missing
+			if (submitValidationErrors[highlightText]?.missingConcern) {
+				const updated = { ...submitValidationErrors };
+				updated[highlightText] = { ...updated[highlightText], missingConcern: false };
+				if (!updated[highlightText].missingRating && !updated[highlightText].missingConcern) {
+					delete updated[highlightText];
+				}
+				submitValidationErrors = updated;
+			}
 		} else {
 			const updated = current.filter((id) => id !== concernId);
 			highlightConcerns = { ...highlightConcerns, [highlightText]: updated };
@@ -2516,8 +2621,9 @@
 	 * @deprecated In Approach 3, use stored HTML (responseHighlightedHTML/promptHighlightedHTML) directly
 	 */
 	function getHighlightedHTML(text: string, highlights: HighlightInfo[]): string {
-		// Approach 3: Just render markdown - highlights are stored as HTML directly
-		return renderMarkdown(text);
+		// Fallback path: if stored HTML is missing, reconstruct marks from highlight text.
+		const rendered = renderMarkdown(text);
+		return applyHighlightsToHTML(rendered, highlights);
 	}
 
 	// Reactive statement for response HTML - Approach 3: Use stored HTML directly
@@ -2539,6 +2645,10 @@
 		if (responseHighlightedHTML) {
 			console.log('🔴 Using responseHighlightedHTML');
 			return responseHighlightedHTML;
+		}
+		if (highlightedTexts1.length > 0) {
+			console.log('🔴 Using getHighlightedHTML fallback from highlightedTexts1');
+			return getHighlightedHTML(originalResponse1, highlightedTexts1);
 		}
 		// Fall back to rendered markdown if no stored HTML
 		// Always show original with highlights when in Step 1 of initial decision pane
@@ -2575,6 +2685,10 @@
 		if (promptHighlightedHTML) {
 			console.log('🔵 Using promptHighlightedHTML');
 			return promptHighlightedHTML;
+		}
+		if (highlightedTexts1.length > 0) {
+			console.log('🔵 Using getHighlightedHTML fallback from highlightedTexts1');
+			return getHighlightedHTML(childPrompt1, highlightedTexts1);
 		}
 		// Fall back to rendered markdown if no stored HTML
 		console.log('🔵 Using renderMarkdown (default fallback)');
@@ -2798,6 +2912,7 @@
 		highlightConcerns = {};
 		newConcernInputs = {};
 		highlightRatings = {};
+		submitValidationErrors = {};
 		concernReason = '';
 		satisfactionLevel = null;
 		satisfactionReason = '';
@@ -2836,7 +2951,6 @@
 				backendSession = sessions.find(
 					(s: any) =>
 						s.scenario_index === index &&
-						s.session_number === sessionNumber &&
 						s.attempt_number === currentAttemptNumber &&
 						s.version_number === 0
 				);
@@ -2844,7 +2958,6 @@
 					.filter(
 						(s: any) =>
 							s.scenario_index === index &&
-							s.session_number === sessionNumber &&
 							s.attempt_number === currentAttemptNumber &&
 							s.version_number > 0
 					)
@@ -3017,6 +3130,14 @@
 				console.log('✅ Restored highlights from backend:', highlightedTexts1.length);
 			}
 
+			// Restore server-rendered highlight HTML when available.
+			if (backendSession.response_highlighted_html) {
+				responseHighlightedHTML = backendSession.response_highlighted_html;
+			}
+			if (backendSession.prompt_highlighted_html) {
+				promptHighlightedHTML = backendSession.prompt_highlighted_html;
+			}
+
 			// Step 2: Restore concern reason from backend (now in column, not metadata)
 			if (backendSession.concern_reason) {
 				concernReason = backendSession.concern_reason;
@@ -3040,7 +3161,7 @@
 						scenario_index: index,
 						attempt_number: currentAttemptNumber,
 						version_number: 0,
-						session_number: sessionNumber
+						session_id: getActiveSessionId()
 					});
 					if (dbItems.length > 0) {
 						concernMappings = dbItems.map((item: ConcernItemResponse) => ({
@@ -3255,6 +3376,63 @@
 			customInstructions = [...savedState.customInstructions];
 			showOriginal1 = savedState.showOriginal1 || showOriginal1;
 			showComparisonView = savedState.showComparisonView || showComparisonView;
+
+			// Missing-field merge from in-memory state for same-session navigation.
+			if (!responseHighlightedHTML && savedState.responseHighlightedHTML) {
+				responseHighlightedHTML = savedState.responseHighlightedHTML;
+			}
+			if (!promptHighlightedHTML && savedState.promptHighlightedHTML) {
+				promptHighlightedHTML = savedState.promptHighlightedHTML;
+			}
+			if (highlightedTexts1.length === 0 && savedState.highlightedTexts1?.length > 0) {
+				highlightedTexts1 = [...savedState.highlightedTexts1];
+			}
+			if (!step1Completed && savedState.step1Completed) {
+				step1Completed = true;
+			}
+			if (Object.keys(highlightRatings).length === 0 && savedState.highlightRatings) {
+				highlightRatings = { ...savedState.highlightRatings };
+			}
+			if (concernMappings.length === 0 && savedState.concernMappings?.length > 0) {
+				concernMappings = [...savedState.concernMappings];
+			}
+			if (Object.keys(highlightConcerns).length === 0 && savedState.highlightConcerns) {
+				highlightConcerns = { ...savedState.highlightConcerns };
+			}
+			if (realismLevel == null && savedState.realismLevel != null) {
+				realismLevel = savedState.realismLevel;
+			}
+			if (!concernReason && savedState.concernReason) {
+				concernReason = savedState.concernReason;
+			}
+			if (!step2Completed && savedState.step2Completed) {
+				step2Completed = true;
+			}
+			if (!step3Completed && savedState.step3Completed) {
+				step3Completed = true;
+			}
+			if (!markedNotApplicable && savedState.markedNotApplicable) {
+				markedNotApplicable = true;
+			}
+			if (concernLevel == null && savedState.concernLevel != null) {
+				concernLevel = savedState.concernLevel;
+			}
+			if (satisfactionLevel == null && savedState.satisfactionLevel != null) {
+				satisfactionLevel = savedState.satisfactionLevel;
+			}
+			if (!satisfactionReason && savedState.satisfactionReason) {
+				satisfactionReason = savedState.satisfactionReason;
+			}
+			if (!nextAction && savedState.nextAction) {
+				nextAction = savedState.nextAction;
+			}
+			if (versions.length === 0 && savedState.versions?.length > 0) {
+				versions = [...savedState.versions];
+				currentVersionIndex = savedState.currentVersionIndex;
+			}
+			if (confirmedVersionIndex === null && savedState.confirmedVersionIndex !== null) {
+				confirmedVersionIndex = savedState.confirmedVersionIndex;
+			}
 			if (!backendSession) {
 				// No backend data — restore all fields from in-memory state
 				step1Completed = savedState.step1Completed || false;
@@ -3277,15 +3455,80 @@
 				if (savedState.confirmedVersionIndex !== null) {
 					confirmedVersionIndex = savedState.confirmedVersionIndex;
 				}
-				if (!responseHighlightedHTML && savedState.responseHighlightedHTML) {
-					responseHighlightedHTML = savedState.responseHighlightedHTML;
+			}
+		}
+
+		// Restore draft data (Step 1 + Step 2) from workflow draft when scenario is incomplete.
+		// IMPORTANT: Do not skip this just because Step 1/backend highlights already exist.
+		// On reload, Step 1 often comes from backend while Step 2 draft fields (like realismLevel)
+		// must still be merged from workflow_draft.
+		if (!step2Completed) {
+			try {
+				const token = localStorage.token || '';
+				if (token && selectedChildId) {
+					const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
+					const scenarioDrafts = ((draftRes?.data as any)?.scenario_drafts ?? {}) as Record<
+						string,
+						any
+					>;
+
+					const draftLookupKeys = [
+						identifier,
+						backendSession?.scenario_id,
+						savedState?.scenario_id
+					].filter((k): k is string => typeof k === 'string' && k.length > 0);
+
+					let scenarioDraft: any = null;
+					for (const key of draftLookupKeys) {
+						if (scenarioDrafts[key]) {
+							scenarioDraft = scenarioDrafts[key];
+							break;
+						}
+					}
+
+					if (scenarioDraft) {
+						// Step 1 data
+						if (highlightedTexts1.length === 0 && scenarioDraft.highlightedTexts1?.length > 0) {
+							highlightedTexts1 = scenarioDraft.highlightedTexts1;
+						}
+						if (!responseHighlightedHTML && scenarioDraft.responseHighlightedHTML) {
+							responseHighlightedHTML = scenarioDraft.responseHighlightedHTML;
+						}
+						if (!promptHighlightedHTML && scenarioDraft.promptHighlightedHTML) {
+							promptHighlightedHTML = scenarioDraft.promptHighlightedHTML;
+						}
+						if (!step1Completed && scenarioDraft.step1Completed) {
+							step1Completed = true;
+						}
+
+						// Step 2 data
+						if (
+							Object.keys(highlightRatings).length === 0 &&
+							Object.keys(scenarioDraft.highlightRatings ?? {}).length > 0
+						) {
+							highlightRatings = scenarioDraft.highlightRatings;
+						}
+						if (concernMappings.length === 0 && scenarioDraft.concernMappings?.length > 0) {
+							concernMappings = scenarioDraft.concernMappings;
+						}
+						if (
+							Object.keys(highlightConcerns).length === 0 &&
+							Object.keys(scenarioDraft.highlightConcerns ?? {}).length > 0
+						) {
+							highlightConcerns = scenarioDraft.highlightConcerns;
+						}
+						if (realismLevel == null && scenarioDraft.realismLevel != null) {
+							realismLevel = scenarioDraft.realismLevel;
+						}
+						if (!concernReason && scenarioDraft.concernReason) {
+							concernReason = scenarioDraft.concernReason;
+						}
+
+						console.log('📋 Restored draft for scenario', identifier, 'via keys:', draftLookupKeys);
+					}
 				}
-				if (!promptHighlightedHTML && savedState.promptHighlightedHTML) {
-					promptHighlightedHTML = savedState.promptHighlightedHTML;
-				}
-				if (highlightedTexts1.length === 0 && savedState.highlightedTexts1?.length > 0) {
-					highlightedTexts1 = [...savedState.highlightedTexts1];
-				}
+			} catch (e) {
+				console.warn('Could not load moderation draft (non-blocking):', e);
 			}
 		}
 
@@ -3497,17 +3740,15 @@
 			// Save to backend with is_final_version: true
 			try {
 				const stepData = getCurrentStepData();
-				const sessionId = `scenario_${selectedScenarioIndex}`;
 				// Get the version number for the confirmed version (0 = original, 1+ = moderated versions)
 				const versionNumber = confirmedVersionIndex === -1 ? 0 : confirmedVersionIndex + 1;
 				await saveModerationSession(localStorage.token, {
-					session_id: sessionId,
+					session_id: getActiveSessionId(),
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId || 'unknown',
 					scenario_index: selectedScenarioIndex,
 					attempt_number: currentAttemptNumber,
 					version_number: versionNumber,
-					session_number: sessionNumber,
 					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
@@ -3844,15 +4085,13 @@
 			// Note: Highlights in `selection` table remain untouched (already saved when user highlighted)
 			// Only `moderation_session.highlighted_texts` is set to empty array
 			try {
-				const sessionId = `scenario_${selectedScenarioIndex}`;
 				await saveModerationSession(localStorage.token, {
-					session_id: sessionId,
+					session_id: getActiveSessionId(),
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId || 'unknown',
 					scenario_index: selectedScenarioIndex,
 					attempt_number: currentAttemptNumber,
 					version_number: 0,
-					session_number: sessionNumber,
 					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
@@ -3886,15 +4125,13 @@
 			// Note: Individual highlights were already saved to `selection` table via `saveSelection()`
 			// This saves all highlights together for session state restoration
 			try {
-				const sessionId = `scenario_${selectedScenarioIndex}`;
 				await saveModerationSession(localStorage.token, {
-					session_id: sessionId,
+					session_id: getActiveSessionId(),
 					user_id: $user?.id || 'unknown',
 					child_id: selectedChildId || 'unknown',
 					scenario_index: selectedScenarioIndex,
 					attempt_number: currentAttemptNumber,
 					version_number: 0,
-					session_number: sessionNumber,
 					scenario_id: getCurrentScenarioId(),
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
@@ -3938,37 +4175,53 @@
 	 * Marks scenario as complete and navigates to next scenario if available.
 	 */
 	async function completeStep2() {
+		// Clear previous validation errors
+		submitValidationErrors = {};
+
 		// Validate realism level is selected
 		if (realismLevel === null) {
 			toast.error('Please rate how realistic this scenario is');
+			const realismEl = document.getElementById('realism-rating');
+			if (realismEl) realismEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			return;
 		}
 
-		// Validate every highlight has a sentiment rating
-		if (highlightedTexts1.some((h) => (highlightRatings[h.text] ?? null) === null)) {
-			toast.error('Please rate every highlight');
-			return;
+		// Build per-highlight validation errors
+		let hasHighlightErrors = false;
+		const errors: Record<string, { missingRating: boolean; missingConcern: boolean }> = {};
+
+		for (const h of highlightedTexts1) {
+			const missingRating = (highlightRatings[h.text] ?? null) === null;
+			const missingConcern = !(highlightConcerns[h.text] ?? []).length;
+			if (missingRating || missingConcern) {
+				errors[h.text] = { missingRating, missingConcern };
+				hasHighlightErrors = true;
+			}
 		}
 
 		// Validate at least one concern with text is provided
 		const validConcerns = concernMappings.filter((c) => c.text.trim());
 		if (validConcerns.length === 0) {
 			toast.error('Please add at least one reason');
-			return;
+			hasHighlightErrors = true;
 		}
 
 		// Validate each concern with text has at least one linked highlight (when highlights exist)
 		if (highlightedTexts1.length > 0 && !allConcernsHaveHighlights()) {
 			toast.error('Please link each reason to at least one highlight');
-			return;
+			hasHighlightErrors = true;
 		}
 
-		// Validate ALL highlights are matched to at least one concern (when highlights exist)
-		if (highlightedTexts1.length > 0 && !allHighlightsMatched()) {
-			const unmatched = getUnmatchedHighlights();
-			toast.error(
-				`Please add a reason for each highlight (${unmatched.length} highlight${unmatched.length > 1 ? 's' : ''} remaining)`
-			);
+		if (hasHighlightErrors) {
+			submitValidationErrors = errors;
+			// Scroll to first incomplete highlight card
+			await tick();
+			const firstErrorKey = Object.keys(errors)[0];
+			if (firstErrorKey) {
+				const idx = highlightedTexts1.findIndex((h) => h.text === firstErrorKey);
+				const el = document.getElementById(`highlight-card-${idx}`);
+				if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
 			return;
 		}
 
@@ -4013,7 +4266,6 @@
 		// Save identification completion to backend with is_final_version: true
 		// Use try-catch to ensure errors don't prevent step completion
 		try {
-			const sessionId = `scenario_${selectedScenarioIndex}`;
 			const userId = $user?.id || 'unknown';
 			const childId = selectedChildId || 'unknown';
 
@@ -4046,13 +4298,12 @@
 			await persistConcernItems();
 
 			await saveModerationSession(localStorage.token, {
-				session_id: sessionId,
+				session_id: getActiveSessionId(),
 				user_id: userId,
 				child_id: childId,
 				scenario_index: selectedScenarioIndex,
 				attempt_number: currentAttemptNumber,
 				version_number: 0,
-				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
@@ -4079,6 +4330,19 @@
 			});
 			console.log('✅ Identification complete - scenario marked as final');
 			window.dispatchEvent(new Event('workflow-updated'));
+
+			// Clear draft for this scenario after successful submit
+			try {
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const existing = await getWorkflowDraft(localStorage.token, selectedChildId, 'moderation');
+				const existingData = (existing?.data as Record<string, any>) ?? {};
+				const scenarioDrafts = { ...(existingData.scenario_drafts ?? {}) };
+				delete scenarioDrafts[currentIdentifier];
+				await saveWorkflowDraft(localStorage.token, selectedChildId, 'moderation', {
+					...existingData,
+					scenario_drafts: scenarioDrafts
+				});
+			} catch {}
 		} catch (e) {
 			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
@@ -4126,17 +4390,15 @@
 		// Save to backend
 		try {
 			const stepData = getCurrentStepData();
-			const sessionId = `scenario_${selectedScenarioIndex}`;
 			const versionNumber = currentVersionIndex >= 0 ? currentVersionIndex + 1 : 1;
 
 			await saveModerationSession(localStorage.token, {
-				session_id: sessionId,
+				session_id: getActiveSessionId(),
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId || 'unknown',
 				scenario_index: selectedScenarioIndex,
 				attempt_number: currentAttemptNumber,
 				version_number: versionNumber,
-				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
@@ -4258,15 +4520,13 @@
 		// Save complete session data
 		try {
 			const stepData = getCurrentStepData();
-			const sessionId = `scenario_${selectedScenarioIndex}`;
 			await saveModerationSession(localStorage.token, {
-				session_id: sessionId,
+				session_id: getActiveSessionId(),
 				user_id: $user?.id || 'unknown',
 				child_id: selectedChildId || 'unknown',
 				scenario_index: selectedScenarioIndex,
 				attempt_number: currentAttemptNumber,
 				version_number: 0,
-				session_number: sessionNumber,
 				scenario_id: getCurrentScenarioId(),
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
@@ -4426,15 +4686,13 @@
 				// Save complete session data with the new version (use snapshot)
 				try {
 					const stepData = getCurrentStepData();
-					const sessionId = `scenario_${selectedScenarioIndex}`;
 					await saveModerationSession(localStorage.token, {
-						session_id: sessionId,
+						session_id: getActiveSessionId(),
 						user_id: $user?.id || 'unknown',
 						child_id: selectedChildId || 'unknown',
 						scenario_index: selectedScenarioIndex,
 						attempt_number: currentAttemptNumber,
 						version_number: currentVersionIndex + 1,
-						session_number: sessionNumber,
 						scenario_id: getCurrentScenarioId(),
 						scenario_prompt: childPrompt1,
 						original_response: originalResponse1,
@@ -4497,12 +4755,18 @@
 		moderationFinalized = true;
 		showConfirmationModal = false; // Close modal
 
-		// Persist just the finalized flag to draft so getWorkflowState can read it back on reload
+		// Persist the finalized flag to draft, merging with existing draft data
 		if (selectedChildId && typeof window !== 'undefined') {
 			try {
 				const token = localStorage.token || '';
 				if (token) {
+					let existingData: Record<string, any> = {};
+					try {
+						const existing = await getWorkflowDraft(token, selectedChildId, 'moderation');
+						if (existing?.data) existingData = existing.data as Record<string, any>;
+					} catch {}
 					await saveWorkflowDraft(token, selectedChildId, 'moderation', {
+						...existingData,
 						moderation_finalized: true
 					});
 				}
@@ -4515,7 +4779,7 @@
 		try {
 			await finalizeModeration(localStorage.token, {
 				child_id: selectedChildId,
-				session_number: sessionNumber
+				session_id: getActiveSessionId()
 			});
 		} catch (e) {
 			console.error('Finalize moderation error:', e);
@@ -4640,7 +4904,9 @@
 		try {
 			const token = (typeof window !== 'undefined' && localStorage.token) || '';
 			if (token) {
-				const state = await getWorkflowState(token);
+				const state = await getWorkflowState(token, {
+					childId: selectedChildId || childProfileSync.getCurrentChildId()
+				});
 				workflowStateForModeration = state;
 				// Restore moderationFinalized from persisted draft flag (via workflow state)
 				if (state?.progress_by_section?.moderation_finalized) {
@@ -4665,6 +4931,7 @@
 		// saveCurrentScenarioState() call could write a partial draft — or the $: reactive block
 		// could fire saveCurrentScenarioState() — and pollute the new attempt's draft.
 		console.log('🔄 Workflow reset detected, clearing all scenario state');
+		isLoadingScenario = true; // Prevent autosave while reset + regeneration are in progress.
 		resetAllScenarioStates(); // clears scenariosLockedForSession, steps, concerns, timers, etc.
 		scenarioList = []; // resetAllScenarioStates does not clear scenarioList itself
 
@@ -4730,7 +4997,7 @@
 					const sessions = await getModerationSessions(localStorage.token, childIdForSession);
 					const maxSession =
 						Array.isArray(sessions) && sessions.length > 0
-							? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
+							? Math.max(...sessions.map((s: any) => Number(s.session_id || 0)))
 							: 0;
 					localStorage.setItem(sessionKey, String(maxSession + 1));
 				}
@@ -4747,11 +5014,14 @@
 
 		// Guard navigation if user tries to jump ahead (check backend workflow state)
 		try {
-			const wf = await getWorkflowState(localStorage.token);
-			if (
-				!wf?.progress_by_section?.instructions_completed ||
-				!wf?.progress_by_section?.has_child_profile
-			) {
+			const wf = await getWorkflowState(localStorage.token, {
+				childId: selectedChildId || childProfileSync.getCurrentChildId()
+			});
+			if (!wf?.progress_by_section?.instructions_completed) {
+				goto('/assignment-instructions');
+				return;
+			}
+			if (!wf?.progress_by_section?.has_child_profile) {
 				goto('/kids/profile');
 				return;
 			}
@@ -4806,7 +5076,7 @@
 						return;
 					}
 					availableScenarioIndices = availableScenarios.available_scenarios || [];
-					sessionNumber = availableScenarios.session_number ?? sessionNumber;
+					// Keep local sessionNumber unchanged; backend session_id is authoritative for writes.
 					console.log(
 						'Prolific user - available scenarios (from backend):',
 						availableScenarioIndices,
@@ -6259,7 +6529,33 @@
 												<h4 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">
 													2a. Scenario Realism
 												</h4>
+												<div class="mb-2">
+													<div class="flex items-center justify-between mb-1">
+														<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+															{realismLevel !== null ? '1 of 1' : '0 of 1'} rated
+														</span>
+														{#if realismLevel !== null}
+															<span class="text-sm font-medium text-green-600 dark:text-green-400"
+																>Complete</span
+															>
+														{:else}
+															<span class="text-sm font-medium text-amber-600 dark:text-amber-400"
+																>Rating needed</span
+															>
+														{/if}
+													</div>
+													<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+														<div
+															class="h-2 rounded-full transition-all duration-300 {realismLevel !==
+															null
+																? 'bg-green-500'
+																: 'bg-blue-500'}"
+															style="width: {realismLevel !== null ? 100 : 0}%"
+														></div>
+													</div>
+												</div>
 												<div
+													id="realism-rating"
 													class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4"
 												>
 													<p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -6314,7 +6610,7 @@
 																{matchedCount} of {highlightedTexts1.length} highlight{highlightedTexts1.length !==
 																1
 																	? 's'
-																	: ''} addressed
+																	: ''} complete (rated + linked to a reason)
 															</span>
 															{#if matchedCount === highlightedTexts1.length}
 																<span class="text-sm font-medium text-green-600 dark:text-green-400"
@@ -6347,6 +6643,7 @@
 																(highlightRatings[highlight.text] ?? null) !== null &&
 																linkedIds.length > 0}
 															<div
+																id="highlight-card-{hIdx}"
 																class="p-3 border rounded-lg transition-colors {isAddressed
 																	? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10'
 																	: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}"
@@ -6359,6 +6656,31 @@
 																			: 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'}"
 																	>
 																		{hIdx + 1}
+																	</span>
+																	<!-- Per-highlight status badges -->
+																	<span class="flex items-center gap-1 flex-shrink-0 mt-1">
+																		{#if (highlightRatings[highlight.text] ?? null) !== null}
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+																				title="Rating provided">Rated</span
+																			>
+																		{:else}
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+																				title="Rating needed">Needs rating</span
+																			>
+																		{/if}
+																		{#if linkedIds.length > 0}
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+																				title="Linked to reason(s)">Linked</span
+																			>
+																		{:else}
+																			<span
+																				class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+																				title="Needs a linked reason">Needs reason</span
+																			>
+																		{/if}
 																	</span>
 																	<span
 																		class="flex-1 text-base text-gray-900 dark:text-white font-mono bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded break-all leading-relaxed"
@@ -6402,6 +6724,23 @@
 																						...highlightRatings,
 																						[highlight.text]: opt.v
 																					};
+																					// Clear validation error for this highlight
+																					if (
+																						submitValidationErrors[highlight.text]?.missingRating
+																					) {
+																						const updated = { ...submitValidationErrors };
+																						updated[highlight.text] = {
+																							...updated[highlight.text],
+																							missingRating: false
+																						};
+																						if (
+																							!updated[highlight.text].missingRating &&
+																							!updated[highlight.text].missingConcern
+																						) {
+																							delete updated[highlight.text];
+																						}
+																						submitValidationErrors = updated;
+																					}
 																				}}
 																				class="px-2 py-1 text-xs rounded border transition-colors {highlightRatings[
 																					highlight.text
@@ -6414,6 +6753,48 @@
 																		{/each}
 																	</div>
 																</div>
+
+																<!-- Inline validation errors -->
+																{#if submitValidationErrors[highlight.text]}
+																	<div class="mt-1 space-y-1">
+																		{#if submitValidationErrors[highlight.text].missingRating}
+																			<p
+																				class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1"
+																			>
+																				<svg
+																					class="w-4 h-4 flex-shrink-0"
+																					fill="currentColor"
+																					viewBox="0 0 20 20"
+																				>
+																					<path
+																						fill-rule="evenodd"
+																						d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+																						clip-rule="evenodd"
+																					/>
+																				</svg>
+																				Please select a sentiment rating above
+																			</p>
+																		{/if}
+																		{#if submitValidationErrors[highlight.text].missingConcern}
+																			<p
+																				class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1"
+																			>
+																				<svg
+																					class="w-4 h-4 flex-shrink-0"
+																					fill="currentColor"
+																					viewBox="0 0 20 20"
+																				>
+																					<path
+																						fill-rule="evenodd"
+																						d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+																						clip-rule="evenodd"
+																					/>
+																				</svg>
+																				Please link at least one reason to this highlight below
+																			</p>
+																		{/if}
+																	</div>
+																{/if}
 
 																<!-- Reasons section -->
 																<div class="space-y-2">
@@ -7757,7 +8138,7 @@
 <!-- Assignment Time Tracker (separate from moderation tracking) -->
 <AssignmentTimeTracker
 	userId={get(user)?.id || ''}
-	{sessionNumber}
+	sessionId={getActiveSessionId()}
 	attemptNumber={currentAttemptNumber}
 	enabled={true}
 />

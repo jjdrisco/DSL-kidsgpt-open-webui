@@ -22,6 +22,7 @@
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
 	import Scenarios from './Settings/Scenarios.svelte';
+	import ConsentForms from './Settings/ConsentForms.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -50,6 +51,7 @@
 			'images',
 			'pipelines',
 			'scenarios',
+			'consent-forms',
 			'db'
 		].includes(tabFromPath)
 			? tabFromPath
@@ -245,6 +247,12 @@
 			title: 'Scenarios',
 			route: '/admin/settings/scenarios',
 			keywords: ['scenarios', 'moderation', 'upload', 'json', 'attention check']
+		},
+		{
+			id: 'consent-forms',
+			title: 'Consent Forms',
+			route: '/admin/settings/consent-forms',
+			keywords: ['consent', 'forms', 'irb', 'study', 'prolific', 'agreement']
 		},
 		{
 			id: 'db',
@@ -504,6 +512,24 @@
 								d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z"
 							/>
 						</svg>
+					{:else if tab.id === 'consent-forms'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+								clip-rule="evenodd"
+							/>
+							<path
+								fill-rule="evenodd"
+								d="M2 7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7Zm6.585 1.08a.75.75 0 0 1 .336 1.005l-1.75 3.5a.75.75 0 0 1-1.16.234l-1.25-1.25a.75.75 0 0 1 1.06-1.06l.522.521 1.238-2.614a.75.75 0 0 1 1.004-.336Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
 					{:else if tab.id === 'db'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -613,6 +639,8 @@
 					// Scenarios component manages its own state
 				}}
 			/>
+		{:else if selectedTab === 'consent-forms'}
+			<ConsentForms />
 		{/if}
 	</div>
 </div>

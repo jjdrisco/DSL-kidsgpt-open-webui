@@ -6,7 +6,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	export let userId: string = '';
-	export let sessionNumber: number = 1;
+	export let sessionId: string = 'unknown';
 	export let attemptNumber: number = 1;
 	export let enabled: boolean = true;
 
@@ -25,19 +25,19 @@
 		return typeof document !== 'undefined' && document.visibilityState === 'visible';
 	}
 
-	function activityKeyFor(uId: string, session: number, attempt: number) {
+	function activityKeyFor(uId: string, session: string, attempt: number) {
 		return `assignmentActiveMs_${uId}_${session}_${attempt}`;
 	}
 
 	async function syncActivity() {
 		if (!enabled) return;
 		const currentUserId = userId || get(user)?.id || 'unknown';
-		if (!currentUserId || !Number.isFinite(sessionNumber)) return;
+		if (!currentUserId || !sessionId) return;
 
 		try {
 			await postAssignmentActivity(localStorage.token || '', {
 				user_id: currentUserId,
-				session_number: sessionNumber,
+				session_id: sessionId,
 				attempt_number: attemptNumber,
 				active_ms_cumulative: assignmentActiveMs
 			});
@@ -50,11 +50,11 @@
 		if (!enabled) return;
 
 		const currentUserId = userId || get(user)?.id || 'unknown';
-		if (!currentUserId || !Number.isFinite(sessionNumber)) return;
+		if (!currentUserId || !sessionId) return;
 
 		// Restore from localStorage
 		try {
-			const k = activityKeyFor(currentUserId, sessionNumber, attemptNumber);
+			const k = activityKeyFor(currentUserId, sessionId, attemptNumber);
 			const saved = localStorage.getItem(k);
 			if (saved) {
 				assignmentActiveMs = Number(saved) || 0;
@@ -72,7 +72,7 @@
 				if (now - lastActivityAt <= IDLE_THRESHOLD_MS) {
 					assignmentActiveMs += 1000;
 					try {
-						const k = activityKeyFor(currentUserId, sessionNumber, attemptNumber);
+						const k = activityKeyFor(currentUserId, sessionId, attemptNumber);
 						localStorage.setItem(k, String(assignmentActiveMs));
 					} catch (e) {
 						console.warn('Failed to save assignment activity to localStorage', e);
@@ -101,7 +101,7 @@
 			try {
 				const payload = JSON.stringify({
 					user_id: currentUserId,
-					session_number: sessionNumber,
+					session_id: sessionId,
 					attempt_number: attemptNumber,
 					active_ms_cumulative: assignmentActiveMs
 				});

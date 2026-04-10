@@ -18,8 +18,9 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     func,
+    UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 
 from open_webui.internal.db import Base, get_db
 import logging
@@ -188,6 +189,12 @@ class ScenarioAssignment(Base):
         Index("idx_assignments_participant_scenario", "participant_id", "scenario_id"),
         Index("idx_assignments_attempt_number", "attempt_number"),
         Index("idx_assignments_child_attempt", "child_profile_id", "attempt_number"),
+        UniqueConstraint(
+            "participant_id",
+            "attempt_number",
+            "scenario_id",
+            name="uq_assignments_participant_attempt_scenario",
+        ),
     )
 
 
@@ -344,27 +351,43 @@ class ScenarioTable:
             rows = query.all()
             return [ScenarioModel.model_validate(row) for row in rows]
 
-    def increment_counter(self, scenario_id: str, counter_name: str) -> bool:
+    def increment_counter(
+        self,
+        scenario_id: str,
+        counter_name: str,
+        db_session: Optional[Session] = None,
+        commit: bool = True,
+    ) -> bool:
         """Increment a counter (n_assigned, n_completed, n_skipped, n_abandoned)"""
-        with get_db() as db:
-            obj = db.query(Scenario).filter(Scenario.scenario_id == scenario_id).first()
-            if not obj:
-                return False
+        if db_session is None:
+            with get_db() as db:
+                return self.increment_counter(
+                    scenario_id,
+                    counter_name,
+                    db_session=db,
+                    commit=True,
+                )
 
-            if counter_name == "n_assigned":
-                obj.n_assigned += 1
-            elif counter_name == "n_completed":
-                obj.n_completed += 1
-            elif counter_name == "n_skipped":
-                obj.n_skipped += 1
-            elif counter_name == "n_abandoned":
-                obj.n_abandoned += 1
-            else:
-                return False
+        db = db_session
+        obj = db.query(Scenario).filter(Scenario.scenario_id == scenario_id).first()
+        if not obj:
+            return False
 
-            obj.updated_at = int(time.time() * 1000)
+        if counter_name == "n_assigned":
+            obj.n_assigned += 1
+        elif counter_name == "n_completed":
+            obj.n_completed += 1
+        elif counter_name == "n_skipped":
+            obj.n_skipped += 1
+        elif counter_name == "n_abandoned":
+            obj.n_abandoned += 1
+        else:
+            return False
+
+        obj.updated_at = int(time.time() * 1000)
+        if commit:
             db.commit()
-            return True
+        return True
 
     def deactivate_by_set_name(self, set_name: str) -> int:
         """Deactivate all active scenarios with the given set_name. Returns count deactivated."""
@@ -547,48 +570,65 @@ class ScenarioAssignmentTable:
         form: ScenarioAssignmentForm,
         scenario_id: str,
         sampling_audit: Optional[dict] = None,
+        db_session: Optional[Session] = None,
+        commit: bool = True,
     ) -> ScenarioAssignmentModel:
         """Create a new assignment"""
-        with get_db() as db:
-            ts = int(time.time() * 1000)
-            assignment_id = str(uuid.uuid4())
+        if db_session is None:
+            with get_db() as db:
+                return self.create(
+                    form,
+                    scenario_id,
+                    sampling_audit,
+                    db_session=db,
+                    commit=True,
+                )
 
-            # Get attempt_number from form or compute from user's current attempt
-            attempt_number = form.attempt_number
-            if attempt_number is None:
-                attempt_number = _get_current_attempt_number(form.participant_id)
+        db = db_session
+        ts = int(time.time() * 1000)
+        assignment_id = str(uuid.uuid4())
 
-            obj = ScenarioAssignment(
-                assignment_id=assignment_id,
-                participant_id=form.participant_id,
-                scenario_id=scenario_id,
-                child_profile_id=form.child_profile_id,
-                attempt_number=attempt_number,
-                status=AssignmentStatus.ASSIGNED.value,
-                assigned_at=ts,
-                started_at=None,
-                ended_at=None,
-                alpha=form.alpha,
-                eligible_pool_size=(
-                    sampling_audit.get("eligible_pool_size") if sampling_audit else None
-                ),
-                n_assigned_before=(
-                    sampling_audit.get("n_assigned_before") if sampling_audit else None
-                ),
-                weight=sampling_audit.get("weight") if sampling_audit else None,
-                sampling_prob=(
-                    sampling_audit.get("sampling_prob") if sampling_audit else None
-                ),
-                assignment_position=form.assignment_position,
-                issue_any=None,
-                skip_stage=None,
-                skip_reason=None,
-                skip_reason_text=None,
-            )
-            db.add(obj)
+        # Get attempt_number from form or compute from user's current attempt
+        attempt_number = form.attempt_number
+        if attempt_number is None:
+            attempt_number = _get_current_attempt_number(form.participant_id)
+
+        obj = ScenarioAssignment(
+            assignment_id=assignment_id,
+            participant_id=form.participant_id,
+            scenario_id=scenario_id,
+            child_profile_id=form.child_profile_id,
+            attempt_number=attempt_number,
+            status=AssignmentStatus.ASSIGNED.value,
+            assigned_at=ts,
+            started_at=None,
+            ended_at=None,
+            alpha=form.alpha,
+            eligible_pool_size=(
+                sampling_audit.get("eligible_pool_size") if sampling_audit else None
+            ),
+            n_assigned_before=(
+                sampling_audit.get("n_assigned_before") if sampling_audit else None
+            ),
+            weight=sampling_audit.get("weight") if sampling_audit else None,
+            sampling_prob=(
+                sampling_audit.get("sampling_prob") if sampling_audit else None
+            ),
+            assignment_position=form.assignment_position,
+            issue_any=None,
+            skip_stage=None,
+            skip_reason=None,
+            skip_reason_text=None,
+        )
+        db.add(obj)
+
+        if commit:
             db.commit()
-            db.refresh(obj)
-            return ScenarioAssignmentModel.model_validate(obj)
+        else:
+            db.flush()
+
+        db.refresh(obj)
+        return ScenarioAssignmentModel.model_validate(obj)
 
     def update_status(
         self,
@@ -601,54 +641,93 @@ class ScenarioAssignmentTable:
         skip_reason: Optional[str] = None,
         skip_reason_text: Optional[str] = None,
         duration_seconds: Optional[int] = None,
+        db_session: Optional[Session] = None,
+        commit: bool = True,
     ) -> Optional[ScenarioAssignmentModel]:
         """Update assignment status and related fields"""
-        with get_db() as db:
-            obj = (
-                db.query(ScenarioAssignment)
-                .filter(ScenarioAssignment.assignment_id == assignment_id)
-                .first()
-            )
-            if not obj:
-                return None
+        if db_session is None:
+            with get_db() as db:
+                return self.update_status(
+                    assignment_id,
+                    status,
+                    started_at,
+                    ended_at,
+                    issue_any,
+                    skip_stage,
+                    skip_reason,
+                    skip_reason_text,
+                    duration_seconds,
+                    db_session=db,
+                    commit=True,
+                )
 
-            obj.status = status.value
-            if started_at is not None:
-                obj.started_at = started_at
-            if ended_at is not None:
-                obj.ended_at = ended_at
-            if issue_any is not None:
-                obj.issue_any = issue_any
-            if skip_stage is not None:
-                obj.skip_stage = skip_stage
-            if skip_reason is not None:
-                obj.skip_reason = skip_reason
-            if skip_reason_text is not None:
-                obj.skip_reason_text = skip_reason_text
-            if duration_seconds is not None:
-                obj.duration_seconds = duration_seconds
+        db = db_session
+        obj = (
+            db.query(ScenarioAssignment)
+            .filter(ScenarioAssignment.assignment_id == assignment_id)
+            .first()
+        )
+        if not obj:
+            return None
 
+        obj.status = status.value
+        if started_at is not None:
+            obj.started_at = started_at
+        if ended_at is not None:
+            obj.ended_at = ended_at
+        if issue_any is not None:
+            obj.issue_any = issue_any
+        if skip_stage is not None:
+            obj.skip_stage = skip_stage
+        if skip_reason is not None:
+            obj.skip_reason = skip_reason
+        if skip_reason_text is not None:
+            obj.skip_reason_text = skip_reason_text
+        if duration_seconds is not None:
+            obj.duration_seconds = duration_seconds
+
+        if commit:
             db.commit()
-            db.refresh(obj)
-            return ScenarioAssignmentModel.model_validate(obj)
+        else:
+            db.flush()
+
+        db.refresh(obj)
+        return ScenarioAssignmentModel.model_validate(obj)
 
     def update_duration(
-        self, assignment_id: str, duration_seconds: int
+        self,
+        assignment_id: str,
+        duration_seconds: int,
+        db_session: Optional[Session] = None,
+        commit: bool = True,
     ) -> Optional[ScenarioAssignmentModel]:
         """Update duration_seconds for an assignment without changing status"""
-        with get_db() as db:
-            obj = (
-                db.query(ScenarioAssignment)
-                .filter(ScenarioAssignment.assignment_id == assignment_id)
-                .first()
-            )
-            if not obj:
-                return None
+        if db_session is None:
+            with get_db() as db:
+                return self.update_duration(
+                    assignment_id,
+                    duration_seconds,
+                    db_session=db,
+                    commit=True,
+                )
 
-            obj.duration_seconds = duration_seconds
+        db = db_session
+        obj = (
+            db.query(ScenarioAssignment)
+            .filter(ScenarioAssignment.assignment_id == assignment_id)
+            .first()
+        )
+        if not obj:
+            return None
+
+        obj.duration_seconds = duration_seconds
+        if commit:
             db.commit()
-            db.refresh(obj)
-            return ScenarioAssignmentModel.model_validate(obj)
+        else:
+            db.flush()
+
+        db.refresh(obj)
+        return ScenarioAssignmentModel.model_validate(obj)
 
     def get_by_id(self, assignment_id: str) -> Optional[ScenarioAssignmentModel]:
         """Get an assignment by ID"""
@@ -676,6 +755,12 @@ class ScenarioAssignmentTable:
     def get_completed_or_skipped_scenario_ids(self, participant_id: str) -> List[str]:
         """
         Get list of scenario_ids that participant has completed, skipped, assigned, or started.
+
+        Policy: scenario uniqueness is participant-global (not child-scoped and not
+        attempt-scoped) for all in-progress and terminal states except abandoned.
+        This prevents resurfacing a scenario_id for the same participant while
+        still allowing an abandoned scenario to be retried.
+
         This ensures uniqueness when assigning multiple scenarios in a session.
         Allows scenarios that were abandoned to be reassigned.
         """

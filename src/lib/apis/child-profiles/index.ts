@@ -27,7 +27,7 @@ export interface ChildProfile {
 	child_internet_use_frequency?: string;
 	// Current attempt flag - only children with is_current: true are selectable
 	is_current?: boolean;
-	session_number?: number;
+	session_id?: string;
 	attempt_number?: number;
 	created_at: number;
 	updated_at: number;
@@ -59,7 +59,7 @@ export interface ChildProfileForm {
 	parent_llm_monitoring_other?: string;
 	// Cross-reference attention check field: child internet use frequency (1–8 scale)
 	child_internet_use_frequency?: string;
-	session_number?: number; // Optional, backend will determine if not provided
+	session_id?: string;
 	child_email?: string;
 	selected_features?: string[];
 	selected_interface_modes?: string[];

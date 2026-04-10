@@ -133,7 +133,9 @@
 
 		loadingWorkflow = true;
 		try {
-			workflowState = await getWorkflowState(token);
+			workflowState = await getWorkflowState(token, {
+				childId: childProfileSync.getCurrentChildId()
+			});
 		} catch (error) {
 			console.error('Failed to fetch workflow state:', error);
 			workflowState = null;

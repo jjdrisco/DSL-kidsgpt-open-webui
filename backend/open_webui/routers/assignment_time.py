@@ -19,7 +19,7 @@ router = APIRouter()
 
 class AssignmentSessionActivityPayload(BaseModel):
     user_id: str
-    session_number: int
+    session_id: str
     attempt_number: Optional[int] = 1
     active_ms_cumulative: int
 
@@ -36,7 +36,7 @@ async def post_assignment_session_activity(
             raise HTTPException(status_code=403, detail="Forbidden")
         form = AssignmentSessionActivityForm(
             user_id=payload.user_id,
-            session_number=payload.session_number,
+            session_id=payload.session_id,
             attempt_number=payload.attempt_number or 1,
             active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
         )

@@ -19,26 +19,12 @@
 	let mainPageContainer: HTMLElement;
 
 	// Assignment time tracking
-	$: sessionNumber = $user?.session_number || 1;
+	$: sessionId =
+		$user?.current_session_id || localStorage.getItem('prolificSessionId') || 'unknown';
 	let attemptNumber: number = 1;
 
-	// Function to determine session number for new child profile
-	async function determineSessionNumberForUser(userId: string, token: string): Promise<number> {
-		try {
-			const profiles = await getChildProfiles(token);
-			if (Array.isArray(profiles) && profiles.length > 0) {
-				const maxSession = Math.max(...profiles.map((p: ChildProfile) => p.session_number || 1));
-				const nextSession = maxSession + 1;
-				console.log(`Determined session number: ${nextSession} (max existing: ${maxSession})`);
-				return nextSession;
-			} else {
-				console.log('No existing profiles, using session number: 1');
-				return 1;
-			}
-		} catch (error) {
-			console.error('Error determining session number, defaulting to 1:', error);
-			return 1;
-		}
+	function resolveSessionIdForUser(): string {
+		return $user?.current_session_id || localStorage.getItem('prolificSessionId') || 'unknown';
 	}
 
 	async function handleProfileCreated(profile: ChildProfile) {
@@ -47,9 +33,9 @@
 		const token = localStorage.getItem('token') || '';
 
 		if (userId && token) {
-			const sessionNumber = await determineSessionNumberForUser(userId, token);
+			const sessionId = resolveSessionIdForUser();
 			const scenariosPerSession = get(config)?.study?.scenarios_per_session ?? 6;
-			assignScenariosForChild(profile.id, userId, sessionNumber, token, scenariosPerSession)
+			assignScenariosForChild(profile.id, userId, sessionId, token, scenariosPerSession)
 				.then((result) => {
 					console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${profile.id}`);
 					if (result.assignmentCount < scenariosPerSession) {
@@ -119,7 +105,9 @@
 		try {
 			const token = (typeof window !== 'undefined' && localStorage.token) || '';
 			if (token) {
-				const state = await getWorkflowState(token);
+				const state = await getWorkflowState(token, {
+					childId: childProfileSync.getCurrentChildId()
+				});
 				if (!state?.progress_by_section?.instructions_completed) {
 					goto('/assignment-instructions');
 					return;
@@ -299,10 +287,5 @@
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-	<AssignmentTimeTracker
-		userId={get(user)?.id || ''}
-		{sessionNumber}
-		{attemptNumber}
-		enabled={true}
-	/>
+	<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionId} {attemptNumber} enabled={true} />
 </div>

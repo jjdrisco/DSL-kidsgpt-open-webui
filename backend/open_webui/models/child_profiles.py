@@ -61,7 +61,7 @@ class ChildProfile(Base):
     # Reset/attempt tracking
     attempt_number = Column(Integer, nullable=False, default=1)
     is_current = Column(Boolean, nullable=False, default=True)
-    session_number = Column(BigInteger, nullable=False, default=1)
+    session_id = Column(String, nullable=False, default="unknown")
 
     created_at = Column(BigInteger)  # When profile was created
     updated_at = Column(BigInteger)  # When profile was last updated
@@ -86,7 +86,7 @@ class ChildProfile(Base):
         Index(
             "idx_child_profile_user_session_current",
             "user_id",
-            "session_number",
+            "session_id",
             "is_current",
         ),
     )
@@ -114,7 +114,7 @@ class ChildProfileModel(BaseModel):
     parent_llm_monitoring_other: Optional[str] = None
     attempt_number: int
     is_current: bool
-    session_number: int
+    session_id: str
     created_at: int
     updated_at: int
     child_email: Optional[str] = None
@@ -139,7 +139,7 @@ class ChildProfileForm(BaseModel):
     child_gender_other: Optional[str] = None
     child_ai_use_contexts_other: Optional[str] = None
     parent_llm_monitoring_other: Optional[str] = None
-    session_number: Optional[int] = None  # If None, defaults to 1 in insert function
+    session_id: Optional[str] = None
     child_email: Optional[str] = None
     selected_features: Optional[list[str]] = None
     selected_interface_modes: Optional[list[str]] = None
@@ -156,7 +156,7 @@ class ChildProfileTable:
         self,
         form_data: ChildProfileForm,
         user_id: str,
-        session_number: int = 1,
+        session_id: str = "unknown",
         attempt_number: int = 1,
     ) -> Optional[ChildProfileModel]:
         """Insert a new child profile into the database"""
@@ -189,7 +189,7 @@ class ChildProfileTable:
                     ),
                     "attempt_number": attempt_number,
                     "is_current": True,
-                    "session_number": session_number,
+                    "session_id": session_id,
                     "created_at": ts,
                     "updated_at": ts,
                 }
@@ -352,7 +352,7 @@ class ChildProfileTable:
             return ChildProfileModel.model_validate(profile) if profile else None
 
     def clone_current_profile_for_session(
-        self, user_id: str, new_session_number: int
+        self, user_id: str, new_session_id: str
     ) -> Optional[ChildProfileModel]:
         with get_db() as db:
             current = (
@@ -389,7 +389,7 @@ class ChildProfileTable:
                 ),
                 attempt_number=current.attempt_number,
                 is_current=True,
-                session_number=new_session_number,
+                session_id=new_session_id,
                 created_at=ts,
                 updated_at=ts,
             )

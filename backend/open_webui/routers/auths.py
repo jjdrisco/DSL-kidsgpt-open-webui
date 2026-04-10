@@ -104,7 +104,7 @@ class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     prolific_pid: Optional[str] = None
     study_id: Optional[str] = None
     current_session_id: Optional[str] = None
-    session_number: Optional[int] = None
+    session_id: Optional[str] = None
     consent_given: Optional[bool] = None
 
 
@@ -174,7 +174,7 @@ async def get_session_user(
         "prolific_pid": user.prolific_pid,
         "study_id": user.study_id,
         "current_session_id": user.current_session_id,
-        "session_number": user.session_number,
+        "session_id": user.current_session_id,
         "consent_given": user.consent_given,
     }
 

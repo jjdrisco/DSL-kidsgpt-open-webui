@@ -93,7 +93,7 @@ export interface ModerationSessionResponse {
 export interface SessionActivityPayload {
 	user_id: string;
 	child_id: string;
-	session_number: number;
+	session_id: string;
 	attempt_number: number;
 	active_ms_cumulative: number;
 }
@@ -102,7 +102,7 @@ export interface SessionActivityResponse {
 	id: string;
 	user_id: string;
 	child_id: string;
-	session_number: number;
+	session_id: string;
 	attempt_number: number;
 	active_ms_delta: number;
 	cumulative_ms: number;
@@ -221,7 +221,6 @@ export interface ConcernItemBatchPayload {
 	scenario_index: number;
 	attempt_number: number;
 	version_number: number;
-	session_number: number;
 	scenario_id?: string;
 	items: ConcernItemPayload[];
 }
@@ -234,7 +233,6 @@ export interface ConcernItemResponse {
 	scenario_index: number;
 	attempt_number: number;
 	version_number: number;
-	session_number: number;
 	scenario_id: string | null;
 	position: number;
 	text: string;
@@ -268,7 +266,7 @@ export const getConcernItems = async (
 		scenario_index: number;
 		attempt_number: number;
 		version_number: number;
-		session_number: number;
+		session_id: string;
 	}
 ): Promise<ConcernItemResponse[]> => {
 	let base = WEBUI_API_BASE_URL || '';
@@ -288,7 +286,7 @@ export const getConcernItems = async (
 	url.searchParams.set('scenario_index', String(params.scenario_index));
 	url.searchParams.set('attempt_number', String(params.attempt_number));
 	url.searchParams.set('version_number', String(params.version_number));
-	url.searchParams.set('session_number', String(params.session_number));
+	url.searchParams.set('session_id', params.session_id);
 
 	const res = await fetch(url.toString(), {
 		method: 'GET',

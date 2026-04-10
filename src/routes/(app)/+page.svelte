@@ -5,6 +5,7 @@
 	import { getUserType } from '$lib/utils';
 	import { getWorkflowState } from '$lib/apis/workflow';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 	import Chat from '$lib/components/chat/Chat.svelte';
 
 	let showChat = false;
@@ -48,7 +49,9 @@
 		// For interviewees, use workflow state from backend
 		if (userType === 'interviewee') {
 			try {
-				const workflowState = await getWorkflowState(localStorage.token);
+				const workflowState = await getWorkflowState(localStorage.token, {
+					childId: childProfileSync.getCurrentChildId()
+				});
 				if (workflowState?.progress_by_section?.exit_survey_completed) {
 					goto('/completion');
 					return;
