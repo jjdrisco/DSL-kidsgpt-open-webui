@@ -22,6 +22,7 @@ Scenarios come from the `scenarios` database table (managed via the admin panel)
    - Calls `fetchWorkflowStateForModeration()` → reads `/workflow/state` to restore the `moderationFinalized` flag only (not full scenario state).
    - Fetches `currentAttemptNumber` via `getCurrentAttempt()`.
    - Calls `getAssignmentsForChild(childId, attemptNumber)` to fetch any existing `scenario_assignments` rows for this child at the current `attempt_number`.
+   - Existing-assignment restore uses current-attempt rows including `assigned`, `started`, `completed`, and `skipped` so revisits restore the existing package instead of creating new assignments.
    - For any unfilled slots (up to `SCENARIOS_PER_SESSION`, default 6), calls `assignScenario()` which POSTs to `/moderation/scenarios/assign`.
    - **No `workflow_draft` is read for scenario state.** Per-scenario state is restored inside `loadScenario()` from `getModerationSessions()` (backend DB), with the in-memory `scenarioStates` Map as a session-only fallback for same-session navigation.
 2. Each `assignScenario()` call returns `assignment_id`, `scenario_id`, `prompt_text`, `response_text`, and optionally `attention_check_code`.
@@ -31,7 +32,8 @@ Scenarios come from the `scenarios` database table (managed via the admin panel)
 
 - Location: `backend/open_webui/routers/moderation_scenarios.py`
 - Performs weighted sampling: `p(s) ∝ 1/(n_assigned + 1)^α` — favors less-seen scenarios.
-- Creates a `scenario_assignments` row with `status='assigned'` and increments `scenarios.n_assigned`.
+- Creates a `scenario_assignments` row with `status='assigned'` and increments `scenarios.n_assigned` in one transaction.
+- On unique-conflict races, retries assignment and returns `409` if conflicts persist.
 
 **`SCENARIOS_PER_SESSION`**: Configurable in Admin → Scenarios → Study Configuration (default: 6).
 
@@ -168,6 +170,14 @@ The following fields were removed from `ScenarioState` in earlier refactors:
 - Read by `fetchWorkflowStateForModeration()` at mount to restore the `moderationFinalized` flag.
 - Deleted on workflow reset (`deleteWorkflowDraft()`).
 - **Not** used for scenario state, selected moderations, highlights, or any other per-scenario data.
+
+### Draft Keying Safety (April 2026)
+
+To prevent stale content from appearing on Scenario 0 after resets/reloads:
+
+- Draft restore no longer falls back to numeric index keys (for example, `"0"`).
+- Autosave is skipped unless a stable assignment-backed scenario identifier exists.
+- Workflow reset sets `isLoadingScenario = true` before clearing state to suppress reactive autosave races during regeneration.
 
 > **Removed (March 2026):** The localStorage keys `moderationScenarioStates_{childId}`, `moderationScenarioTimers_{childId}`, `moderationCurrentScenario_{childId}`, and the `scenarioPkg_{childId}_{sessionNumber}` package are no longer written. The hybrid localStorage + backend draft merge system (`restoreFromLocalStorageIfMissing`, `loadSavedStates`, `backendProvided` Set) has been removed in favour of the backend-primary restore approach.
 

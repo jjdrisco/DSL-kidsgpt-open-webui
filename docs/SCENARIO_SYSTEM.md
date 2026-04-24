@@ -61,7 +61,9 @@ One row per exposure to a scenario, tracking the assignment lifecycle.
 
 **Constraints:**
 
-- Partial unique constraint: (participant_id, scenario_id, status) WHERE status != 'abandoned'
+- Unique constraint: `(participant_id, attempt_number, scenario_id)`
+
+This enforces one assignment row per participant/scenario within an attempt and prevents duplicate issuance under concurrency.
 
 #### `attention_check_scenarios` Table
 
@@ -106,6 +108,7 @@ Stores highlight spans with assignment tracking.
 3. Create assignment record (status: 'assigned')
    - Store sampling audit fields
    - Increment scenarios.n_assigned counter
+	- Both operations are committed in one DB transaction
    ↓
 4. Frontend loads scenario
    ↓
@@ -152,7 +155,7 @@ Where:
 
 **Implementation:**
 
-1. Get eligible scenarios (exclude completed/skipped for participant, allow abandoned)
+1. Get eligible scenarios (exclude completed/skipped/assigned/started for participant, allow abandoned)
 2. Calculate weight for each: `weight = 1.0 / (n_assigned + 1)^alpha`
 3. Normalize to probabilities: `prob = weight / sum(weights)`
 4. Use cumulative distribution for weighted random selection
@@ -172,6 +175,8 @@ Where:
 #### `POST /api/v1/moderation/scenarios/assign`
 
 Assign a scenario using weighted sampling.
+
+If a concurrent request wins the same scenario first, the endpoint retries sampling a few times and returns `409` if it cannot resolve a conflict.
 
 **Request:**
 
@@ -262,6 +267,12 @@ Mark an assignment as abandoned and trigger reassignment.
 	"assignment_id": "uuid"
 }
 ```
+
+#### `GET /api/v1/moderation/scenarios/assignments/{child_id}`
+
+Get the current-attempt assignment set for a child profile, ordered by `assignment_position`.
+
+This endpoint now includes in-progress and terminal statuses (`assigned`, `started`, `completed`, `skipped`) so the frontend restores the existing attempt package instead of creating a fresh set on revisit.
 
 **Response:**
 

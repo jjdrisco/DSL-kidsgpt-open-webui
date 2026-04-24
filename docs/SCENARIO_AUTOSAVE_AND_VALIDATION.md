@@ -47,6 +47,12 @@ A Svelte reactive block fires `saveModerationDraft()` (debounced at 500ms) whene
 
 The guard `if (isLoadingScenario) return` prevents save loops during restoration.
 
+Additional guards (April 2026):
+- Skip autosave when `scenarioList` is empty.
+- Skip autosave when `selectedScenarioIndex` is out of bounds.
+- Skip autosave when `scenarioIdentifiers` are not initialized for the selected scenario.
+- Skip autosave when the identifier is only the numeric fallback (`String(index)`), which prevents writing stale draft data under ambiguous keys.
+
 ### Save Flow (read-modify-write)
 
 Each save:
@@ -64,10 +70,13 @@ In `loadScenario()`, after checking the backend `ModerationSession` and in-memor
 - Step 1 data (highlights, highlighted HTML, step1Completed) is restored first
 - Step 2 data (ratings, concerns, links, realism) is restored if present
 
+Draft lookup keys are stable identifiers only (assignment/scenario IDs). Legacy numeric index key fallback has been removed to prevent cross-scenario contamination after reset/regeneration.
+
 ### Cleanup
 
 - On successful Step 2 submit (`completeStep2`): the scenario's entry is deleted from `scenario_drafts`
 - On finalization (`proceedToNextStep`): existing draft is read and `moderation_finalized: true` is merged in (not overwritten)
+- On workflow reset, `isLoadingScenario` is set before state clearing to suppress reactive autosave until scenario regeneration completes.
 
 ### Data Restoration Priority
 
