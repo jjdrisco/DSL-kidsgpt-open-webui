@@ -98,6 +98,10 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Generated notebook output directories (reproducible from notebooks)
+data-exports/*/highlight_analysis_output/
+data-exports/*/contextual_analysis_output/
+
 # IPython
 profile_default/
 ipython_config.py

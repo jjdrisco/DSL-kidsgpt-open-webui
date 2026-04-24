@@ -1,0 +1,254 @@
+concern_item_id,highlight_id,response_characteristic_code
+77e987e3-b087-4f31-a810-128176e77425,516110c8-6334-4e98-bfb1-35438322be79,Emphasize Emotional Support
+b4793e79-3f83-4b4f-bca4-dda271237de7,83df2270-d129-4cf3-b00a-9d323140d871,Prompted Suggestions
+62860cc2-39e8-45dc-b0c5-a2dd61be55d5,83df2270-d129-4cf3-b00a-9d323140d871,Prompted Suggestions
+3542c456-f839-43d7-bc67-f9362271323f,7cb5cfd6-6e5f-4de0-844f-ec76d6261719,Prompted Suggestions
+6e72cab0-9ecc-4690-8b15-4b9f40b1c851,c6a8eede-91f1-42bd-b462-52d0bdb93b91,Prompted Suggestions
+b4793e79-3f83-4b4f-bca4-dda271237de7,c2ca2a03-6e79-41f5-afbb-494d7e23086c,Prompted Suggestions
+4ef8c14c-a2a2-4820-b3fc-b9a487e9fc87,9904c7c5-6e97-4623-86d2-b55f822a8f43,Prompted Suggestions
+dd3d2ee5-a463-4ece-8a0d-93c48831d68b,92c5302c-103b-4b8d-84c7-0e6e84d6cc59,Prompted Suggestions
+b4793e79-3f83-4b4f-bca4-dda271237de7,b4254fe3-75f7-4229-bff0-a2af91c21589,Prompted Suggestions
+62860cc2-39e8-45dc-b0c5-a2dd61be55d5,b4254fe3-75f7-4229-bff0-a2af91c21589,Prompted Suggestions
+493fce8f-a5c4-4f11-9703-dd4ade4c425d,995f8e6c-3700-4f41-a4a8-aad68677d40c,Emphasize Emotional Support
+6e400b9b-8500-488a-b0a2-936897548b15,ab155088-2c4f-42f7-9f34-fd7d0f988813,Redirect with Alternatives
+f43d55c6-7a1a-4daf-8196-2f7d64cb49d2,5b53ca19-2663-4743-a175-72a09197896b,Explain Problems in Prompt
+f28da5b6-82c5-4e32-80d5-c0c4a22faae8,69208a4a-0060-4a99-97e7-02d793dd5b1a,Prompted Suggestions
+a3d91383-dfce-4215-b8d0-7d682c44db01,c98344dd-0d2f-446e-8100-1f5c68b4f8f0,Redirect with Alternatives
+a3d91383-dfce-4215-b8d0-7d682c44db01,21751cd0-fa44-4862-80a9-d53337c75f59,Redirect with Alternatives
+a251d13b-2929-4a41-ba48-908322faa26f,21751cd0-fa44-4862-80a9-d53337c75f59,Redirect with Alternatives
+bba97205-2257-429c-b82b-2f486e24b8b3,21751cd0-fa44-4862-80a9-d53337c75f59,Redirect with Alternatives
+bba97205-2257-429c-b82b-2f486e24b8b3,a1947e84-b6d7-496d-8f56-6e128d0a1741,Redirect with Alternatives
+a3d91383-dfce-4215-b8d0-7d682c44db01,43833232-7fa4-47ab-bb13-0dc62ee99e23,Redirect with Alternatives
+a251d13b-2929-4a41-ba48-908322faa26f,43833232-7fa4-47ab-bb13-0dc62ee99e23,Redirect with Alternatives
+bba97205-2257-429c-b82b-2f486e24b8b3,43833232-7fa4-47ab-bb13-0dc62ee99e23,Redirect with Alternatives
+bf358a50-9e7a-4cec-9fa7-899042c7a53a,0d1fac93-de46-4589-895a-040243b01f8e,Clarify Child's Intent
+67e179fd-db59-4f42-8ce1-cb6e1d864749,e6492160-cb7e-4555-a831-2e6fda27585d,Prompted Suggestions
+0c9f6f40-8399-498b-97f9-a65929abb669,e6492160-cb7e-4555-a831-2e6fda27585d,Prompted Suggestions
+625dd8f6-3e1d-47f5-b06d-fc3b0c5a0b3f,e6492160-cb7e-4555-a831-2e6fda27585d,Prompted Suggestions
+e3c8a782-fb09-46ab-8a35-f0a6072a6ef4,44b266ae-9866-4c51-863b-5c066e1d1d7c,Prompted Suggestions
+e3c8a782-fb09-46ab-8a35-f0a6072a6ef4,36bb03c1-9695-44b1-ad38-e26642ad0e6c,Unprompted Suggestions
+9ac31af7-34b2-451f-a079-35bfe70b807a,1db853df-ffd3-4230-a156-70610bc7d7b0,Prompted Suggestions
+9ac31af7-34b2-451f-a079-35bfe70b807a,978bd8da-20d4-48e4-a877-450f92e02bbb,Prompted Suggestions
+0de8e0a9-3219-4a9c-a7e5-e75ced16e050,978bd8da-20d4-48e4-a877-450f92e02bbb,Prompted Suggestions
+9ac31af7-34b2-451f-a079-35bfe70b807a,10467d6d-f0f7-4f87-a9ff-8ec7581e2c68,Prompted Suggestions
+0de8e0a9-3219-4a9c-a7e5-e75ced16e050,10467d6d-f0f7-4f87-a9ff-8ec7581e2c68,Prompted Suggestions
+d0f9b707-0ce6-4419-a63f-cbed8a3deae0,10467d6d-f0f7-4f87-a9ff-8ec7581e2c68,Prompted Suggestions
+d76e9c0d-c08d-43b0-97e8-1d1d9b4ac9b5,0cd5f84e-6988-41a4-8116-35afccb17dc6,Prompted Suggestions
+2fedb1a4-25e1-4c49-bf1d-cf2ab08d94b8,bc2a7d1d-63f5-4837-8a1c-c344277a1d78,Prompted Suggestions
+53917341-d8b8-46e7-ab45-a03acf3e02d2,04245a9f-3ad4-4e5a-9e82-2223bc0bb74b,Prompted Suggestions
+a50611bc-5cbd-4db0-b7ca-5fb7601e7603,e10773c0-e79f-41df-83d9-e4f5b1aa11f7,Prompted Suggestions
+32a8b520-1b1f-48bc-9d82-40e66dafb08f,45eea772-8e87-47a7-a3cf-d2d7e3d06fb1,Prompted Suggestions
+c3a48695-98a5-4d0c-bcac-04b32932e03a,5c2df3f9-9514-40f4-b665-2bdd1da53e05,Prompted Suggestions
+17950a11-bb06-4715-9ca4-3bca49390f12,c16a688c-3079-495e-8b4b-93ce4d2e8fd6,Prompted Suggestions
+163c4b2a-d3d9-4f3f-8d35-7eb9afb51edf,8ef54ea3-86ee-43bd-8011-cd31b535f7db,Prompted Suggestions
+6a95f6bc-b4d6-440a-9495-2118de00118a,fd993163-990e-46f5-850f-1d80f59e618c,Emphasize Emotional Support
+43ff2612-0331-4ccf-9b44-5d4b8282fcbf,c4843506-0b1a-4b33-913e-855522215ce9,Emphasize Risk Awareness
+88cf2914-0600-426f-9005-e014e3ba4825,5f68a423-a35f-410c-b506-3d684877586f,Prompted Suggestions
+88cf2914-0600-426f-9005-e014e3ba4825,3e9dd5c0-e72e-4021-87b0-58349d4b258c,Prompted Suggestions
+ee6fbfee-a3aa-4669-9344-81e102798284,9a0dd373-eda6-4688-9bca-d1d6f8f8875c,Prompted Suggestions
+d8a188a7-cf41-47c3-81d2-8a6fff366af8,430c3615-b24d-407e-9b1a-56e5685b517a,Explain Problems in Prompt
+419ee558-c5e0-4617-8054-3b949550bfd5,3ca8438c-ea70-4381-9c01-f540327ebef5,Explain Problems in Prompt
+21dd668c-916c-45fd-a06f-a5a47f69b198,bad3aaf6-d51b-4fd1-998d-3e4e35e05ae6,Prompted Suggestions
+bbcea077-a826-41f4-abcd-2ee15528c2c2,8e133024-9845-4cbf-8407-c9c7f031be22,Prompted Suggestions
+500683a2-921b-4155-9163-eefeae58545c,36f95eb6-09a4-47ea-8f80-5b3c4503d7d2,Unprompted Suggestions
+11d32859-6830-4463-a265-2a4d7e89b5d9,be60f9bd-0d97-4c60-bb36-97573ebab85c,Unprompted Suggestions
+e3274e3c-613c-44ce-97c1-b4aa9ebaf9c8,d97d7319-d19f-474a-9415-4b86d72cac3b,Prompted Suggestions
+eacc4987-6bc7-4a06-9b84-d6ba62b21554,497be385-19f3-4793-82a9-11bb9b616e66,Refuse Response and Explain
+93aae8d8-d751-4f79-b9d4-8602cc1d0d2c,497be385-19f3-4793-82a9-11bb9b616e66,Refuse Response and Explain
+6614b6d8-771f-4b88-9b42-1c6d4bab66fc,497be385-19f3-4793-82a9-11bb9b616e66,Refuse Response and Explain
+93ab4ef8-1a88-415d-be3d-df9a33cb378a,497be385-19f3-4793-82a9-11bb9b616e66,Refuse Response and Explain
+add3dd01-8dd3-41c2-ae2e-8045443dd873,497be385-19f3-4793-82a9-11bb9b616e66,Refuse Response and Explain
+eacc4987-6bc7-4a06-9b84-d6ba62b21554,140ea719-7fd9-4db4-ada8-068d5dfaf2be,Unprompted Suggestions
+93aae8d8-d751-4f79-b9d4-8602cc1d0d2c,140ea719-7fd9-4db4-ada8-068d5dfaf2be,Unprompted Suggestions
+add3dd01-8dd3-41c2-ae2e-8045443dd873,140ea719-7fd9-4db4-ada8-068d5dfaf2be,Unprompted Suggestions
+eacc4987-6bc7-4a06-9b84-d6ba62b21554,969365c8-5411-4d1e-b98d-1c6e3fa2fc16,Unprompted Suggestions
+93aae8d8-d751-4f79-b9d4-8602cc1d0d2c,969365c8-5411-4d1e-b98d-1c6e3fa2fc16,Unprompted Suggestions
+6614b6d8-771f-4b88-9b42-1c6d4bab66fc,969365c8-5411-4d1e-b98d-1c6e3fa2fc16,Unprompted Suggestions
+9cb8c26e-3cc4-49f0-8d84-6dfdf5a4ba87,969365c8-5411-4d1e-b98d-1c6e3fa2fc16,Unprompted Suggestions
+93aae8d8-d751-4f79-b9d4-8602cc1d0d2c,b516b693-3aa5-4c7a-bff0-9b5080549ebd,Unprompted Suggestions
+6614b6d8-771f-4b88-9b42-1c6d4bab66fc,b516b693-3aa5-4c7a-bff0-9b5080549ebd,Unprompted Suggestions
+eacc4987-6bc7-4a06-9b84-d6ba62b21554,d75beff8-5919-419e-80c4-7f3c2757bea5,Unprompted Suggestions
+93aae8d8-d751-4f79-b9d4-8602cc1d0d2c,d75beff8-5919-419e-80c4-7f3c2757bea5,Unprompted Suggestions
+93ab4ef8-1a88-415d-be3d-df9a33cb378a,d75beff8-5919-419e-80c4-7f3c2757bea5,Unprompted Suggestions
+93aae8d8-d751-4f79-b9d4-8602cc1d0d2c,dc27089f-fecc-44c2-b59e-36a96c20d14c,Unprompted Suggestions
+6614b6d8-771f-4b88-9b42-1c6d4bab66fc,dc27089f-fecc-44c2-b59e-36a96c20d14c,Unprompted Suggestions
+93ab4ef8-1a88-415d-be3d-df9a33cb378a,dc27089f-fecc-44c2-b59e-36a96c20d14c,Unprompted Suggestions
+add3dd01-8dd3-41c2-ae2e-8045443dd873,dc27089f-fecc-44c2-b59e-36a96c20d14c,Unprompted Suggestions
+abebc30a-844e-4441-9459-c809c9c941eb,39f64685-75fa-4d3b-b40d-4c5d9541f7ba,Unprompted Suggestions
+36fbae2a-ee00-435d-b20a-2f24e65ce31d,39f64685-75fa-4d3b-b40d-4c5d9541f7ba,Unprompted Suggestions
+83587839-a0bb-4143-8d48-418eaedbe7a3,199cc77a-cbf4-4150-b0d8-4cc1fb3b1d88,Unprompted Suggestions
+bfc57ebf-a16e-46a7-a2d9-f5a9da349b88,7e61fd4a-18ce-46b0-9a60-9dbbb89834d8,Emphasize Emotional Support
+1d2f6e2b-091c-43d8-acad-b2c7e658a7b7,7e61fd4a-18ce-46b0-9a60-9dbbb89834d8,Emphasize Emotional Support
+50e3e9ab-7959-4e25-af21-1d5d66cd083c,7e61fd4a-18ce-46b0-9a60-9dbbb89834d8,Emphasize Emotional Support
+5609f75c-5d68-4e3d-9b52-45d7016683e3,e3a49dfd-5d09-46de-884e-ba98994f6515,Prompted Suggestions
+019ff0d9-d47c-4842-8df0-868390135c9a,e3a49dfd-5d09-46de-884e-ba98994f6515,Prompted Suggestions
+aedb2358-f7bd-4bd7-b82e-5d01d7aa1d92,85981316-b360-4b98-a3f3-873bb9533a36,Prompted Suggestions
+0492a688-3cd1-46ae-a925-b137b9ef2d09,85981316-b360-4b98-a3f3-873bb9533a36,Prompted Suggestions
+2c4918d0-6404-4d78-bee1-89f000ec2add,85981316-b360-4b98-a3f3-873bb9533a36,Prompted Suggestions
+83110433-c270-4dfb-98b8-28421916b9b8,dc70b305-da24-438d-a8e7-80bc31e2a586,Prompted Suggestions
+9c38f713-2881-4b69-ae2e-56f0f63b5dd0,dc70b305-da24-438d-a8e7-80bc31e2a586,Prompted Suggestions
+4353be82-2b38-4bfc-84e3-4942be4a2c58,852de557-6389-442b-b140-05c0785a4527,Clarify Child's Intent
+2f5465a8-9828-4bdd-9fe2-06d5d4346df2,852de557-6389-442b-b140-05c0785a4527,Clarify Child's Intent
+a8c9aeb1-3d31-43d5-a18c-1456e4c2c182,852de557-6389-442b-b140-05c0785a4527,Clarify Child's Intent
+c00a7fad-e21f-470e-b5e8-a7c1d5aa12a2,09cf87bd-f69a-45b5-a450-d5af10cf68ea,Prompted Suggestions
+f62aa03e-3c6d-4ceb-a29c-914db28d77a2,4907b739-fa60-4b2a-99c9-14487df70678,Emphasize Emotional Support
+f622f74e-3dd9-4542-840a-cde6b8f626ef,4907b739-fa60-4b2a-99c9-14487df70678,Emphasize Emotional Support
+f86896fb-a732-45ed-ace3-cbf8c0b50711,9fc7463e-b3b0-4e3c-a8aa-4bad2448d2d8,Clarify Child's Intent
+1e252162-558d-49ab-85cb-a94094f5abff,9fc7463e-b3b0-4e3c-a8aa-4bad2448d2d8,Clarify Child's Intent
+bfc57ebf-a16e-46a7-a2d9-f5a9da349b88,39be0da3-55f0-41ea-97ad-3cf5392c7d19,Emphasize Emotional Support
+1d2f6e2b-091c-43d8-acad-b2c7e658a7b7,39be0da3-55f0-41ea-97ad-3cf5392c7d19,Emphasize Emotional Support
+a53c9de2-972e-43fa-b62a-dec78deebfd0,39be0da3-55f0-41ea-97ad-3cf5392c7d19,Emphasize Emotional Support
+5ab6efc0-0949-49d4-8fb9-0f4953000e1f,39be0da3-55f0-41ea-97ad-3cf5392c7d19,Emphasize Emotional Support
+5609f75c-5d68-4e3d-9b52-45d7016683e3,b3dbdf12-1dc8-4d58-a825-1a2e2dac63f8,Emphasize Emotional Support
+809436f0-e836-4666-82fd-a2f83e910f16,b3dbdf12-1dc8-4d58-a825-1a2e2dac63f8,Emphasize Emotional Support
+3661f83c-2a8b-4743-ad2e-af844a0aaea6,7c5b14ef-f405-4efe-9234-0ef75436c53e,Emphasize Emotional Support
+3661f83c-2a8b-4743-ad2e-af844a0aaea6,86815bbf-7eea-47f3-8adb-7e830c910bf6,Explain Problems in Prompt
+61c3113a-0bc5-4034-9bc6-1d85aebe661b,86815bbf-7eea-47f3-8adb-7e830c910bf6,Explain Problems in Prompt
+c530cb1f-e6d7-4def-a4dd-e204a879b386,86815bbf-7eea-47f3-8adb-7e830c910bf6,Explain Problems in Prompt
+3661f83c-2a8b-4743-ad2e-af844a0aaea6,b7c66ac6-9959-4c74-93cf-5dfa87ec4563,Clarify Child's Intent
+61c3113a-0bc5-4034-9bc6-1d85aebe661b,b7c66ac6-9959-4c74-93cf-5dfa87ec4563,Clarify Child's Intent
+c530cb1f-e6d7-4def-a4dd-e204a879b386,b7c66ac6-9959-4c74-93cf-5dfa87ec4563,Clarify Child's Intent
+1bd889f8-5abd-4def-a33e-258f09b24998,cb7f657e-e39d-450d-83ac-3d428862f0ba,Emphasize Emotional Support
+1bd889f8-5abd-4def-a33e-258f09b24998,4be5d2c5-48c4-4be1-bc7d-c00ed435b06f,Emphasize Emotional Support
+47adc3dc-d436-4251-8e44-76b3d149a5e3,1c7efd15-9751-47a1-8a98-fbb82f71d2a1,Clarify Child's Intent
+1bd889f8-5abd-4def-a33e-258f09b24998,dfae9406-aefd-4a98-88d1-3553b08239e2,Unprompted Suggestions
+47adc3dc-d436-4251-8e44-76b3d149a5e3,dfae9406-aefd-4a98-88d1-3553b08239e2,Unprompted Suggestions
+1f2ded10-c4ab-4120-9e29-4cef78847092,dfae9406-aefd-4a98-88d1-3553b08239e2,Unprompted Suggestions
+78d7ae3c-e4af-4c1d-b0fe-9244a88a4e8e,36312dfa-0807-4b23-88eb-d58322efffb8,Emphasize Emotional Support
+692059a1-d75d-47f4-9911-0a7cf5ee610f,169f0351-9a0c-4c4b-acf9-ee82c9df2bc2,Prompted Suggestions
+b0c578fd-7dd9-41a5-b9b7-51eae312d3f8,bfd95dba-8c63-4f8e-a1f8-abaa6d794966,Adapt to Age Group
+ed799196-350d-4139-89d8-8c9f75acba23,4c99097d-8306-47c4-917f-0593d5d514b8,Adapt to Age Group
+937c1bf2-4749-49c0-91db-17db0ead85dc,e42b2b76-9b45-42bc-94fc-00cac1248777,Prompted Suggestions
+061dd4b7-1531-4c2d-a4b6-0642e37776ed,e42b2b76-9b45-42bc-94fc-00cac1248777,Prompted Suggestions
+604e30b9-3d4d-45b4-bc62-85b34dce3820,e4eff6c5-5f25-4086-af34-9dba9d84d90c,Prompted Suggestions
+9887143c-a3fc-46fa-bfac-c2cfa12f42be,b0c34725-b3ff-4aef-80b0-dca4b95a3c02,Emphasize Risk Awareness
+2bf47902-b2ca-4a6e-a50e-5af68a882cc4,3cb1e02f-4240-4d6c-b486-f37b5851ccd3,Emphasize Risk Awareness
+ae2e4f9f-3f40-4c8a-9b37-f9640b554c98,41caecb8-ee84-473f-bbdc-5d2491348087,Prompted Suggestions
+713437f6-5297-4af4-8ab7-91122b0362d6,235a8a54-763f-48b8-bf0c-4f609b1c97e5,Prompted Suggestions
+01df75ff-a945-49f7-aac8-68354cd75260,41a0327c-31a8-4cd6-a777-b67266aec39a,Prompted Suggestions
+b0d5b444-10ab-490f-94d0-a793c8490742,253d6821-9a2d-4c0a-ab9b-1d6ff360afd0,Prompted Suggestions
+61cf5610-41d2-4173-a6e2-dd0ccbfd60fb,cc01a2b2-6e49-4a72-9190-7c958abf9bbc,Emphasize Risk Awareness
+c9e59c80-2e46-4891-8937-8c3665f1ad1d,bd9132f1-9cbc-4375-96ed-b2b6be0c79fa,Clarify Child's Intent
+c19e89e0-4bea-47ef-8b91-bc51cf3fceef,80372c35-a710-4e62-8dc1-dcf16897c82b,Emphasize Emotional Support
+50bb4774-dd4c-47a2-8bef-585eab9caa1c,80372c35-a710-4e62-8dc1-dcf16897c82b,Emphasize Emotional Support
+e5c2e0f5-4e64-456d-8620-7fe03bb18255,80372c35-a710-4e62-8dc1-dcf16897c82b,Emphasize Emotional Support
+c19e89e0-4bea-47ef-8b91-bc51cf3fceef,ea9aae48-dd28-4269-b17b-5c0a6b156f22,Clarify Child's Intent
+50bb4774-dd4c-47a2-8bef-585eab9caa1c,ea9aae48-dd28-4269-b17b-5c0a6b156f22,Clarify Child's Intent
+e5c2e0f5-4e64-456d-8620-7fe03bb18255,ea9aae48-dd28-4269-b17b-5c0a6b156f22,Clarify Child's Intent
+c19e89e0-4bea-47ef-8b91-bc51cf3fceef,e760bd29-50b4-42d2-9db3-3db1f4dd5f43,Emphasize Emotional Support
+50bb4774-dd4c-47a2-8bef-585eab9caa1c,e760bd29-50b4-42d2-9db3-3db1f4dd5f43,Emphasize Emotional Support
+e5c2e0f5-4e64-456d-8620-7fe03bb18255,e760bd29-50b4-42d2-9db3-3db1f4dd5f43,Emphasize Emotional Support
+7868c2b4-12e8-4174-88c6-e68dc8e3004d,bc527690-6edd-4a40-8ed6-0a01bc9f9211,Emphasize Emotional Support
+3d22126e-5c9c-4f3d-baf7-5db9ad28dd95,18d077d7-e38a-4a04-adb9-781a63be6d95,Prompted Suggestions
+4372d926-afc7-4486-a32c-177f8d2aa261,c8fde879-de66-4021-94a5-389f48561aa7,Prompted Suggestions
+a5c0eaae-6eb5-4aa2-9ecf-f98f2101d3fb,f9317574-c231-4460-96be-e7d308697deb,Prompted Suggestions
+3664b7ba-0bfd-4e33-b056-7d97fb01522a,492a047a-e594-4a92-bf10-b68105893e35,Prompted Suggestions
+ea9de917-c47a-4427-89df-3d4161d999c5,41237324-ff92-4180-89c8-0c1df53d01d3,Prompted Suggestions
+ea9de917-c47a-4427-89df-3d4161d999c5,2b5d6c86-716b-434a-b0d7-9fdaca801bba,Prompted Suggestions
+7174d8f0-6a6c-4084-bd72-a781c1cf4b57,b9a979bd-5bd3-4f7d-af91-e34f3a637506,Adapt to Age Group
+bf6f54c3-0692-45d2-bc1b-636c0e9ff926,2b8ec1be-7b72-4b10-b83c-301ac6c881e3,Prompted Suggestions
+bfb16bbb-1026-4661-a975-e4c01e135fe1,483a4aac-68fe-4515-9e15-2857f73ca562,Emphasize Emotional Support
+e3bb1c1a-84be-4046-8108-e57438f51eaf,35ec056c-f127-46be-ba9f-cf18a66de179,Prompted Suggestions
+bec22771-cb28-462a-b532-716b8f4a370e,5b5a7577-f6fe-4b30-be29-702a6e19ac5e,Prompted Suggestions
+aac3ad1b-9895-4bc3-a05f-779dc1bad0b8,2018e935-104c-43cc-b994-8b85d9b56df3,Prompted Suggestions
+8bceb42b-d400-4870-b0c6-d8daf7ffdd12,6471d8c1-01ad-4803-a243-635da0130196,Clarify Child's Intent
+3bde279b-d4ff-4047-a932-386f14822588,cb2de3de-b866-44fd-b56f-11d3411f8a66,Prompted Suggestions
+40d0ec09-6ea0-43da-b2fb-84f9ff74251e,c860bf7c-c8ed-4521-8744-d0a6689aa1ab,Prompted Suggestions
+8a4ac36e-162e-46eb-a621-cd2385a1abf9,a6d990f5-dbc2-4973-b649-d275c03f373e,Prompted Suggestions
+480b9466-c9a2-4615-b922-b9718447ce39,ebc42260-7a18-4462-913b-23bf3183fe33,Emphasize Risk Awareness
+480b9466-c9a2-4615-b922-b9718447ce39,0c05fd7f-b9a5-4060-b7fb-3cb423c26220,Prompted Suggestions
+cb0969e7-e0f7-425c-a645-62b6a5a59b37,56b2bdd6-bd43-4856-9ee0-7b3b81dac324,Emphasize Risk Awareness
+d2325de7-656c-4f6a-8c66-ff6ea7e0d2cb,56b2bdd6-bd43-4856-9ee0-7b3b81dac324,Emphasize Risk Awareness
+a50bfd89-2761-40a5-bc08-d0af05ddee76,99dd73b5-3f00-4685-a688-3f856219389a,Prompted Suggestions
+7d4e370b-a2d0-49ad-a87e-099c1479e24a,c28eedc0-7580-4969-8137-b237a2db83d2,Emphasize Emotional Support
+7d4e370b-a2d0-49ad-a87e-099c1479e24a,92a0641e-c4af-4510-937a-79fd14aea7e0,Emphasize Emotional Support
+7d4e370b-a2d0-49ad-a87e-099c1479e24a,1cd32808-15d2-44f7-9e18-09a48606e1e0,Prompted Suggestions
+ff8ea104-666c-4ddd-bc77-d1430d037d36,b20db67b-ac91-4254-999d-5cd50ce1b753,Prompted Suggestions
+950941e1-01e7-4830-a028-a990fefeabd6,7a045af7-a044-46e0-ad02-46fd936ee67f,Prompted Suggestions
+215d3f07-9f32-4de3-8d3d-60eeb1fc7b31,03792646-f2c9-4208-bf49-18c5087ff35f,Unprompted Suggestions
+33b63601-482d-4519-8828-2e9247e2ae2b,a55790fb-f0e9-44b1-a89c-9aa1bc7c8828,Emphasize Risk Awareness
+43bd342e-0213-4bf3-b003-65b196083f78,9062207e-06ba-4a27-a159-7a4cecd425ea,Redirect with Alternatives
+31c3f780-5ddf-4381-a8fd-3813e6ff7239,aa96dd5e-9aa2-4f29-b113-9c126dde1cd9,Emphasize Emotional Support
+3bbb9f1b-4503-43be-b09b-35ba1a5b5658,4b033d01-497f-4fba-aa04-5bf3d981e845,Emphasize Risk Awareness
+1393a282-a5f4-4b80-9a68-9a999ac92e1b,1d4acdc6-2859-42ab-b998-096771bc6887,Prompted Suggestions
+31c3f780-5ddf-4381-a8fd-3813e6ff7239,47c5cd1e-5c52-4911-abe8-d3df1c6e9eaa,Prompted Suggestions
+31c3f780-5ddf-4381-a8fd-3813e6ff7239,92c009c7-a198-4fce-95e0-e33a24549a70,Prompted Suggestions
+23c0760e-b91a-4d8d-ba02-8f3c46b7dce5,389f839b-6ebb-4a62-bb26-aa28efeaecd5,Prompted Suggestions
+23c0760e-b91a-4d8d-ba02-8f3c46b7dce5,4360498b-d910-4e06-834b-9d5a2390df52,Defer to Resources
+23c0760e-b91a-4d8d-ba02-8f3c46b7dce5,c28b1710-2832-46f8-89f9-4faf50a8019c,Defer to Resources
+ef67adfe-5ada-44e5-95cb-788798f5999e,7de77362-c215-441f-ac8d-a55b026e3542,Prompted Suggestions
+bf82c929-764e-431d-a342-989fda6d40eb,b1d0455c-c925-43ce-a594-9fd18bae5baa,Adapt to Age Group
+239374cd-eda3-4f55-a6a9-cd5676c26400,605f3143-f199-4ca7-b3c0-8f3d9d17bdec,Adapt to Age Group
+7ac05468-1846-453c-846e-668f85c7e1a3,d734eba2-cc84-4432-853c-e7e107d28019,Adapt to Age Group
+69eadb6e-e1a2-4e94-88d3-89db8944cdec,0fd7bc5c-e6df-487a-9987-85640f655a32,Adapt to Age Group
+0ed626c4-5e1c-44e3-af62-85d47b90cbc5,471593eb-6b53-49c1-b92a-379b98e78beb,Prompted Suggestions
+10ba8bdf-3120-4e03-9e38-db2e82e10b59,3dd5697a-4c11-4979-be4c-6a524693d3ea,Prompted Suggestions
+10ba8bdf-3120-4e03-9e38-db2e82e10b59,72145c6e-045b-4316-acbc-4db31bc20d9d,Prompted Suggestions
+7ac05468-1846-453c-846e-668f85c7e1a3,f8fdbc97-5727-4838-b784-9f768dc24e5f,Prompted Suggestions
+7ac05468-1846-453c-846e-668f85c7e1a3,2aaeec6f-7b74-489a-93a8-9d049070b786,Prompted Suggestions
+dcaf7873-bc9b-42f6-8b1f-78049bd0fced,33308404-2aab-4e2b-a148-136c907103c1,Prompted Suggestions
+dcaf7873-bc9b-42f6-8b1f-78049bd0fced,74f18548-c8c0-4ed2-917a-9ab1df4b9b6a,Prompted Suggestions
+dcaf7873-bc9b-42f6-8b1f-78049bd0fced,0c367808-cdd8-4305-b356-37f2cc13c394,Prompted Suggestions
+dcaf7873-bc9b-42f6-8b1f-78049bd0fced,c0835fd4-4f7d-4782-b93b-6b160ee375c7,Prompted Suggestions
+20f5f69a-a0e2-4f3f-becd-77e50b60b7a2,e84abda3-9c35-4a00-999f-313df39b7ca0,Prompted Suggestions
+1058feba-5e82-4386-b6c5-a9c8796cf4eb,e84abda3-9c35-4a00-999f-313df39b7ca0,Prompted Suggestions
+d278fbf1-46ab-4d09-b359-61287c679869,7877a0c6-9c38-4885-b64c-d0bd3ec78186,Unprompted Suggestions
+709374f9-bcfb-4dc8-ad11-9fe76f0d0bbb,581adb26-a840-42c3-81e0-e0eaf0aa60fc,Prompted Suggestions
+d51c5bd5-ef3b-4364-bcb9-1f07a97b3da4,581adb26-a840-42c3-81e0-e0eaf0aa60fc,Prompted Suggestions
+026ba2b0-3af7-4eb1-b833-cda56fefdea5,3d64a62e-4d45-4e04-91b5-766e236492d9,Prompted Suggestions
+5848ec43-5619-4cee-b156-c11e6b634890,3d64a62e-4d45-4e04-91b5-766e236492d9,Prompted Suggestions
+cd5d8167-be62-4537-883d-bc5cdb153590,7084b004-e4c5-4d12-a59b-133cd0cc5c2f,Prompted Suggestions
+be682e76-57e3-42d4-ae7e-b5e513db402b,e304671e-b755-4ea4-a231-5ea31fc7b4c7,Emphasize Emotional Support
+c73fc1c7-d685-44fe-aba5-a6b62b627d72,fb831073-75e1-4388-a06a-04a985c30b31,Emphasize Emotional Support
+778abf37-c730-4e48-b67d-bf4a7cbf3b2f,ab72d36d-61d7-4fa0-b79f-0748a36a990a,Unprompted Suggestions
+980953f3-4784-4407-8d87-7a07c9410b81,17dbe921-5361-4e11-9c3e-22fc4014b007,Emphasize Emotional Support
+f62c56e6-2646-489a-bc92-99ed5b7ea835,75a00496-57b9-43e5-b1a1-82c0b4713bfc,Prompted Suggestions
+af382fee-26b9-4e7a-867f-e491fd92abba,75a00496-57b9-43e5-b1a1-82c0b4713bfc,Prompted Suggestions
+c73ba731-7119-43bb-ad1a-bf6cc04aab62,75a00496-57b9-43e5-b1a1-82c0b4713bfc,Prompted Suggestions
+dc05fbc3-dcec-4e85-99ca-92bfa7ca1f65,75a00496-57b9-43e5-b1a1-82c0b4713bfc,Prompted Suggestions
+505d7bb7-c452-463f-b47a-7c99e2413913,75a00496-57b9-43e5-b1a1-82c0b4713bfc,Prompted Suggestions
+b6e45d73-964c-47da-880e-49e3d0c2a6b9,726b31b1-2247-44b6-9307-47d343c4eb6c,Prompted Suggestions
+ede3524d-db61-4fde-89b3-8b7e0a155ace,0ff2c43b-efde-4a04-a512-09fac7492bc4,Emphasize Emotional Support
+ede3524d-db61-4fde-89b3-8b7e0a155ace,e19ba0b9-02df-4587-a512-d4aa92c9c482,Emphasize Emotional Support
+ede3524d-db61-4fde-89b3-8b7e0a155ace,b5f6e4a0-c01d-4f8b-bdae-7cef6df14b86,Emphasize Emotional Support
+0d6faa7c-ec04-4f97-8e80-ee16debecf28,fa964133-2c71-49c3-afde-82bc74401278,Emphasize Emotional Support
+a9daab71-ea9b-4738-b378-830017d414e5,7f72695e-5c67-4ee4-b57b-19a6e83a397a,Emphasize Emotional Support
+ede3524d-db61-4fde-89b3-8b7e0a155ace,685b07e5-a858-4c5a-9a20-bf18ef0d8ce7,Emphasize Emotional Support
+0d6faa7c-ec04-4f97-8e80-ee16debecf28,46f00e1d-cd96-4f49-81ee-f6d44a04981c,Emphasize Emotional Support
+6bc85ac5-9cba-4064-95f5-8892cca30378,a086ddb3-a9b5-4de9-90dd-44af035fe7c1,Prompted Suggestions
+73d419ed-576d-4033-a382-ddb909d30c05,0357a544-569a-4d7e-9fac-6d0d953fb272,Prompted Suggestions
+73d419ed-576d-4033-a382-ddb909d30c05,771828d6-f5e0-4724-96cb-469e1fe8faeb,Prompted Suggestions
+aa7b7a67-0372-4cf8-8d0e-9129524b74c8,c5c8e4e5-10f5-47bd-a3f2-1176e242f47b,Clarify Child's Intent
+0ceaef50-6851-48c0-9f5e-a870b745f9f3,edc336c2-6d04-454c-b69b-5af1e080fe27,Emphasize Risk Awareness
+572215a7-da7f-4e69-9178-87dc2fc26824,bca87a63-4024-4c30-98a3-887f46e4ae86,Encourage Introspection
+6aa11aea-611d-462e-bdef-949b0cea5799,bca87a63-4024-4c30-98a3-887f46e4ae86,Encourage Introspection
+572215a7-da7f-4e69-9178-87dc2fc26824,70001b8a-f401-4b84-9f4a-61a59d9befe9,Prompted Suggestions
+b72949bd-a12d-41b2-a849-56fee1888309,5f1059b2-c369-42d8-80ba-b3696b498e43,Emphasize Emotional Support
+b72949bd-a12d-41b2-a849-56fee1888309,025a212b-02b0-46e3-a019-73ab08f35563,Emphasize Emotional Support
+b72949bd-a12d-41b2-a849-56fee1888309,eae98d93-739f-40b7-9cb0-523ade84eb13,Explain Problems in Prompt
+207fa58d-838a-4753-8a9c-98ea70bceb0b,eae98d93-739f-40b7-9cb0-523ade84eb13,Explain Problems in Prompt
+b72949bd-a12d-41b2-a849-56fee1888309,2c87c554-20db-4a4c-a9a2-67f010904185,Clarify Child's Intent
+207fa58d-838a-4753-8a9c-98ea70bceb0b,2c87c554-20db-4a4c-a9a2-67f010904185,Clarify Child's Intent
+8ca7efa7-6acb-490e-957f-6a7812bab275,2c87c554-20db-4a4c-a9a2-67f010904185,Clarify Child's Intent
+a53af71f-b2e2-4f78-b18f-859d25e128fa,8e0f8373-db06-4281-9b6c-0f4154b79f97,Prompted Suggestions
+7cfb12ec-42c5-4e17-87e2-48f8709a390f,1a599650-60cc-45bf-9ee2-f1942309ca24,Clarify Child's Intent
+540dd17b-1720-4883-afaf-155db228ce3d,6077d0b9-07ed-469c-bcab-a9992810c222,Prompted Suggestions
+6d87c35b-f087-4706-b09a-da9cc0651b3b,7f8e23ba-ee32-4479-a002-8ea278b43699,Emphasize Risk Awareness
+6d87c35b-f087-4706-b09a-da9cc0651b3b,563dcba1-c87a-41e4-85e8-3d31f00e27d9,Emphasize Risk Awareness
+6d87c35b-f087-4706-b09a-da9cc0651b3b,cba5433e-8f9c-43b8-968e-d1894cd2ec4a,Emphasize Risk Awareness
+63751fec-fcfd-41f5-9615-d3bae6165aa3,fcee262d-f9a4-4988-9dd0-93c03cf47b6f,Prompted Suggestions
+dabddea1-04ab-4104-9c49-e2df412caa3f,e44717ab-5006-451e-8996-a95596d60841,Emphasize Emotional Support
+6d87c35b-f087-4706-b09a-da9cc0651b3b,00d96a3c-78d8-4dd9-af37-31b03588570b,Emphasize Risk Awareness
+63751fec-fcfd-41f5-9615-d3bae6165aa3,8165b818-1f05-4052-8702-a9172148da6f,Prompted Suggestions
+7c90f357-3096-4cb1-b448-37dafd7ac211,7fa738e9-1767-4d04-b455-a65cf2ddb032,Prompted Suggestions
+20253a3b-29f3-4f55-936e-98bb5e07525b,537555fa-1109-4c13-b0be-82d1b886235c,Prompted Suggestions
+20253a3b-29f3-4f55-936e-98bb5e07525b,8fceb8c1-34dc-421b-884f-7b1750c04dae,Emphasize Risk Awareness
+e15c36c2-d599-4529-9fed-8c8ab37fbe90,8fceb8c1-34dc-421b-884f-7b1750c04dae,Emphasize Risk Awareness
+20253a3b-29f3-4f55-936e-98bb5e07525b,90cd3bef-4751-4b1a-b805-e526a71c8514,Emphasize Risk Awareness
+e15c36c2-d599-4529-9fed-8c8ab37fbe90,90cd3bef-4751-4b1a-b805-e526a71c8514,Emphasize Risk Awareness
+8ba0d383-0c96-4a6c-84d6-19bdab911bc8,90cd3bef-4751-4b1a-b805-e526a71c8514,Emphasize Risk Awareness
+20253a3b-29f3-4f55-936e-98bb5e07525b,1c63f53b-0963-4d1c-a68c-eddc55dbf03c,Prompted Suggestions
+7ae16157-1c4f-4597-8dc6-a15ea8e12e24,4d666263-7616-4973-b206-3d67396823af,Explain Problems in Prompt
+3f1ec007-28a3-4603-b7dc-5fb2c01eea8a,16df86f7-1160-4de0-a270-db1c283fb33c,Emphasize Emotional Support
+24b3d626-4b42-49d4-9b0f-1d6edec7f2a9,34ebf6f0-2ec1-4aba-84b3-230abd5502c0,Prompted Suggestions
+1c1a7040-3538-4a27-9e70-df915a521148,64be0ad0-a67b-4278-ba59-eb5862a14035,Prompted Suggestions
