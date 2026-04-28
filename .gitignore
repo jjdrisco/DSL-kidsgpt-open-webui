@@ -99,8 +99,12 @@ target/
 .ipynb_checkpoints
 
 # Generated notebook output directories (reproducible from notebooks)
-data-exports/*/highlight_analysis_output/
+# Use /* instead of / so subdirectory negations can override (git won't un-ignore children of an ignored dir)
+data-exports/*/highlight_analysis_output/*
 data-exports/*/contextual_analysis_output/
+# Track the LLM coding cache — not reproducible without API cost
+!data-exports/*/highlight_analysis_output/llm_coding_output
+!data-exports/*/highlight_analysis_output/llm_coding_output/**
 
 # IPython
 profile_default/
