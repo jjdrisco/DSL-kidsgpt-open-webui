@@ -1,7 +1,13 @@
 # DSL KidsGPT — Highlight Analysis Findings
 
-Notebook: `stat_analysis/0_highlight_analysis.ipynb`
-Dataset: pilot 9 (`data-exports/20260412_183830`), n=200 selections, n=86 sessions, n=21 parents
+Two analysis rounds, each in its own notebook:
+
+| Round | Notebook | Analysis grain | df_sel rows | Coding source |
+|---|---|---|---|---|
+| R4 | `stat_analysis/0_R4_highlight_analysis.ipynb` | 1 row per unique selection | 200 | `model_strategy_for_notebook.csv` + `parent_motivation_for_notebook.csv` |
+| R5 | `stat_analysis/0_R5_highlight_analysis.ipynb` | 1 row per highlight × rationale pair | 267 | `R5_highlights_coded` |
+
+Dataset: pilot 9 (`data-exports/20260412_183830`), n=200 unique selections, n=267 highlight × rationale pairs, n=86 sessions, n=21 parents
 
 All outputs saved to `data-exports/20260412_183830/highlight_analysis_output/`.
 
@@ -9,14 +15,17 @@ All outputs saved to `data-exports/20260412_183830/highlight_analysis_output/`.
 
 ## Notebook Structure
 
+Both R4 and R5 share the same cell structure; they differ in the config cell (Cell 2)
+and the df_sel build cell (Cell 9).
+
 | Cell | Label | Content |
 |---|---|---|
 | 0–3 | Setup | Imports, config, helpers |
-| 4 | Load | All exports + coded CSVs |
+| 4 | Load | All exports + coded CSVs (R4: strategy/motivation CSVs; R5: R5_highlights_coded) |
 | 5–6 | Metadata | Scenario enrichment; parent covariates from exit quiz |
 | 7 | Filter | Approved-participant filter |
 | 8 | df_session | Session-level dataframe (79 rows) |
-| 9 | df_sel | Selection-level dataframe (200 rows) — core build cell |
+| 9 | df_sel | Core build cell (R4: 200 rows selection-level; R5: 267 rows rationale-level) |
 | 10–11 | Descriptives | Session + selection summaries, histograms, frequency tables |
 | 12–14 | Part 1 | Model Strategy: by prompt factors (1a), by subdomain (1c), by sentiment (1b) |
 | 15–19 | Part 2 | Parent Motivation: by prompt factors (2a), by demographics (2c), by sentiment (2b) |
@@ -243,9 +252,12 @@ than V.
 
 ## Output Files
 
+Both notebooks write to `highlight_analysis_output/`. R5 outputs will overwrite R4 outputs
+when run; archive R4 outputs separately if needed before running R5.
+
 | File | Description |
 |---|---|
-| `df_sel.csv` | 200-row analysis dataframe (primary output) |
+| `df_sel.csv` | Analysis dataframe (200 rows for R4; 267 rows for R5) |
 | `model_strategy_freq.csv` | Strategy frequency table |
 | `parent_motivation_freq.csv` | Motivation frequency table |
 | `strategy_x_motivation_crosstab.csv` | Co-occurrence counts |

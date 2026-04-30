@@ -1,0 +1,24 @@
+dimension,code,ac1,f1,n_gt,n_pred,pass
+Model Strategy,Clarify Child's Intent,0.931,0.545,22,11,True
+Model Strategy,Consider Age Group,0.924,0.32,7,18,True
+Model Strategy,Defer to Parents,0.988,0.0,0,3,True
+Model Strategy,Defer to Resources,0.992,0.0,2,0,True
+Model Strategy,Emphasize Emotional Support,0.898,0.795,43,45,True
+Model Strategy,Emphasize Risk Awareness,0.962,0.789,18,20,True
+Model Strategy,Encourage Introspection,0.983,0.333,1,5,True
+Model Strategy,Explain Problems in Prompt,0.957,0.444,9,9,True
+Model Strategy,Prompted Suggestions,0.52,0.687,103,95,False
+Model Strategy,Redirect with Alternatives,0.902,0.083,10,14,True
+Model Strategy,Refuse Response and Explain,0.987,0.769,5,8,True
+Model Strategy,Unprompted Suggestions,0.843,0.195,28,13,True
+Model Strategy,null,0.971,0.0,0,7,True
+Parent Motivation,Child Intentions,0.987,0.914,18,17,True
+Parent Motivation,Parents Trust of Model Capabilities,0.992,0.5,3,1,True
+Parent Motivation,Response Complexity,0.958,0.643,13,15,True
+Parent Motivation,Response Confirmation / Contradiction,0.992,0.5,1,3,True
+Parent Motivation,Response Could Evoke Strong Emotions,0.826,0.545,24,53,True
+Parent Motivation,Response Identification of the Root Cause,0.877,0.121,22,11,True
+Parent Motivation,Response Organization,0.94,0.611,19,17,True
+Parent Motivation,Response Risk Awareness,0.811,0.565,50,35,True
+Parent Motivation,Response Usefulness,0.383,0.635,117,113,False
+Parent Motivation,null,0.992,0.0,0,2,True

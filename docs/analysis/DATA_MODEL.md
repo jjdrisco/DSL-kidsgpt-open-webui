@@ -45,7 +45,7 @@ Each export directory contains timestamped CSVs:
 | File | Grain | Key fields |
 |---|---|---|
 | `moderation_sessions_export` | 1 row per parent × scenario attempt | `user_id`, `scenario_id`, `attempt_number`, `is_final_version`, `concern_level`, `realism_level`, `initial_decision` |
-| `selections_export` | 1 row per text highlight | `id` (highlight UUID), `user_id`, `scenario_id`, `selected_text`, `start_offset`, `end_offset`, `prolific_pid` |
+| `selections_export` | 1 row per text highlight | `id` (highlight UUID), `user_id`, `scenario_id`, `selected_text`, `start_offset`, `end_offset`, `prolific_pid`, `source` |
 | `concern_items_export` | 1 row per rationale block | `id`, `user_id`, `scenario_id`, `text` (rationale), `linked_highlights` (JSON array), `highlight_levels` (JSON dict text→rating) |
 | `scenarios_export` | 1 row per scenario | `scenario_id`, `domain`, `age_band`, `trait`, `n_assigned`, `n_completed` |
 | `assignment_time_export` | 1 row per assignment | Timing metadata |
@@ -127,11 +127,16 @@ lookup in the `df_sel` build.
 
 ---
 
-## df_sel Build (`highlight_analysis.ipynb` Cell 9)
+## df_sel Build
 
-`df_sel` is the primary analysis dataframe: 200 rows × 1 row per unique selection.
+`df_sel` is the primary analysis dataframe. Two analysis rounds use different grains:
 
-Build steps:
+| Round | Notebook | Grain | Rows | Coding source |
+|---|---|---|---|---|
+| R4 | `0_R4_highlight_analysis.ipynb` | 1 row per unique selection | 200 | `model_strategy_for_notebook.csv` + `parent_motivation_for_notebook.csv` |
+| R5 | `0_R5_highlight_analysis.ipynb` | 1 row per highlight × rationale pair | 267 | `R5_highlights_coded` |
+
+**R4 build (Cell 9, 200 rows):**
 
 1. Filter `selections_export` to approved-participant sessions via `df_session` keys
 2. Explode `concern_items.linked_highlights` and substring-match against `selections.selected_text`
@@ -142,19 +147,37 @@ Build steps:
    pipe-joined string per selection
 6. Collapse to one row per selection (`drop_duplicates('selection_id')`)
 7. Attach `model_strategy` via `selection_id` only
-8. Merge scenario metadata (domain, subdomain, age_band, trait, sensitivity_level, etc.)
-   and parent covariates from exit quiz
+8. Merge scenario metadata and parent covariates from exit quiz
 
-**model_strategy NaN:** 16 rows have null model_strategy. These are highlights of non-response
-text (e.g., structural elements, headers) rather than AI response content. They are genuine
-missing values, not an "unknown" category. An indicator `strategy_is_null` is added in
-classifier feature engineering.
+**R5 build (Cell 9, 267 rows):**
+
+Same as R4 through step 4, then:
+
+5. Filter to the canonical 267 (highlight_id, concern_item_id) pairs from
+   `highlights_for_coding_export.tsv` (removes 5 spurious duplicates where two concern
+   items have identical rationale text but different IDs)
+6. Attach `parent_motivation` via `(selection_id, concern_item_id)` — no collapsing;
+   each rationale is a separate analysis unit
+7. Attach `model_strategy` via `selection_id` (same code for all rationales of a highlight)
+8. Merge scenario metadata and parent covariates
+
+**`source` field:** Each selection carries a `source` value (`'response'` | `'prompt'`)
+indicating whether the parent highlighted text from the AI response or from the child's
+question. 19 of 267 rows have `source='prompt'`. Prompt-source highlights cannot be
+assigned a Model Strategy code (strategy only applies to AI response text), and correspond
+to a subset of the null model_strategy entries in `df_sel`.
+
+**model_strategy NaN:** 16 rows in `df_sel` have null model_strategy. These include
+prompt-source highlights and highlights of non-response structural elements (headers,
+formatting). They are genuine missing values, not an "unknown" category. An indicator
+`strategy_is_null` is added in classifier feature engineering.
 
 ---
 
 ## Qualitative Coding
 
-Two codes per (highlight × rationale) pair.
+Two codes per (highlight × rationale) pair. Code names were standardized from earlier pilot
+labels via `LABEL_MAP` in `0_llm_coder.ipynb`; the canonical names below are used throughout.
 
 **Model Strategy** — what the AI response did that the parent flagged:
 
@@ -165,7 +188,7 @@ Two codes per (highlight × rationale) pair.
 | Emphasize Risk Awareness | 15 | 7.5% |
 | Unprompted Suggestions | 14 | 7.0% |
 | Clarify Child's Intent | 11 | 5.5% |
-| Adapt to Age Group | 7 | 3.5% |
+| Consider Age Group | 7 | 3.5% |
 | Redirect with Alternatives | 6 | 3.0% |
 | Explain Problems in Prompt | 6 | 3.0% |
 | Defer to Resources | 2 | 1.0% |
@@ -174,17 +197,25 @@ Two codes per (highlight × rationale) pair.
 
 **Parent Motivation** — why the parent flagged the highlight:
 
+Response-level codes (assigned when `source='response'`):
+
 | Code | N | % of selections |
 |---|---|---|
 | Response Usefulness | 91 | 45.5% |
 | Response Risk Awareness | 38 | 19.0% |
-| Child Intentions | 16 | 8.0% |
 | Response Organization | 16 | 8.0% |
-| Response Could Evoke Strong Emotion | 15 | 7.5% |
+| Response Could Evoke Strong Emotions | 15 | 7.5% |
 | Response Identification of Root Cause | 12 | 6.0% |
 | Response Complexity | 10 | 5.0% |
+| Response Confirmation / Contradiction | 1 | 0.5% |
+
+Prompt-level codes (assigned when `source='prompt'`):
+
+| Code | N | % of selections |
+|---|---|---|
+| Child Intentions | 16 | 8.0% |
 | Parents Trust of Model Capabilities | 1 | 0.5% |
-| Response Contradicts Itself | 1 | 0.5% |
+| Children Could Become Overdependent | 0 | — |
 
 ### Coding Pipeline
 
@@ -194,26 +225,187 @@ selections_export + concern_items_export
     ▼ export_highlights_tsv.py
 highlights_for_coding_export.tsv   (267 rows: highlight × rationale pairs)
     │
-    ▼ human coding in Google Sheets
-highlights_coded.tsv               (Model Strategy + Parent Motivation columns)
+    ├── R4 human coding in Google Sheets
+    │       │
+    │       ▼ R4_highlights_coded.tsv  (998 data rows)
+    │       │
+    │       ▼ import_coded_tsv.py
+    │       model_strategy_for_notebook.csv    (253 rows)
+    │       parent_motivation_for_notebook.csv (272 rows)
+    │       │
+    │       ▼ 0_R4_highlight_analysis.ipynb
+    │       df_sel (200 rows — one per unique selection)
     │
-    ▼ import_coded_tsv.py
-model_strategy_for_notebook.csv    (253 rows)
-parent_motivation_for_notebook.csv (272 rows)
+    ├── LLM coding Round 4 (0_llm_coder.ipynb)
+    │       │
+    │       ▼ llm_coding_output/R4_llm_coded_highlights.tsv
+    │         R4_cache_strategy.json  (248 entries)
+    │         R4_cache_motivation.json (267 entries)
+    │         R4_validation_report.csv
     │
-    ▼ highlight_analysis.ipynb
-df_sel                             (200 rows — one per unique selection)
+    └── R5 adjudicated coding
+            R5_motivation_coded.tsv     (267-row three-way: R4 | LLM | R5 adjudicated)
+            R5_highlights_coded         (full R5 coding, 998 data rows)
+            R5_strategy_coded           (strategy adjudication)
+            │
+            ▼ 0_R5_highlight_analysis.ipynb
+            df_sel (267 rows — one per highlight × rationale pair)
 ```
+
+The current working caches (`cache_strategy.json`, `cache_motivation.json`,
+`llm_coded_highlights.tsv`) reflect the most recent LLM coding run.
 
 **Pilot 9 coding coverage:**
 
 | Measure | N |
 |---|---|
-| Unique selections (df_sel) | 200 |
+| Unique selections (df_sel R4) | 200 |
+| Highlight × rationale pairs (df_sel R5) | 267 |
 | Selections with model_strategy coded | 184 |
 | Selections with parent_motivation coded | 200 |
 | Selections with highlight_sentiment | 200 |
 | Mean highlight sentiment | 5.33 / 7 |
+
+---
+
+## LLM Coding
+
+**Notebook:** `stat_analysis/0_llm_coder.ipynb`
+**Model:** `claude-opus-4-7`
+**Input:** `highlights_for_coding_export.tsv` (267 rows — highlight × rationale pairs)
+**Purpose:** Validate an LLM-based coder against single-coder human labels to enable
+scalable coding in the main study without per-row manual effort.
+
+### Design
+
+- Two separate API calls per row (strategy and motivation) prevent cross-contamination
+- No sentiment leakage: the 1–7 `highlight_sentiment` rating is never passed to the model
+- Presence-agnostic coding: codes reflect what the parent *considered*, not whether AI
+  behavior was objectively present or successful
+- CRAFT-structured system prompts with full-scenario few-shot examples from pilot data
+  (scenario prompt + full AI response + highlighted text + parent rationale per example)
+- Acceptance criterion: Gwet's AC1 ≥ 0.70 per code vs. human ground truth
+
+### Source Filter (strategy only)
+
+19 rows have `source='prompt'` (parent highlighted text from the child's question rather
+than the AI response). These rows are excluded from strategy coding — no strategy code is
+meaningful when the highlighted span is not AI-generated content. The strategy cache covers
+248 response-source rows; all 267 rows are coded for motivation.
+
+### Source-Gated Motivation Taxonomy
+
+Response-level and prompt-level motivation codes are mutually exclusive by design.
+`predict_motivation()` selects between two separate system prompts at runtime:
+
+| `source` value | Taxonomy used | Codes available |
+|---|---|---|
+| `'response'` | Response-level | Response Usefulness, Response Risk Awareness, Response Could Evoke Strong Emotions, Response Identification of Root Cause, Response Complexity, Response Organization, Response Confirmation / Contradiction |
+| `'prompt'` | Prompt-level | Child Intentions, Children Could Become Overdependent, Parents Trust of Model Capabilities |
+
+### Two-Turn Context Protocol
+
+Turn 1 sends only the highlighted span and parent rationale (no scenario context) to
+minimize prompt length and avoid priming. If the model returns `{"need_context": true}`,
+Turn 2 provides the full scenario prompt and AI response.
+
+- Strategy context usage: 54/248 rows (22%) required Turn 2
+- Motivation context usage: 17/267 rows (6%) required Turn 2
+- Fallback: if Turn 2 also returns `need_context`, the code is set to `null` (this occurs
+  when the highlighted text does not appear in the AI response)
+
+### Caching
+
+Predictions are cached incrementally to JSON files keyed by `highlight_id|concern_item_id`.
+Re-runs skip cached rows. Cache files are tracked in git under `llm_coding_output/`.
+
+| Cache file | Entries |
+|---|---|
+| `cache_strategy.json` | 248 |
+| `cache_motivation.json` | 267 |
+
+### LABEL_MAP Normalizations
+
+Ground truth labels from earlier pilot coding rounds are normalized to canonical names
+before validation:
+
+| Old label | Canonical label |
+|---|---|
+| Adapt to Age Group | Consider Age Group |
+| Response Contradicts Itself | Response Confirmation / Contradiction |
+| Response Could Evoke Strong Emotion | Response Could Evoke Strong Emotions |
+
+### Round 1 Validation Results
+
+**Model Strategy** (248 response-source comparable pairs, threshold AC1 ≥ 0.70):
+
+| Code | AC1 | F1 | N_GT | Result |
+|---|---|---|---|---|
+| Prompted Suggestions | 0.520 | 0.687 | 103 | **FAIL** |
+| Emphasize Emotional Support | 0.898 | 0.795 | 43 | PASS |
+| Unprompted Suggestions | 0.843 | 0.195 | 28 | PASS |
+| Clarify Child's Intent | 0.931 | 0.545 | 22 | PASS |
+| Emphasize Risk Awareness | 0.962 | 0.789 | 18 | PASS |
+| Redirect with Alternatives | 0.902 | 0.083 | 10 | PASS |
+| Explain Problems in Prompt | 0.957 | 0.444 | 9 | PASS |
+| Consider Age Group | 0.924 | 0.320 | 7 | PASS |
+| Refuse Response and Explain | 0.987 | 0.769 | 5 | PASS |
+| Defer to Resources | 0.992 | 0.000 | 2 | PASS |
+| Encourage Introspection | 0.983 | 0.333 | 1 | PASS |
+| Defer to Parents | 0.988 | 0.000 | 0 | PASS |
+| null | 0.971 | 0.000 | 0 | PASS |
+| **Overall** | — | 0.382 (macro F1) | — | **12/13 PASS** |
+
+Exact match accuracy: 58.9%
+
+**Parent Motivation** (267 comparable pairs, threshold AC1 ≥ 0.70):
+
+| Code | AC1 | F1 | N_GT | Result |
+|---|---|---|---|---|
+| Response Usefulness | 0.383 | 0.635 | 117 | **FAIL** |
+| Response Risk Awareness | 0.811 | 0.565 | 50 | PASS |
+| Response Could Evoke Strong Emotions | 0.902 | — | 24 | PASS |
+| Response Identification of Root Cause | 0.877 | 0.121 | 22 | PASS |
+| Response Organization | 0.940 | 0.611 | 19 | PASS |
+| Child Intentions | 0.987 | 0.914 | 18 | PASS |
+| Response Complexity | 0.958 | 0.643 | 13 | PASS |
+| Parents Trust of Model Capabilities | 0.992 | 0.500 | 3 | PASS |
+| Response Confirmation / Contradiction | 0.992 | 0.500 | 1 | PASS |
+| **Overall** | — | 0.503 (macro F1) | — | **9/10 PASS** |
+
+Exact match accuracy: 59.2%
+
+**Interpretation:** The two failing codes are the highest-frequency catch-all codes in each
+dimension. *Prompted Suggestions* (44.5% of strategy labels) is confusable with Redirect
+with Alternatives, Unprompted Suggestions, and Emphasize Emotional Support when those
+strategies co-occur with direct help. *Response Usefulness* (45.5% of motivation labels)
+is a broad evaluative catch-all that the model conflates with Response Could Evoke Strong
+Emotions and Response Identification of Root Cause in ambiguous cases. Both are targets
+for prompt revision in Round 2.
+
+**Limitation:** No human-human IRR baseline exists; single-coder ground truth is the
+practical ceiling. AC1 ≥ 0.70 is a pragmatic threshold noted as a study limitation.
+
+### Output Files
+
+Located in `data-exports/20260412_183830/highlight_analysis_output/llm_coding_output/`:
+
+**Round 4 (archived):**
+
+| File | Description |
+|---|---|
+| `R4_llm_coded_highlights.tsv` | 267 rows: `highlight_id`, `Model Strategy`, `Parent Motivation` |
+| `R4_cache_strategy.json` | R4 strategy predictions (248 response-source entries) |
+| `R4_cache_motivation.json` | R4 motivation predictions (267 entries) |
+| `R4_validation_report.csv` | Per-code AC1, F1, N_GT, N_pred, PASS/FAIL — R4 round |
+
+**Current working files (most recent run):**
+
+| File | Description |
+|---|---|
+| `llm_coded_highlights.tsv` | 267 rows: `highlight_id`, `Model Strategy`, `Parent Motivation` |
+| `cache_strategy.json` | Strategy predictions (248 response-source entries) |
+| `cache_motivation.json` | Motivation predictions (267 entries) |
 
 ---
 
@@ -226,12 +418,20 @@ df_sel                             (200 rows — one per unique selection)
 cd data-exports/20260412_183830
 python export_highlights_tsv.py          # → highlights_for_coding_export.tsv
 
-# After editing highlights_coded.tsv, re-import
+# After editing R4_highlights_coded.tsv (selection-level), re-import
 python import_coded_tsv.py               # → model_strategy_for_notebook.csv
                                          #    parent_motivation_for_notebook.csv
 
-# Run analysis
-jupyter notebook stat_analysis/0_highlight_analysis.ipynb
+# Run LLM coder (requires CLAUDE_API_KEY in stat_analysis/.env)
+# Skips cached rows on re-run; outputs to llm_coding_output/
+jupyter notebook stat_analysis/0_llm_coder.ipynb
+
+# R4 analysis (selection-level, 200 rows)
+jupyter notebook stat_analysis/0_R4_highlight_analysis.ipynb
+
+# R5 analysis (rationale-level, 267 rows — uses R5_highlights_coded)
+jupyter notebook stat_analysis/0_R5_highlight_analysis.ipynb
+
 jupyter notebook stat_analysis/1_classifier_sentiment.ipynb
 jupyter notebook stat_analysis/1_classifier_llm.ipynb
 ```

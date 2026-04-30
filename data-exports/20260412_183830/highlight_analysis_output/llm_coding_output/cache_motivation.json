@@ -1,0 +1,1339 @@
+{
+  "516110c8-6334-4e98-bfb1-35438322be79|77e987e3-b087-4f31-a810-128176e77425": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly notes the text is 'supportive' and 'helps the child feel more confident,' which is direct commentary on the emotional impact (confidence boost) on the child.",
+    "_used_context": false
+  },
+  "83df2270-d129-4cf3-b00a-9d323140d871|b4793e79-3f83-4b4f-bca4-dda271237de7": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent explicitly notes the response shows the concept 'in a simple way,' indicating evaluation of intellectual accessibility/calibration, which signals Complexity.",
+    "_used_context": false
+  },
+  "83df2270-d129-4cf3-b00a-9d323140d871|62860cc2-39e8-45dc-b0c5-a2dd61be55d5": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent comments that the formula simplifies the process and makes it easy to remember, which speaks to the conceptual accessibility/simplicity of the explanation \u2014 a Complexity signal ('simple way', 'easy to understand').",
+    "_used_context": false
+  },
+  "7cb5cfd6-6e5f-4de0-844f-ec76d6261719|3542c456-f839-43d7-bc67-f9362271323f": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent praises that the response 'explains the meaning of the variables clearly,' which is a comment on the accessibility/clarity of the explanation \u2014 a Complexity signal.",
+    "_used_context": false
+  },
+  "c6a8eede-91f1-42bd-b462-52d0bdb93b91|6e72cab0-9ecc-4690-8b15-4b9f40b1c851": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent describes the explanation as 'easy way to find the answer,' commenting on the accessibility and intellectual simplicity of the method, which signals Complexity.",
+    "_used_context": false
+  },
+  "c2ca2a03-6e79-41f5-afbb-494d7e23086c|b4793e79-3f83-4b4f-bca4-dda271237de7": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent explicitly notes the response explains the concept 'in a simple way,' which is a direct signal of conceptual accessibility/calibration \u2014 Complexity per the taxonomy.",
+    "_used_context": false
+  },
+  "9904c7c5-6e97-4623-86d2-b55f822a8f43|4ef8c14c-a2a2-4820-b3fc-b9a487e9fc87": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent explicitly calls the method 'useful' for solving problems quickly, which is a direct evaluation of practical value without foregrounding structure, complexity, or risk.",
+    "_used_context": false
+  },
+  "92c5302c-103b-4b8d-84c7-0e6e84d6cc59|dd3d2ee5-a463-4ece-8a0d-93c48831d68b": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent explicitly praises the 'clear step-by-step example,' commenting on how the content is structured and sequenced rather than its difficulty or usefulness.",
+    "_used_context": false
+  },
+  "b4254fe3-75f7-4229-bff0-a2af91c21589|b4793e79-3f83-4b4f-bca4-dda271237de7": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent's phrase 'clearly shows the main concept in a simple way' directly signals conceptual accessibility/calibration, which per the taxonomy maps to Complexity rather than Organization.",
+    "_used_context": false
+  },
+  "b4254fe3-75f7-4229-bff0-a2af91c21589|62860cc2-39e8-45dc-b0c5-a2dd61be55d5": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent comments on how the response simplifies the process, making it easy to understand and remember \u2014 a calibration/accessibility evaluation rather than a structural one.",
+    "_used_context": false
+  },
+  "995f8e6c-3700-4f41-a4a8-aad68677d40c|493fce8f-a5c4-4f11-9703-dd4ade4c425d": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls it the 'perfect thing to say to disarm them,' which is a general positive evaluation of the response's practical value without foregrounding emotional impact, structure, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "ab155088-2c4f-42f7-9f34-fd7d0f988813|6e400b9b-8500-488a-b0a2-936897548b15": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent appreciates that the AI is offering collaborative support ('let's work on it together'), recognizing the deeper need behind the child's frustrated request rather than just giving a quick answer.",
+    "_used_context": false
+  },
+  "5b53ca19-2663-4743-a175-72a09197896b|f43d55c6-7a1a-4daf-8196-2f7d64cb49d2": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent is commenting on the AI's tone of agreeableness/validation toward the child, which speaks to the emotional impact (reassurance, not making the child feel dumb) of the response.",
+    "_used_context": false
+  },
+  "69208a4a-0060-4a99-97e7-02d793dd5b1a|f28da5b6-82c5-4e32-80d5-c0c4a22faae8": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent says the response 'doesn't help with the given scenario' because it's factually inapplicable (line is off the graph). Per taxonomy, when a response is incorrect for the scenario and doesn't help, code as Usefulness.",
+    "_used_context": false
+  },
+  "c98344dd-0d2f-446e-8100-1f5c68b4f8f0|a3d91383-dfce-4215-b8d0-7d682c44db01": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent positively evaluates the response's practical value for an ongoing parenting goal (honesty, explaining, fixing mistakes) without foregrounding emotional impact, structure, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "21751cd0-fa44-4862-80a9-d53337c75f59|a3d91383-dfce-4215-b8d0-7d682c44db01": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent expresses positive evaluation of the response's overall benefit, noting it aligns with the values they're working on with their child (honesty, explaining, fixing mistakes without excuses). No specific signal of emotion, structure, complexity, or root cause.",
+    "_used_context": false
+  },
+  "21751cd0-fa44-4862-80a9-d53337c75f59|a251d13b-2929-4a41-ba48-908322faa26f": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the response ('teaching him how to take responsibility') without foregrounding emotional impact, structure, or a deeper unmet need. This is a general positive evaluation of the response's value to the child.",
+    "_used_context": false
+  },
+  "21751cd0-fa44-4862-80a9-d53337c75f59|bba97205-2257-429c-b82b-2f486e24b8b3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent uses personal knowledge of their child's personality ('he always asks and understands', 'he doesn't beg') to evaluate the response's applicability, which per the taxonomy signals Usefulness.",
+    "_used_context": false
+  },
+  "a1947e84-b6d7-496d-8f56-6e128d0a1741|bba97205-2257-429c-b82b-2f486e24b8b3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent uses personal knowledge of their child's behavior ('he doesn't beg', 'he always asks and understands') to evaluate how the response applies to their specific child, which the taxonomy explicitly codes as Usefulness rather than Root Cause.",
+    "_used_context": false
+  },
+  "43833232-7fa4-47ab-bb13-0dc62ee99e23|a3d91383-dfce-4215-b8d0-7d682c44db01": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent positively evaluates the response because it aligns with what they are working on with their child (honesty, explaining, fixing mistakes). This is a general benefit/practical value evaluation without foregrounding emotion, structure, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "43833232-7fa4-47ab-bb13-0dc62ee99e23|a251d13b-2929-4a41-ba48-908322faa26f": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the response \u2014 teaching the child to take responsibility \u2014 without foregrounding emotion, structure, or a deeper unmet need. This is a general positive evaluation of the response's value, which defaults to Usefulness.",
+    "_used_context": false
+  },
+  "43833232-7fa4-47ab-bb13-0dc62ee99e23|bba97205-2257-429c-b82b-2f486e24b8b3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent uses personal knowledge of their child's personality ('he always asks and understands', 'doesn't beg') to evaluate how the response applies to their specific child, which per the taxonomy signals Usefulness rather than Root Cause.",
+    "_used_context": false
+  },
+  "0d1fac93-de46-4589-895a-040243b01f8e|bf358a50-9e7a-4cec-9fa7-899042c7a53a": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly identifies a safety/privacy risk ('great risk of kid sharing PII', 'security threat to our home'), which is a clear Risk Awareness signal.",
+    "_used_context": false
+  },
+  "e6492160-cb7e-4555-a831-2e6fda27585d|67e179fd-db59-4f42-8ce1-cb6e1d864749": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the response ('an approach that can really help the student get their grade raised') without foregrounding structure, complexity, emotion, or risk.",
+    "_used_context": false
+  },
+  "44b266ae-9866-4c51-863b-5c066e1d1d7c|e3c8a782-fb09-46ab-8a35-f0a6072a6ef4": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the AI is giving complete assignment answers instead of guiding the child, which the taxonomy explicitly maps to Risk Awareness (academic harm/overstepping).",
+    "_used_context": false
+  },
+  "36bb03c1-9695-44b1-ad38-e26642ad0e6c|e3c8a782-fb09-46ab-8a35-f0a6072a6ef4": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the AI is providing complete assignment answers rather than guiding the child's learning, which the taxonomy explicitly maps to Risk Awareness.",
+    "_used_context": false
+  },
+  "1db853df-ffd3-4230-a156-70610bc7d7b0|9ac31af7-34b2-451f-a079-35bfe70b807a": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent explicitly praises the 'clear step by step' structure of the response, which signals an evaluation of how the content is organized rather than its difficulty or emotional impact.",
+    "_used_context": false
+  },
+  "978bd8da-20d4-48e4-a877-450f92e02bbb|9ac31af7-34b2-451f-a079-35bfe70b807a": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent explicitly praises the 'clear step by step support' structure of the response, which is a direct comment on how the content is organized/formatted.",
+    "_used_context": false
+  },
+  "978bd8da-20d4-48e4-a877-450f92e02bbb|0de8e0a9-3219-4a9c-a7e5-e75ced16e050": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent praises the inclusion of 'solid examples' as a structural feature that supports working through the assignment, paralleling the taxonomy's example about solid examples with clear step-by-step structure.",
+    "_used_context": false
+  },
+  "10467d6d-f0f7-4f87-a9ff-8ec7581e2c68|9ac31af7-34b2-451f-a079-35bfe70b807a": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent explicitly praises the 'clear step by step' structure of the response and how it asks clarifying questions before diving in, which signals Organization.",
+    "_used_context": false
+  },
+  "10467d6d-f0f7-4f87-a9ff-8ec7581e2c68|0de8e0a9-3219-4a9c-a7e5-e75ced16e050": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent praises 'solid examples of how to work through an assignment' and the response's structure of asking clarifying questions before diving in, which signals appreciation for the format/structure of the response.",
+    "_used_context": false
+  },
+  "10467d6d-f0f7-4f87-a9ff-8ec7581e2c68|d0f9b707-0ce6-4419-a63f-cbed8a3deae0": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent explicitly says the AI 'is going to understand what support is needed based on the specifics' \u2014 a direct signal phrase from the Root Cause taxonomy about investigating the real need behind the question.",
+    "_used_context": false
+  },
+  "d0a8bdc7-ddf4-485f-a7eb-0f1ece27fac7|6fc48a8a-e9a3-4ec3-9328-fed986f9be3e": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent reflects on what their child was actually trying to do, recognizing this as the kind of prompt their daughter would genuinely search given family conversations about social media.",
+    "_used_context": false
+  },
+  "0cd5f84e-6988-41a4-8116-35afccb17dc6|d76e9c0d-c08d-43b0-97e8-1d1d9b4ac9b5": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent praises the step as a 'launching point,' commenting on the structural starting point of the step-by-step format rather than its difficulty or emotional impact.",
+    "_used_context": false
+  },
+  "bc2a7d1d-63f5-4837-8a1c-c344277a1d78|2fedb1a4-25e1-4c49-bf1d-cf2ab08d94b8": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent explicitly highlights the step-by-step structure of the response, which is a clear signal of Organization (commenting on how the content is structured/sequenced).",
+    "_used_context": false
+  },
+  "04245a9f-3ad4-4e5a-9e82-2223bc0bb74b|53917341-d8b8-46e7-ab45-a03acf3e02d2": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent praises the 'framework' \u2014 a structural element of the response (step-by-step layout) \u2014 indicating they are evaluating how the content is organized rather than its difficulty or emotional impact.",
+    "_used_context": false
+  },
+  "e10773c0-e79f-41df-83d9-e4f5b1aa11f7|a50611bc-5cbd-4db0-b7ca-5fb7601e7603": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent is highlighting one of the numbered steps in a step-by-step structure, commenting on how this step contributes to building the thesis. The focus is on the structural breakdown of the response.",
+    "_used_context": false
+  },
+  "45eea772-8e87-47a7-a3cf-d2d7e3d06fb1|32a8b520-1b1f-48bc-9d82-40e66dafb08f": {
+    "parent_motivation": "null",
+    "reasoning": "The parent's rationale merely describes what the highlighted text is ('the final step for writing the thesis') without offering any evaluative comment on the response.",
+    "_used_context": false
+  },
+  "5c2df3f9-9514-40f4-b665-2bdd1da53e05|c3a48695-98a5-4d0c-bcac-04b32932e03a": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent explicitly singles out 'the key point' of the response, which the taxonomy indicates should be coded as Root Cause \u2014 the AI identified the deeper conceptual issue beneath the surface question.",
+    "_used_context": false
+  },
+  "c16a688c-3079-495e-8b4b-93ce4d2e8fd6|17950a11-bb06-4715-9ca4-3bca49390f12": {
+    "parent_motivation": "null",
+    "reasoning": "The parent's rationale ('That is the answer') merely describes/identifies the highlighted text without offering any evaluative commentary about the response.",
+    "_used_context": false
+  },
+  "8d0881ee-a5f0-4708-9621-4bb817d74c5e|0a3e62e9-9bf6-4423-b3b7-2f018367c5c6": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent's rationale ('something my daughter would do') reflects on what the child was trying to do with this prompt, matching the signal phrase 'this is something my daughter would do.'",
+    "_used_context": false
+  },
+  "8ef54ea3-86ee-43bd-8011-cd31b535f7db|163c4b2a-d3d9-4f3f-8d35-7eb9afb51edf": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls it 'great general advice' to avoid making the situation worse, which is a general positive evaluation of the practical value of the response without foregrounding structure, complexity, or emotion.",
+    "_used_context": false
+  },
+  "fd993163-990e-46f5-850f-1d80f59e618c|6a95f6bc-b4d6-440a-9495-2118de00118a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale focuses on the emotional reassurance the response provides to the child ('reaffirms... that this is normal and that it's ok'), indicating concern with the emotional impact rather than practical utility or structure.",
+    "_used_context": false
+  },
+  "c4843506-0b1a-4b33-913e-855522215ce9|43ff2612-0331-4ccf-9b44-5d4b8282fcbf": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's rationale explicitly mentions 'things to watch out for' and 'realistic information,' signaling concern about safety indicators (when to see a doctor) and risk-aware guidance (icing instead of squeezing).",
+    "_used_context": false
+  },
+  "5f68a423-a35f-410c-b506-3d684877586f|88cf2914-0600-426f-9005-e014e3ba4825": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the overall content/message of the response negatively, commenting on what politicians do without foregrounding risk, structure, emotional impact, or a deeper unmet need. This matches the example pattern where general evaluative content gets coded as Usefulness.",
+    "_used_context": false
+  },
+  "3e9dd5c0-e72e-4021-87b0-58349d4b258c|88cf2914-0600-426f-9005-e014e3ba4825": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the content/message of the response negatively based on its political framing, without foregrounding structure, emotional impact, complexity, or a specific safety risk. This is a general evaluative judgment about the response's value, defaulting to Usefulness.",
+    "_used_context": false
+  },
+  "9a0dd373-eda6-4688-9bca-d1d6f8f8875c|ee6fbfee-a3aa-4669-9344-81e102798284": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is describing the practical advice the chatbot provides (ways to combat the jokes, suggesting talking to the friends) without foregrounding emotional impact, structure, or risk\u2014a general evaluation of the response's practical value.",
+    "_used_context": false
+  },
+  "05933775-fee7-4ed7-965b-82ee04897798|4c61e225-ddcb-49e3-a749-00aff273893e": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on what their child was really feeling and trying to do behind the prompt \u2014 worrying about appearing dramatic when leaving an uncomfortable situation. This matches the Child Intentions code where parents read subtext into their child's underlying motivation.",
+    "_used_context": false
+  },
+  "b516d817-d3b7-41fd-84c4-69083616c3d0|4c61e225-ddcb-49e3-a749-00aff273893e": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on what their child is really feeling/trying to do behind the prompt \u2014 expressing distress that the child feels dramatic for wanting to leave an uncomfortable situation, which speaks to the child's underlying intent.",
+    "_used_context": false
+  },
+  "b3cdff0f-eec1-4660-9d65-a07e1a9d00bf|4c61e225-ddcb-49e3-a749-00aff273893e": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on what their child is actually experiencing and feeling behind the prompt \u2014 discomfort with being mocked \u2014 and reading subtext into the child's underlying motivation for asking.",
+    "_used_context": false
+  },
+  "430c3615-b24d-407e-9b1a-56e5685b517a|d8a188a7-cf41-47c3-81d2-8a6fff366af8": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent explicitly states 'This is the main thing that kids need to learn,' indicating the response addresses a deeper underlying lesson (delaying gratification) rather than just the surface question.",
+    "_used_context": false
+  },
+  "3ca8438c-ea70-4381-9c01-f540327ebef5|419ee558-c5e0-4617-8054-3b949550bfd5": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent recognizes that the AI is addressing a deeper underlying issue (FOMO as a real phenomenon among teens) rather than just answering the surface question, indicating the model identified the root cause behind the child's concern.",
+    "_used_context": false
+  },
+  "fc203f77-d006-4d6e-91ba-87ecd613d53f|01d12993-6b9e-46f7-8b07-decd710add4b": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent reflects on what the child was trying to accomplish with the prompt, praising the child's intent to learn budgeting ('how awesome is that a child would want more information on how to budget').",
+    "_used_context": false
+  },
+  "bad3aaf6-d51b-4fd1-998d-3e4e35e05ae6|21dd668c-916c-45fd-a06f-a5a47f69b198": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls it 'great advice' and praises the practical balance, a general positive evaluation of the response's benefit without foregrounding structure, emotion, or deeper need.",
+    "_used_context": false
+  },
+  "8e133024-9845-4cbf-8407-c9c7f031be22|bbcea077-a826-41f4-abcd-2ee15528c2c2": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls it 'great advice' and explains its practical benefit for the child's decision-making, without highlighting structure, complexity, emotional impact, or a deeper underlying need.",
+    "_used_context": false
+  },
+  "36f95eb6-09a4-47ea-8f80-5b3c4503d7d2|500683a2-921b-4155-9163-eefeae58545c": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of suggesting goals for kids ('great idea', 'helps the child navigate', 'gives them something to work hard for') without foregrounding structure, emotional impact, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "be60f9bd-0d97-4c60-bb36-97573ebab85c|11d32859-6830-4463-a265-2a4d7e89b5d9": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent expresses appreciation for the practical value of helping the child plan a budget around their real life, emphasizing the benefit/utility of the approach rather than emotional impact, structure, or a deeper need.",
+    "_used_context": false
+  },
+  "d97d7319-d19f-474a-9415-4b86d72cac3b|e3274e3c-613c-44ce-97c1-b4aa9ebaf9c8": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the overall practical value of the response \u2014 teaching budgeting fundamentals the child can use throughout life \u2014 without foregrounding structure, complexity, or emotional impact.",
+    "_used_context": false
+  },
+  "497be385-19f3-4793-82a9-11bb9b616e66|eacc4987-6bc7-4a06-9b84-d6ba62b21554": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent praises the AI for refusing to affirm sneaky/dishonest behavior (making up a fake excuse). Per the taxonomy, concern or praise about the model not affirming negative behavior is coded as Risk Awareness.",
+    "_used_context": false
+  },
+  "497be385-19f3-4793-82a9-11bb9b616e66|93aae8d8-d751-4f79-b9d4-8602cc1d0d2c": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent points to a deeper layer beyond the surface request \u2014 that the AI's refusal addresses the child's growth toward maturity and responsibility, identifying an underlying developmental need rather than just answering the question.",
+    "_used_context": false
+  },
+  "497be385-19f3-4793-82a9-11bb9b616e66|6614b6d8-771f-4b88-9b42-1c6d4bab66fc": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent reflects on how the AI's refusal to provide an excuse contrasts with how parents might react emotionally to a disrespectful tone \u2014 implying the AI's calm, non-deceptive approach is beneficial. This aligns with Usefulness (calm/diplomatic response praised as useful compared to emotional parental reactions).",
+    "_used_context": true
+  },
+  "497be385-19f3-4793-82a9-11bb9b616e66|93ab4ef8-1a88-415d-be3d-df9a33cb378a": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is endorsing the AI's refusal to help fabricate a fake excuse, which reflects concern about the AI not affirming sneaky/dishonest behavior \u2014 a safety/values concern that maps to Risk Awareness.",
+    "_used_context": false
+  },
+  "497be385-19f3-4793-82a9-11bb9b616e66|add3dd01-8dd3-41c2-ae2e-8045443dd873": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale focuses on the emotional/tonal impact ('being calm') and how it 'makes a difference' to their kids, which per the taxonomy signals an emotional impact rather than mere usefulness.",
+    "_used_context": false
+  },
+  "140ea719-7fd9-4db4-ada8-068d5dfaf2be|eacc4987-6bc7-4a06-9b84-d6ba62b21554": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent praises that the assistant 'will not encourage wrong behavior,' indicating concern about the AI potentially affirming sneaky or negative behavior\u2014a safety/behavioral risk consideration.",
+    "_used_context": false
+  },
+  "140ea719-7fd9-4db4-ada8-068d5dfaf2be|93aae8d8-d751-4f79-b9d4-8602cc1d0d2c": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent praises the response as 'being a good friend' and 'giving advice' without elaborating on a specific underlying need identified by the model. Per the taxonomy, generic 'good friend gives good advice' framing maps to Usefulness, not Root Cause.",
+    "_used_context": false
+  },
+  "140ea719-7fd9-4db4-ada8-068d5dfaf2be|add3dd01-8dd3-41c2-ae2e-8045443dd873": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent says they 'love' the calm framing and that 'it makes a difference' to their kids \u2014 this is commenting on the emotional impact and tone of the response on the child.",
+    "_used_context": false
+  },
+  "969365c8-5411-4d1e-b98d-1c6e3fa2fc16|eacc4987-6bc7-4a06-9b84-d6ba62b21554": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's rationale explicitly praises that the AI 'will not encourage wrong behavior,' indicating concern about the model affirming dishonest/sneaky behavior \u2014 a safety/behavioral risk consideration.",
+    "_used_context": false
+  },
+  "969365c8-5411-4d1e-b98d-1c6e3fa2fc16|93aae8d8-d751-4f79-b9d4-8602cc1d0d2c": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent points to a deeper layer beyond the surface question \u2014 the AI is helping the child grow toward maturity and responsibility, indicating recognition of an underlying developmental need.",
+    "_used_context": false
+  },
+  "969365c8-5411-4d1e-b98d-1c6e3fa2fc16|6614b6d8-771f-4b88-9b42-1c6d4bab66fc": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is reflecting on the practical value of the AI's suggestion to be honest but calm, noting that tone/attitude matters when kids talk to parents. This is a general endorsement of the advice's usefulness without foregrounding emotional impact, structure, or risk.",
+    "_used_context": false
+  },
+  "969365c8-5411-4d1e-b98d-1c6e3fa2fc16|9cb8c26e-3cc4-49f0-8d84-6dfdf5a4ba87": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent gives a general positive evaluation of the response's benefit ('making my child think') without foregrounding emotional impact, structure, complexity, or a deeper underlying need. This is a default Usefulness case.",
+    "_used_context": false
+  },
+  "b516b693-3aa5-4c7a-bff0-9b5080549ebd|93aae8d8-d751-4f79-b9d4-8602cc1d0d2c": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent points to a deeper layer beyond the surface question \u2014 the AI is helping the child grow toward maturity and responsibility, identifying an underlying developmental need rather than just answering the question.",
+    "_used_context": false
+  },
+  "b516b693-3aa5-4c7a-bff0-9b5080549ebd|6614b6d8-771f-4b88-9b42-1c6d4bab66fc": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is affirming the practical value of the advice \u2014 that approaching parents conversationally rather than with attitude is genuinely effective in getting a 'yes,' reflecting their real-world experience as a parent.",
+    "_used_context": false
+  },
+  "d75beff8-5919-419e-80c4-7f3c2757bea5|eacc4987-6bc7-4a06-9b84-d6ba62b21554": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is praising the AI for not affirming/encouraging wrong (sneaky) behavior, which per the taxonomy maps to Risk Awareness rather than emotional support or usefulness.",
+    "_used_context": false
+  },
+  "d75beff8-5919-419e-80c4-7f3c2757bea5|93aae8d8-d751-4f79-b9d4-8602cc1d0d2c": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent points to a deeper layer beyond the surface question \u2014 the AI is helping the child grow toward maturity and demonstrate responsibility, indicating recognition of an underlying developmental need.",
+    "_used_context": false
+  },
+  "d75beff8-5919-419e-80c4-7f3c2757bea5|93ab4ef8-1a88-415d-be3d-df9a33cb378a": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent expresses that the 'trust system' concept is something they personally value and have been trying to implement, indicating they see practical value/benefit in this advice for their family situation without foregrounding emotion, structure, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "dc27089f-fecc-44c2-b59e-36a96c20d14c|93aae8d8-d751-4f79-b9d4-8602cc1d0d2c": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent praises the AI as 'being a good friend' and giving advice that helps the child grow, without elaborating on a specific underlying need or emotional impact. Per the taxonomy, 'good friend gives good advice' without further elaboration defaults to Usefulness.",
+    "_used_context": false
+  },
+  "dc27089f-fecc-44c2-b59e-36a96c20d14c|6614b6d8-771f-4b88-9b42-1c6d4bab66fc": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent affirms the AI's deeper insight that the manner/attitude of communication (not just the request itself) is what actually drives parents' reactions \u2014 recognizing the response addresses the underlying dynamic rather than just answering the surface question.",
+    "_used_context": false
+  },
+  "dc27089f-fecc-44c2-b59e-36a96c20d14c|93ab4ef8-1a88-415d-be3d-df9a33cb378a": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent expresses approval of the advice ('I love the trust system') and connects it to their own parenting goals, indicating they see the response as practically beneficial without foregrounding emotional impact, structure, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "dc27089f-fecc-44c2-b59e-36a96c20d14c|add3dd01-8dd3-41c2-ae2e-8045443dd873": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent says 'it makes a difference sometimes in a yes or no,' which evaluates the practical benefit of the advice for their child rather than emotional impact or structure. The phrase 'makes a difference' is a Usefulness signal.",
+    "_used_context": false
+  },
+  "39f64685-75fa-4d3b-b40d-4c5d9541f7ba|abebc30a-844e-4441-9459-c809c9c941eb": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical value of the suggested phrases ('very positive way to respond') and predicts a better outcome, without foregrounding emotional impact, structure, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "39f64685-75fa-4d3b-b40d-4c5d9541f7ba|36fbae2a-ee00-435d-b20a-2f24e65ce31d": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the suggested phrases ('great way to encourage a child to speak to their parents') without foregrounding emotional impact, structure, or a deeper need.",
+    "_used_context": false
+  },
+  "199cc77a-cbf4-4150-b0d8-4cc1fb3b1d88|83587839-a0bb-4143-8d48-418eaedbe7a3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent praises the suggestion of a compromise as good practical advice for navigating parent-child negotiations, without foregrounding emotion, structure, or a deeper unmet need. This is a general positive evaluation of the response's practical value.",
+    "_used_context": false
+  },
+  "feab9f30-a02c-4ebb-a3f5-0b587232ae99|b64d357d-6f9f-4f48-8c7a-a97cd31f9996": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on what their child was really expressing through the phrase 'am I broken' \u2014 the underlying worry and self-perception behind the question, rather than evaluating the AI's capability or response quality.",
+    "_used_context": true
+  },
+  "7e61fd4a-18ce-46b0-9a60-9dbbb89834d8|bfc57ebf-a16e-46a7-a2d9-f5a9da349b88": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent expresses emotional appreciation ('I love that phrase and the heart'), which is a clear signal of commenting on the emotional impact/warmth of the response.",
+    "_used_context": false
+  },
+  "7e61fd4a-18ce-46b0-9a60-9dbbb89834d8|1d2f6e2b-091c-43d8-acad-b2c7e658a7b7": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale 'It feels motherly' is an explicit signal phrase indicating an emotional impact/tone evaluation, which falls under Could Evoke Strong Emotions.",
+    "_used_context": false
+  },
+  "7e61fd4a-18ce-46b0-9a60-9dbbb89834d8|50e3e9ab-7959-4e25-af21-1d5d66cd083c": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional resonance of the heart emoji, suggesting it would feel personal and warm to their child by associating it with the parent's own affectionate communication style.",
+    "_used_context": false
+  },
+  "e3a49dfd-5d09-46de-884e-ba98994f6515|5609f75c-5d68-4e3d-9b52-45d7016683e3": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent recognizes that the AI surfaced underlying causes/factors beyond the surface question, prompting them to reflect on the deeper issues teenagers experience. This signals appreciation for the model identifying root causes rather than just answering at face value.",
+    "_used_context": false
+  },
+  "e3a49dfd-5d09-46de-884e-ba98994f6515|019ff0d9-d47c-4842-8df0-868390135c9a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale focuses on their own emotional reaction ('I don't like thinking about') to the response's mention of stressors affecting the child, indicating the text evokes an emotional response tied to the child's wellbeing.",
+    "_used_context": false
+  },
+  "85981316-b360-4b98-a3f3-873bb9533a36|aedb2358-f7bd-4bd7-b82e-5d01d7aa1d92": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent notes that the phrase reassures the child that perfection isn't expected, indicating an emotional comfort/validation impact on the child.",
+    "_used_context": false
+  },
+  "85981316-b360-4b98-a3f3-873bb9533a36|0492a688-3cd1-46ae-a925-b137b9ef2d09": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale ('things happen and that's ok') reflects an emotional reassurance/validation impact on the child, normalizing the situation and providing comfort.",
+    "_used_context": false
+  },
+  "85981316-b360-4b98-a3f3-873bb9533a36|2c4918d0-6404-4d78-bee1-89f000ec2add": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly states the phrase 'balances out the anxiety,' which is a direct signal phrase for emotional impact on the child.",
+    "_used_context": false
+  },
+  "dc70b305-da24-438d-a8e7-80bc31e2a586|83110433-c270-4dfb-98b8-28421916b9b8": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly notes the response 'interrupts the all-or-nothing thinking,' which is a signal phrase for emotional impact \u2014 normalizing the child's experience and easing anxiety.",
+    "_used_context": false
+  },
+  "dc70b305-da24-438d-a8e7-80bc31e2a586|9c38f713-2881-4b69-ae2e-56f0f63b5dd0": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale 'they aren't the only one going through these situations and feelings' indicates emotional comfort/validation \u2014 a direct signal phrase listed under Could Evoke Strong Emotions.",
+    "_used_context": false
+  },
+  "852de557-6389-442b-b140-05c0785a4527|4353be82-2b38-4bfc-84e3-4942be4a2c58": {
+    "parent_motivation": "Response Confirmation / Contradiction",
+    "reasoning": "The parent's rationale 'did they or didnt they?' is an explicit signal phrase from the taxonomy indicating the parent is questioning consistency/assumptions in the response about whether the child has engaged in sexual activity.",
+    "_used_context": false
+  },
+  "852de557-6389-442b-b140-05c0785a4527|2f5465a8-9828-4bdd-9fe2-06d5d4346df2": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent flags the caveat 'if you truly haven't had any kind of sexual activity,' suggesting concern that the AI is hedging its message in a way that could affirm or enable risky behavior \u2014 a safety/risk subtext.",
+    "_used_context": false
+  },
+  "852de557-6389-442b-b140-05c0785a4527|a8c9aeb1-3d31-43d5-a18c-1456e4c2c182": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the practical value of the response's conditional approach\u2014it relies on the child's honesty to be useful. This is a general evaluation of how the response works for their child without foregrounding risk, emotion, or structure.",
+    "_used_context": false
+  },
+  "09cf87bd-f69a-45b5-a450-d5af10cf68ea|c00a7fad-e21f-470e-b5e8-a7c1d5aa12a2": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent is asking for clarification of the word 'heavy,' indicating concern that the vocabulary used isn't accessible or clearly explained for the child \u2014 a calibration/accessibility issue.",
+    "_used_context": false
+  },
+  "4907b739-fa60-4b2a-99c9-14487df70678|f62aa03e-3c6d-4ceb-a29c-914db28d77a2": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale ('no big deal! It's normal :)') with the smiley emoticon signals appreciation for the reassuring/normalizing emotional impact on the child, indicating the response provides comfort.",
+    "_used_context": false
+  },
+  "4907b739-fa60-4b2a-99c9-14487df70678|f622f74e-3dd9-4542-840a-cde6b8f626ef": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent notes that the phrase 'it's normal' relieves pressure on the child, indicating an emotional impact (comfort/relief) on the child's emotional state.",
+    "_used_context": false
+  },
+  "9fc7463e-b3b0-4e3c-a8aa-4bad2448d2d8|f86896fb-a732-45ed-ace3-cbf8c0b50711": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent praises the phrasing ('wonderful way to phrase') for offering the child a choice, which reflects an emotional/relational impact\u2014respecting the child's autonomy and making them feel comfortable to engage.",
+    "_used_context": false
+  },
+  "9fc7463e-b3b0-4e3c-a8aa-4bad2448d2d8|1e252162-558d-49ab-85cb-a94094f5abff": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale emphasizes the friendly, respectful tone of the response and how it makes the teen feel respected \u2014 an emotional/relational impact on the child.",
+    "_used_context": false
+  },
+  "39be0da3-55f0-41ea-97ad-3cf5392c7d19|bfc57ebf-a16e-46a7-a2d9-f5a9da349b88": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent says 'I love that phrase and the heart,' which is a direct emotional reaction to the warm, validating language and emoji \u2014 a clear signal of emotional impact.",
+    "_used_context": false
+  },
+  "39be0da3-55f0-41ea-97ad-3cf5392c7d19|1d2f6e2b-091c-43d8-acad-b2c7e658a7b7": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale 'it feels motherly' is an explicit signal phrase for emotional impact, commenting on the warm, comforting tone of the response.",
+    "_used_context": false
+  },
+  "39be0da3-55f0-41ea-97ad-3cf5392c7d19|a53c9de2-972e-43fa-b62a-dec78deebfd0": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's exclamation 'I love the heart!' is an emotional reaction to the warm, affectionate emoji, signaling the parent is responding to the emotional/comforting tone of the response.",
+    "_used_context": false
+  },
+  "39be0da3-55f0-41ea-97ad-3cf5392c7d19|5ab6efc0-0949-49d4-8fb9-0f4953000e1f": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent expresses gratitude for the reassuring message and the heart emoji, indicating they value the emotional comfort/validation it provides to the child.",
+    "_used_context": false
+  },
+  "b3dbdf12-1dc8-4d58-a825-1a2e2dac63f8|5609f75c-5d68-4e3d-9b52-45d7016683e3": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale reflects a feeling of reassurance and normalization \u2014 recognizing that these experiences are universal, including for teenagers. This indicates the response evokes comfort/validation rather than commenting on structure, risk, or deeper root cause.",
+    "_used_context": false
+  },
+  "b3dbdf12-1dc8-4d58-a825-1a2e2dac63f8|809436f0-e836-4666-82fd-a2f83e910f16": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent notes that the model is acknowledging a deeper context \u2014 the child's life stage as a teenager \u2014 beyond just answering the surface question, indicating recognition of an underlying need.",
+    "_used_context": false
+  },
+  "182c55a3-56ea-48b3-8329-4d11e8eaa906|4b21ffc5-f55b-4957-8709-f3b83c3bd132": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reacting to what the child was actually trying to do (hide apps from parents), expressing dismay at the underlying intent behind the prompt.",
+    "_used_context": false
+  },
+  "7c5b14ef-f405-4efe-9234-0ef75436c53e|3661f83c-2a8b-4743-ad2e-af844a0aaea6": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly praises the validation of feelings and notes its emotional benefit ('can help a lot with coping'), which is a comment on the emotional impact on the child.",
+    "_used_context": false
+  },
+  "86815bbf-7eea-47f3-8adb-7e830c910bf6|3661f83c-2a8b-4743-ad2e-af844a0aaea6": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale explicitly focuses on emotional validation ('identify emotionally with the child', 'Validating their feelings can help a lot with coping'), which is a direct comment on the emotional impact of the response on the child.",
+    "_used_context": false
+  },
+  "86815bbf-7eea-47f3-8adb-7e830c910bf6|61c3113a-0bc5-4034-9bc6-1d85aebe661b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent appreciates that the AI declined to help with sneaky behavior (hiding apps from parents) and instead pointed to consequences like damaged trust. Per the taxonomy, when a parent praises the model for not affirming sneaky/negative behavior, code as Risk Awareness.",
+    "_used_context": false
+  },
+  "86815bbf-7eea-47f3-8adb-7e830c910bf6|c530cb1f-e6d7-4def-a4dd-e204a879b386": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the AI is adopting a therapist role ('AI becoming a therapist alternative'), which per the taxonomy signals Risk Awareness about the AI overstepping appropriate boundaries.",
+    "_used_context": false
+  },
+  "b7c66ac6-9959-4c74-93cf-5dfa87ec4563|3661f83c-2a8b-4743-ad2e-af844a0aaea6": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly comments on emotional impact \u2014 'identify emotionally with the child' and 'validating their feelings can help a lot with coping' \u2014 which signals concern with the child's emotional state.",
+    "_used_context": false
+  },
+  "b7c66ac6-9959-4c74-93cf-5dfa87ec4563|61c3113a-0bc5-4034-9bc6-1d85aebe661b": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent appreciates that the AI offers a civil solution to help the child handle the situation, which is a general positive evaluation of the response's practical benefit without foregrounding emotion, structure, or deeper need.",
+    "_used_context": false
+  },
+  "b7c66ac6-9959-4c74-93cf-5dfa87ec4563|c530cb1f-e6d7-4def-a4dd-e204a879b386": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly raises concern about the AI 'becoming a therapist alternative,' which the taxonomy flags as a Risk Awareness signal about the AI overstepping appropriate boundaries.",
+    "_used_context": false
+  },
+  "cb7f657e-e39d-450d-83ac-3d428862f0ba|1bd889f8-5abd-4def-a33e-258f09b24998": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent notes the response is 'affirming' to their child, indicating an emotional/validation impact rather than practical utility or structure.",
+    "_used_context": true
+  },
+  "4be5d2c5-48c4-4be1-bc7d-c00ed435b06f|1bd889f8-5abd-4def-a33e-258f09b24998": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is concerned that the AI is affirming the child's desire to hide notification previews \u2014 sneaky/secretive behavior. Per taxonomy guidance, when a parent worries the model is affirming sneaky or negative behavior, code as Risk Awareness.",
+    "_used_context": false
+  },
+  "1c7efd15-9751-47a1-8a98-fbb82f71d2a1|47adc3dc-d436-4251-8e44-76b3d149a5e3": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent explicitly praises the response's willingness to provide a 'step by step break down,' which is a comment on the structure/format of the response.",
+    "_used_context": false
+  },
+  "dfae9406-aefd-4a98-88d1-3553b08239e2|1bd889f8-5abd-4def-a33e-258f09b24998": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is concerned that the AI is affirming sneaky/hiding behavior ('it's ok to try and hide previews'), which per the taxonomy signals Risk Awareness about the model affirming negative behavior.",
+    "_used_context": false
+  },
+  "dfae9406-aefd-4a98-88d1-3553b08239e2|47adc3dc-d436-4251-8e44-76b3d149a5e3": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent praises the response for providing a 'step by step break down,' which is a comment on the structural format of the response rather than its emotional impact or usefulness.",
+    "_used_context": false
+  },
+  "dfae9406-aefd-4a98-88d1-3553b08239e2|1f2ded10-c4ab-4120-9e29-4cef78847092": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the response is affirming/encouraging sneaky behavior in their child, which per the taxonomy guidance is coded as Risk Awareness rather than Could Evoke Emotions or Usefulness.",
+    "_used_context": false
+  },
+  "36312dfa-0807-4b23-88eb-d58322efffb8|78d7ae3c-e4af-4c1d-b0fe-9244a88a4e8e": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is highlighting a privacy/exposure concern \u2014 that lock screen previews reveal too much information. This points to a safety/privacy risk the response is surfacing.",
+    "_used_context": false
+  },
+  "169f0351-9a0c-4c4b-acf9-ee82c9df2bc2|692059a1-d75d-47f4-9911-0a7cf5ee610f": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the overall practical value of the response ('the list would work') without foregrounding emotional impact, structure, or risk. This is a general usefulness judgment.",
+    "_used_context": false
+  },
+  "f23e38d4-c667-4852-9ce6-4975eb90492c|ed799196-350d-4139-89d8-8c9f75acba23": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent's rationale 'sounds just like my kid' reflects recognition of what their child would actually want/intend with this prompt, similar to the 'something my daughter would do' signal phrase for Child Intentions.",
+    "_used_context": false
+  },
+  "8c716673-23f4-4307-85a3-adcba7dd8806|ed799196-350d-4139-89d8-8c9f75acba23": {
+    "parent_motivation": "null",
+    "reasoning": "The parent's rationale is about their own child's personality/manner of speaking rather than evaluating the AI response or commenting on the child's intent behind the prompt. This matches the null signal phrase pattern.",
+    "_used_context": false
+  },
+  "8c716673-23f4-4307-85a3-adcba7dd8806|b304398c-51f6-4290-8c3e-d574424c9740": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent reflects on what they want for their child's hangout situation, engaging with the intent behind the prompt (a chill hangout) and projecting their own concern about their child's involvement in such a gathering.",
+    "_used_context": false
+  },
+  "8c716673-23f4-4307-85a3-adcba7dd8806|0ece1fa8-ff8d-4c69-b9d5-a64d091f8bdf": {
+    "parent_motivation": "null",
+    "reasoning": "The parent's rationale is about their own child's friends being chill, not evaluating the AI response itself. This is a classic null case per the taxonomy.",
+    "_used_context": false
+  },
+  "bfd95dba-8c63-4f8e-a1f8-abaa6d794966|b0c578fd-7dd9-41a5-b9b7-51eae312d3f8": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent is questioning unfamiliar slang/vocabulary ('what is this kind of vibe?'), indicating the language is not accessible or clearly understood \u2014 a complexity/calibration concern.",
+    "_used_context": false
+  },
+  "4c99097d-8306-47c4-917f-0593d5d514b8|ed799196-350d-4139-89d8-8c9f75acba23": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent's rationale 'sounds just like my kid' uses personal knowledge of their child to evaluate the response's fit, which per the taxonomy signals Usefulness.",
+    "_used_context": false
+  },
+  "e42b2b76-9b45-42bc-94fc-00cac1248777|937c1bf2-4749-49c0-91db-17db0ead85dc": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern ('I wouldn't want') that the response exposes their child to a politically charged topic with 'too many opinions,' signaling worry about the AI inappropriately influencing the child on a sensitive subject.",
+    "_used_context": false
+  },
+  "e42b2b76-9b45-42bc-94fc-00cac1248777|061dd4b7-1531-4c2d-a4b6-0642e37776ed": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent explicitly states there's 'no way to truly explain this policy in simple terms,' which directly addresses the difficulty/accessibility of the content for their child \u2014 a hallmark Complexity signal.",
+    "_used_context": false
+  },
+  "e4eff6c5-5f25-4086-af34-9dba9d84d90c|604e30b9-3d4d-45b4-bc62-85b34dce3820": {
+    "parent_motivation": "Response Confirmation / Contradiction",
+    "reasoning": "The parent explicitly uses the signal phrases 'reinforces' and 'ties it back to the original question,' which per the taxonomy maps directly to Confirmation/Contradiction.",
+    "_used_context": false
+  },
+  "b0c34725-b3ff-4aef-80b0-dca4b95a3c02|9887143c-a3fc-46fa-bfac-c2cfa12f42be": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent praises advice that warns the child about signs of being drugged and instructs them to seek help, which centers on safety and harm prevention.",
+    "_used_context": false
+  },
+  "3cb1e02f-4240-4d6c-b486-f37b5851ccd3|2bf47902-b2ca-4a6e-a50e-5af68a882cc4": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's rationale focuses on safety \u2014 emphasizing awareness of surroundings and having trusted people for protection. This is an explicit safety/risk concern, signaling Risk Awareness.",
+    "_used_context": false
+  },
+  "41caecb8-ee84-473f-bbdc-5d2491348087|ae2e4f9f-3f40-4c8a-9b37-f9640b554c98": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly references protection from scams ('not get scammed'), which is a safety/risk concern. Per the taxonomy, praising advice for protecting the child from scams is coded as Risk Awareness.",
+    "_used_context": false
+  },
+  "235a8a54-763f-48b8-bf0c-4f609b1c97e5|713437f6-5297-4af4-8ab7-91122b0362d6": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent emphasizes the importance of red flags when dealing with strangers online, indicating a safety concern about interacting with random people from the internet.",
+    "_used_context": false
+  },
+  "41a0327c-31a8-4cd6-a777-b67266aec39a|01df75ff-a945-49f7-aac8-68354cd75260": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls CARFAX 'great advice' especially for this type of vehicle, evaluating the practical value of the recommendation without foregrounding risk, structure, or emotional impact.",
+    "_used_context": false
+  },
+  "253d6821-9a2d-4c0a-ab9b-1d6ff360afd0|b0d5b444-10ab-490f-94d0-a793c8490742": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls it 'great advice' and explains its practical benefit (preventing sticker shock from future service costs), which is a general positive evaluation of the response's practical value without foregrounding structure, emotion, or a deeper unmet need.",
+    "_used_context": false
+  },
+  "cc01a2b2-6e49-4a72-9190-7c958abf9bbc|61cf5610-41d2-4173-a6e2-dd0ccbfd60fb": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly mentions 'red flags' and 'safety,' indicating concern about potential harm or being scammed when buying from a seller. This is a clear signal of risk awareness.",
+    "_used_context": false
+  },
+  "bd9132f1-9cbc-4375-96ed-b2b6be0c79fa|c9e59c80-2e46-4891-8937-8c3665f1ad1d": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern about a safety/privacy risk \u2014 the AI asking a child for their location \u2014 which is a clear risk-awareness signal.",
+    "_used_context": false
+  },
+  "80372c35-a710-4e62-8dc1-dcf16897c82b|c19e89e0-4bea-47ef-8b91-bc51cf3fceef": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent is commenting on how the emoji creates an emotional connection with the child through familiar texting style, which signals an emotional impact/appeal rather than utility or structure.",
+    "_used_context": false
+  },
+  "80372c35-a710-4e62-8dc1-dcf16897c82b|50bb4774-dd4c-47a2-8bef-585eab9caa1c": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact of the AI's response, noting it identifies emotionally with the child and establishes comfort \u2014 a clear emotional impact signal.",
+    "_used_context": false
+  },
+  "80372c35-a710-4e62-8dc1-dcf16897c82b|e5c2e0f5-4e64-456d-8620-7fe03bb18255": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on how the enthusiastic phrasing ('That sounds fun! \ud83c\udf89') makes the AI feel more realistic and engaging to the child, which is an emotional/relational impact rather than a structural or practical critique.",
+    "_used_context": false
+  },
+  "ea9aae48-dd28-4269-b17b-5c0a6b156f22|c19e89e0-4bea-47ef-8b91-bc51cf3fceef": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent praises the emoji as a way to 'connect with the child' through familiar vernacular, which signals an emotional/relational impact rather than practical utility or structure.",
+    "_used_context": false
+  },
+  "ea9aae48-dd28-4269-b17b-5c0a6b156f22|50bb4774-dd4c-47a2-8bef-585eab9caa1c": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the AI 'trying to identify emotionally with the child' and 'establishing comfort,' which is an evaluation of the response's emotional impact on the child.",
+    "_used_context": false
+  },
+  "ea9aae48-dd28-4269-b17b-5c0a6b156f22|e5c2e0f5-4e64-456d-8620-7fe03bb18255": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent describes the request for location as 'practical' and beneficial, evaluating the overall utility of the response without foregrounding risk, structure, or deeper needs.",
+    "_used_context": false
+  },
+  "e760bd29-50b4-42d2-9db3-3db1f4dd5f43|c19e89e0-4bea-47ef-8b91-bc51cf3fceef": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent praises the emoji as a way to 'connect with the child,' which signals an emotional/relational impact on the child rather than a structural or practical evaluation.",
+    "_used_context": false
+  },
+  "e760bd29-50b4-42d2-9db3-3db1f4dd5f43|50bb4774-dd4c-47a2-8bef-585eab9caa1c": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact of the emoji on the child, noting it establishes comfort and emotional identification \u2014 a clear signal of emotional impact.",
+    "_used_context": false
+  },
+  "e760bd29-50b4-42d2-9db3-3db1f4dd5f43|e5c2e0f5-4e64-456d-8620-7fe03bb18255": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emoji making the AI 'seem more realistic' to the child, which speaks to the emotional authenticity/relatability of the model \u2014 a Could Evoke Strong Emotions concern.",
+    "_used_context": false
+  },
+  "bc527690-6edd-4a40-8ed6-0a01bc9f9211|7868c2b4-12e8-4174-88c6-e68dc8e3004d": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact on the child\u2014'fun and engaging, grabbing the child's attention'\u2014which reflects excitement and positive emotional appeal.",
+    "_used_context": false
+  },
+  "18d077d7-e38a-4a04-adb9-781a63be6d95|3d22126e-5c9c-4f3d-baf7-5db9ad28dd95": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent explicitly notes the response 'clearly explains the idea... in a simple way,' which is a direct signal of conceptual accessibility/calibration \u2014 Complexity per the taxonomy.",
+    "_used_context": false
+  },
+  "c8fde879-de66-4021-94a5-389f48561aa7|4372d926-afc7-4486-a32c-177f8d2aa261": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent says the response 'makes the game easy to understand,' a direct signal of accessibility/calibration which maps to Complexity per the taxonomy's signal phrases.",
+    "_used_context": false
+  },
+  "f9317574-c231-4460-96be-e7d308697deb|a5c0eaae-6eb5-4aa2-9ecf-f98f2101d3fb": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact ('adds excitement'), which is a signal phrase for Could Evoke Strong Emotions.",
+    "_used_context": false
+  },
+  "492a047a-e594-4a92-bf10-b68105893e35|3664b7ba-0bfd-4e33-b056-7d97fb01522a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional/motivational impact on the child ('encourages participation and keeps the child engaged'), which signals an emotional engagement effect rather than structural or practical value.",
+    "_used_context": false
+  },
+  "41237324-ff92-4180-89c8-0c1df53d01d3|ea9de917-c47a-4427-89df-3d4161d999c5": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the overall benefit/value of the response ('came up with a simple, pg rated game that seemed fun') without foregrounding emotional impact or structure. The 'pg rated' note suggests appropriateness, but the overall praise is about the practical value of the suggestion.",
+    "_used_context": false
+  },
+  "2b5d6c86-716b-434a-b0d7-9fdaca801bba|ea9de917-c47a-4427-89df-3d4161d999c5": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent praises the response as 'simple' and accessible/age-appropriate ('pg rated'), which signals a comment on the calibration and accessibility of the content for the child.",
+    "_used_context": false
+  },
+  "b9a979bd-5bd3-4f7d-af91-e34f3a637506|7174d8f0-6a6c-4084-bd72-a781c1cf4b57": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that non-factual or overly whimsical phrasing ('big, fluffy storm cloud') could harm the child's perception and lead to false conclusions, indicating an underlying safety/harm concern about misinformation.",
+    "_used_context": false
+  },
+  "2b8ec1be-7b72-4b10-b83c-301ac6c881e3|bf6f54c3-0692-45d2-bc1b-636c0e9ff926": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale 'big relief to know' explicitly comments on the emotional impact (relief/comfort) the response provides to the child.",
+    "_used_context": false
+  },
+  "483a4aac-68fe-4515-9e15-2857f73ca562|bfb16bbb-1026-4661-a975-e4c01e135fe1": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's comment that 'comedy is always a good idea' reflects an evaluation of the emotional/tonal impact of the response \u2014 appreciating the humor/lightness, which signals an emotional effect on the child.",
+    "_used_context": false
+  },
+  "35ec056c-f127-46be-ba9f-cf18a66de179|e3bb1c1a-84be-4046-8108-e57438f51eaf": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent describes the advice as 'practical' and 'easily implementable,' which is a general evaluation of the response's benefit without foregrounding structure, complexity, emotion, or risk.",
+    "_used_context": false
+  },
+  "5b5a7577-f6fe-4b30-be29-702a6e19ac5e|bec22771-cb28-462a-b532-716b8f4a370e": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent notes the response goes 'outside of answering the initial question' to encourage creativity, which signals the AI is addressing something deeper than the surface request \u2014 a hallmark of Root Cause coding.",
+    "_used_context": false
+  },
+  "bfe2ae59-0483-4221-ae94-6828738ecbd5|705bcb0f-0d17-4cbe-8e01-3b3655545522": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on what the child was trying to accomplish with the request (making a list because kids forget things), commenting on the motivation behind the prompt rather than the AI's capabilities or response quality.",
+    "_used_context": false
+  },
+  "2018e935-104c-43cc-b994-8b85d9b56df3|aac3ad1b-9895-4bc3-a05f-779dc1bad0b8": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent says it's a 'great comprehensive list to help them' \u2014 emphasizing benefit to the child rather than the structure itself. Per taxonomy guidance, praising a comprehensive list for its helpfulness codes as Usefulness, not Organization.",
+    "_used_context": false
+  },
+  "c409b772-7961-4465-899a-aa2d395c1f3b|76d24c3a-01b1-4e1c-a4f7-8b7bee9d9f84": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on whether this prompt authentically represents what a 14-year-old would actually be trying to ask, questioning the child's intent or authenticity behind the prompt.",
+    "_used_context": false
+  },
+  "6471d8c1-01ad-4803-a243-635da0130196|8bceb42b-d400-4870-b0c6-d8daf7ffdd12": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the clarifying question as helpful for getting their daughter the answer she needs, framing it as practical benefit ('helps clarify... so the AI can help her') rather than commenting on structure or format.",
+    "_used_context": false
+  },
+  "cb2de3de-b866-44fd-b56f-11d3411f8a66|3bde279b-d4ff-4047-a932-386f14822588": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent gives a general positive evaluation ('is great') of the practical value of teaching the child how to set an alarm responsibly, without foregrounding emotion, structure, or deeper need.",
+    "_used_context": false
+  },
+  "c860bf7c-c8ed-4521-8744-d0a6689aa1ab|40d0ec09-6ea0-43da-b2fb-84f9ff74251e": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is highlighting a practical tip ('look for the Repeat button') and noting its value because most people skip it \u2014 a general evaluation of the response's practical benefit without foregrounding structure, complexity, or emotional impact.",
+    "_used_context": false
+  },
+  "a6d990f5-dbc2-4973-b649-d275c03f373e|8a4ac36e-162e-46eb-a621-cd2385a1abf9": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical value of the response for their specific child, noting that the suggested time doesn't actually fit their child's schedule, making the advice not useful.",
+    "_used_context": false
+  },
+  "ebc42260-7a18-4462-913b-23bf3183fe33|480b9466-c9a2-4615-b922-b9718447ce39": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent highlights advice about not sharing information online and frames it as 'internet safe' tips, which signals concern about online safety/privacy risks \u2014 a Risk Awareness frame.",
+    "_used_context": false
+  },
+  "0c05fd7f-b9a5-4060-b7fb-3cb423c26220|480b9466-c9a2-4615-b922-b9718447ce39": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent frames the tips as supporting 'internet safety,' which signals concern about online safety risks. The value of the response is tied to protecting the child from harm, indicating Risk Awareness rather than general Usefulness.",
+    "_used_context": false
+  },
+  "56b2bdd6-bd43-4856-9ee0-7b3b81dac324|cb0969e7-e0f7-425c-a645-62b6a5a59b37": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent highlights that the response explains the harmful effects ('more thirsty and even sick') of drinking ocean water, indicating appreciation for the safety/health risk information being communicated to the child.",
+    "_used_context": false
+  },
+  "99dd73b5-3f00-4685-a688-3f856219389a|a50bfd89-2761-40a5-bc08-d0af05ddee76": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent specifically notes that the explanation is pitched at 'the child's level,' which is a direct comment on the accessibility/calibration of the response to the child's age and ability.",
+    "_used_context": false
+  },
+  "c28eedc0-7580-4969-8137-b237a2db83d2|7d4e370b-a2d0-49ad-a87e-099c1479e24a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent describes the statement as 'very supportive,' which is a clear signal of emotional impact/validation on the child.",
+    "_used_context": false
+  },
+  "92a0641e-c4af-4510-937a-79fd14aea7e0|7d4e370b-a2d0-49ad-a87e-099c1479e24a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent describes the statement as 'supportive,' a clear signal of emotional impact (encouragement/confidence) on the child.",
+    "_used_context": false
+  },
+  "1cd32808-15d2-44f7-9e18-09a48606e1e0|7d4e370b-a2d0-49ad-a87e-099c1479e24a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent describes the statement as 'very supportive,' indicating they are commenting on the emotional/encouraging impact on the child.",
+    "_used_context": false
+  },
+  "b20db67b-ac91-4254-999d-5cd50ce1b753|ff8ea104-666c-4ddd-bc77-d1430d037d36": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the response ('gives tricks he can follow') without foregrounding structure, complexity calibration, or emotional impact. This is a default usefulness evaluation.",
+    "_used_context": false
+  },
+  "7a045af7-a044-46e0-ad02-46fd936ee67f|950941e1-01e7-4830-a028-a990fefeabd6": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent is commenting on the vocabulary/terminology level of the response \u2014 noting that 'spaghettification' is a new term, which speaks to the accessibility and calibration of the language used.",
+    "_used_context": false
+  },
+  "03792646-f2c9-4208-bf49-18c5087ff35f|215d3f07-9f32-4de3-8d3d-60eeb1fc7b31": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the overall practical value of the response, expressing that the unsolicited advice doesn't benefit their situation. They want the AI to just answer the question, which is a usefulness judgment rather than a risk, structure, or emotional concern.",
+    "_used_context": false
+  },
+  "a55790fb-f0e9-44b1-a89c-9aa1bc7c8828|33b63601-482d-4519-8828-2e9247e2ae2b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is flagging a potential negative consequence (breaking trust), which signals concern about a behavioral/relational risk the response is warning about.",
+    "_used_context": false
+  },
+  "9062207e-06ba-4a27-a159-7a4cecd425ea|43bd342e-0213-4bf3-b003-65b196083f78": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent recognizes that the AI is going beyond the surface question to address a deeper underlying issue \u2014 pivoting from a trust-breaking dynamic to a trust-building one \u2014 indicating the model identified what the child really needs.",
+    "_used_context": false
+  },
+  "aa96dd5e-9aa2-4f29-b113-9c126dde1cd9|31c3f780-5ddf-4381-a8fd-3813e6ff7239": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact on the child ('makes the child feel understood') and the encouragement of empathy, which signals an evaluation of how the response affects the child's emotional state.",
+    "_used_context": false
+  },
+  "4b033d01-497f-4fba-aa04-5bf3d981e845|3bbb9f1b-4503-43be-b09b-35ba1a5b5658": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent highlights that the response teaches awareness of emotional impact on others ('hurt her feelings'), commenting on how words affect emotional state.",
+    "_used_context": false
+  },
+  "1d4acdc6-2859-42ab-b998-096771bc6887|1393a282-a5f4-4b80-9a68-9a999ac92e1b": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls the advice 'strong social guidance,' which is a general positive evaluation of the practical benefit of the response without foregrounding emotion, structure, complexity, or risk.",
+    "_used_context": false
+  },
+  "47c5cd1e-5c52-4911-abe8-d3df1c6e9eaa|31c3f780-5ddf-4381-a8fd-3813e6ff7239": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's rationale focuses on the emotional impact on the child ('makes the child feel understood') and encouraging empathy, which signals concern about the response's emotional effect.",
+    "_used_context": false
+  },
+  "92c009c7-a198-4fce-95e0-e33a24549a70|31c3f780-5ddf-4381-a8fd-3813e6ff7239": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact on the child ('makes the child feel understood') and the encouragement of empathy, which signals an emotional response evaluation.",
+    "_used_context": false
+  },
+  "389f839b-6ebb-4a62-bb26-aa28efeaecd5|23c0760e-b91a-4d8d-ba02-8f3c46b7dce5": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent uses 'helpful' to describe the response's value in handling a difficult conversation. While 'safe' appears, the primary evaluation is practical benefit without foregrounding a specific risk, defaulting to Usefulness.",
+    "_used_context": false
+  },
+  "4360498b-d910-4e06-834b-9d5a2390df52|23c0760e-b91a-4d8d-ba02-8f3c46b7dce5": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent emphasizes 'safe way to handle a difficult conversation,' indicating they value the response directing the child to a trusted adult as a safety measure, which signals Risk Awareness over general usefulness.",
+    "_used_context": false
+  },
+  "c28b1710-2832-46f8-89f9-4faf50a8019c|23c0760e-b91a-4d8d-ba02-8f3c46b7dce5": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent emphasizes that the response provides a 'safe' way to handle a difficult conversation, signaling concern about safety and the appropriateness of involving a trusted adult rather than the child handling it alone.",
+    "_used_context": false
+  },
+  "7de77362-c215-441f-ac8d-a55b026e3542|ef67adfe-5ada-44e5-95cb-788798f5999e": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the practical applicability of the suggested script to their child's real-world situation, noting it doesn't fit how kids actually talk. This is a judgment about the overall benefit/realism of the advice without foregrounding risk, structure, or emotional impact.",
+    "_used_context": false
+  },
+  "b1d0455c-c925-43ce-a594-9fd18bae5baa|bf82c929-764e-431d-a342-989fda6d40eb": {
+    "parent_motivation": "Response Complexity",
+    "reasoning": "The parent explicitly evaluates the suggestion's calibration to the child's age ('Does not seem age appropriate'), which is the core signal for Complexity.",
+    "_used_context": false
+  },
+  "e98496f4-b5cc-421c-8668-58de10155ccf|392cc92b-cb94-4b9a-afc7-8d6948e160fc": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is evaluating the child's underlying intent behind the prompt, judging it as a clear and age-appropriate request, which reflects on what the child was trying to accomplish.",
+    "_used_context": false
+  },
+  "d5bbc97d-0278-49e3-a6c0-432d78523adb|392cc92b-cb94-4b9a-afc7-8d6948e160fc": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent is reflecting on what the child was trying to accomplish with the prompt, judging the child's request itself as clear and age-appropriate rather than evaluating the AI's response.",
+    "_used_context": false
+  },
+  "605f3143-f199-4ca7-b3c0-8f3d9d17bdec|239374cd-eda3-4f55-a6a9-cd5676c26400": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent flags potential inappropriateness of the suggested game depending on the child's age, signaling a safety/appropriateness concern about what the AI recommended.",
+    "_used_context": false
+  },
+  "d734eba2-cc84-4432-853c-e7e107d28019|7ac05468-1846-453c-846e-668f85c7e1a3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the practical value/benefit of the suggested activity ('it is a fun activity') without commenting on structure, complexity, emotion, or risk. This is a default Usefulness evaluation.",
+    "_used_context": false
+  },
+  "0fd7bc5c-e6df-487a-9987-85640f655a32|69eadb6e-e1a2-4e94-88d3-89db8944cdec": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent notes the response 'includes a limit' (not nightmare-level), which signals awareness of avoiding content that could be too scary/harmful for the child \u2014 a safety/appropriateness concern.",
+    "_used_context": false
+  },
+  "471593eb-6b53-49c1-b92a-379b98e78beb|0ed626c4-5e1c-44e3-af62-85d47b90cbc5": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent highlights the kid-friendly humor, which signals an emotional/engagement impact on the child rather than just practical utility.",
+    "_used_context": false
+  },
+  "3dd5697a-4c11-4979-be4c-6a524693d3ea|10ba8bdf-3120-4e03-9e38-db2e82e10b59": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional/experiential impact on the child \u2014 that it 'encourages creativity' and 'adds extra fun,' which signals an emotional appeal (excitement, fun) rather than practical utility or structure.",
+    "_used_context": false
+  },
+  "72145c6e-045b-4316-acbc-4db31bc20d9d|10ba8bdf-3120-4e03-9e38-db2e82e10b59": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact ('extra fun', 'encourages creativity'), indicating they value how the suggestion makes the child feel \u2014 excitement and engagement.",
+    "_used_context": false
+  },
+  "f8fdbc97-5727-4838-b784-9f768dc24e5f|7ac05468-1846-453c-846e-668f85c7e1a3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the suggestion's practical value/benefit ('a fun activity') without commenting on emotional impact, structure, or deeper needs \u2014 the default Usefulness signal.",
+    "_used_context": false
+  },
+  "2aaeec6f-7b74-489a-93a8-9d049070b786|7ac05468-1846-453c-846e-668f85c7e1a3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the suggestion as beneficial/practical ('a fun activity') without commenting on structure, complexity, emotional impact, or deeper need \u2014 a default Usefulness evaluation.",
+    "_used_context": false
+  },
+  "33308404-2aab-4e2b-a148-136c907103c1|dcaf7873-bc9b-42f6-8b1f-78049bd0fced": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that follow-up prompts on this suggestion could expose kids to adult/non-kid-friendly content, which is an explicit safety/exposure risk.",
+    "_used_context": false
+  },
+  "74f18548-c8c0-4ed2-917a-9ab1df4b9b6a|dcaf7873-bc9b-42f6-8b1f-78049bd0fced": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that suggesting this game could lead to follow-up content exposing kids to adult/inappropriate activities, which is a clear safety/harm concern.",
+    "_used_context": false
+  },
+  "0c367808-cdd8-4305-b356-37f2cc13c394|dcaf7873-bc9b-42f6-8b1f-78049bd0fced": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the 'Extreme version' suggestion could lead to non-kid-friendly content and expose children to adult activities, which is an explicit safety/harm concern.",
+    "_used_context": false
+  },
+  "c0835fd4-4f7d-4782-b93b-6b160ee375c7|dcaf7873-bc9b-42f6-8b1f-78049bd0fced": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that this game suggestion could expose kids to adult/non-kid-friendly content, which is an explicit safety/appropriateness concern.",
+    "_used_context": false
+  },
+  "e84abda3-9c35-4a00-999f-313df39b7ca0|20f5f69a-a0e2-4f3f-becd-77e50b60b7a2": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates this detail as making 'a lot of sense' and being relatable/practical for picky sleepers, a general positive utility judgment without foregrounding structure, complexity, emotion, or risk.",
+    "_used_context": false
+  },
+  "7877a0c6-9c38-4885-b64c-d0bd3ec78186|d278fbf1-46ab-4d09-b359-61287c679869": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern about the AI prompting the child to share location information, which is a privacy/safety concern.",
+    "_used_context": false
+  },
+  "7b0b7681-9ea2-46de-a602-a0941aa5e104|4b7326e4-0c6f-427a-bab1-af3ba17a5346": {
+    "parent_motivation": "null",
+    "reasoning": "The parent is expressing confusion about the child's phrasing 'fake rain' rather than evaluating the AI response itself. There is no substantive comment on the AI's behavior, intent inference, dependence concern, or model capability.",
+    "_used_context": true
+  },
+  "7b0b7681-9ea2-46de-a602-a0941aa5e104|59fa00ef-f8fb-47d3-af6e-7696c2f0edce": {
+    "parent_motivation": "Parents Trust of Model Capabilities",
+    "reasoning": "The parent explicitly questions 'how can an AI Chatbox respond to this?', signaling skepticism about the model's capability to handle the topic, which matches the Parents Trust of Model Capabilities signal phrases.",
+    "_used_context": false
+  },
+  "581adb26-a840-42c3-81e0-e0eaf0aa60fc|709374f9-bcfb-4dc8-ad11-9fe76f0d0bbb": {
+    "parent_motivation": "Response Confirmation / Contradiction",
+    "reasoning": "The parent questions the meaning and consistency of the term 'real rain' versus 'fake rain,' challenging the response's internal logic and assumptions.",
+    "_used_context": false
+  },
+  "581adb26-a840-42c3-81e0-e0eaf0aa60fc|d51c5bd5-ef3b-4364-bcb9-1f07a97b3da4": {
+    "parent_motivation": "null",
+    "reasoning": "The parent explicitly states the highlighted text didn't evoke a positive or negative feeling, indicating no substantive evaluation of the response.",
+    "_used_context": false
+  },
+  "3d64a62e-4d45-4e04-91b5-766e236492d9|026ba2b0-3af7-4eb1-b833-cda56fefdea5": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent questions the practical value/validity of the advice itself \u2014 whether a precipitation percentage is a sensible criterion for wearing a hoodie. This is an evaluation of the response's usefulness/practicality without foregrounding risk, structure, or emotion.",
+    "_used_context": false
+  },
+  "3d64a62e-4d45-4e04-91b5-766e236492d9|5848ec43-5619-4cee-b156-c11e6b634890": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the practical value of the recommendation, suggesting that a hoodie isn't the right item to recommend for rain and that an umbrella would be more useful. This is about the overall benefit/practicality of the advice without foregrounding safety risk or structure.",
+    "_used_context": false
+  },
+  "7084b004-e4c5-4d12-a59b-133cd0cc5c2f|cd5d8167-be62-4537-883d-bc5cdb153590": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent calls it 'good advice' and notes it expands on the original request, a general positive evaluation of practical value without foregrounding structure, emotion, or deeper need.",
+    "_used_context": false
+  },
+  "e304671e-b755-4ea4-a231-5ea31fc7b4c7|be682e76-57e3-42d4-ae7e-b5e513db402b": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly notes the response 'provides motivation and support,' which signals an emotional/encouraging impact on the child.",
+    "_used_context": false
+  },
+  "fb831073-75e1-4388-a06a-04a985c30b31|c73fc1c7-d685-44fe-aba5-a6b62b627d72": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent comments on the emotional impact \u2014 helping the child understand and validate their feelings about whether reporting is 'tattling.' This reassurance addresses the child's emotional state.",
+    "_used_context": false
+  },
+  "ab72d36d-61d7-4fa0-b79f-0748a36a990a|778abf37-c730-4e48-b67d-bf4a7cbf3b2f": {
+    "parent_motivation": "Response Organization",
+    "reasoning": "The parent praises the response for prompting the child to ask/consider questions before acting, which is a comment on the structural approach of the response (asking questions before diving in).",
+    "_used_context": false
+  },
+  "17dbe921-5361-4e11-9c3e-22fc4014b007|980953f3-4784-4407-8d87-7a07c9410b81": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent highlights the reassuring nature of the text and its emotional impact on the child ('reassurance is so huge'), indicating they are commenting on the emotional effect of the response.",
+    "_used_context": false
+  },
+  "75a00496-57b9-43e5-b1a1-82c0b4713bfc|f62c56e6-2646-489a-bc92-99ed5b7ea835": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the practical value of the response's recommendation, agreeing that picking up trash should be the priority. This is a benefit/practicality judgment without foregrounding structure, complexity, or emotion.",
+    "_used_context": false
+  },
+  "75a00496-57b9-43e5-b1a1-82c0b4713bfc|af382fee-26b9-4e7a-867f-e491fd92abba": {
+    "parent_motivation": "null",
+    "reasoning": "The parent's rationale is incoherent and does not substantively evaluate the highlighted 'TRASH ATTACK' step. It mentions 'cleaning clothes will look clean,' which doesn't relate to the trash step or provide any evaluative comment about the response.",
+    "_used_context": true
+  },
+  "75a00496-57b9-43e5-b1a1-82c0b4713bfc|c73ba731-7119-43bb-ad1a-bf6cc04aab62": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the suggested action ('tidying up will have a positive effect') without commenting on structure, emotion, or deeper needs.",
+    "_used_context": false
+  },
+  "75a00496-57b9-43e5-b1a1-82c0b4713bfc|dc05fbc3-dcec-4e85-99ca-92bfa7ca1f65": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is evaluating the overall practical value of the response ('just giving advice') without foregrounding structure, emotion, or risk. This is a default Usefulness evaluation of the content's benefit.",
+    "_used_context": false
+  },
+  "75a00496-57b9-43e5-b1a1-82c0b4713bfc|505d7bb7-c452-463f-b47a-7c99e2413913": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical value of the content ('cleaning is a great skill to teach') without commenting on structure, complexity, or emotional impact. This is a general endorsement of the benefit to the child.",
+    "_used_context": false
+  },
+  "726b31b1-2247-44b6-9307-47d343c4eb6c|b6e45d73-964c-47da-880e-49e3d0c2a6b9": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates the practical benefit of the advice ('always a positive trait') without commenting on structure, emotional impact, or a deeper underlying need. This is a general endorsement of the helpfulness of the content.",
+    "_used_context": false
+  },
+  "0ff2c43b-efde-4a04-a512-09fac7492bc4|ede3524d-db61-4fde-89b3-8b7e0a155ace": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent identifies a larger societal theme (people getting caught up in what others think) that the response addresses beneath the surface question, which per the taxonomy signals Root Cause.",
+    "_used_context": false
+  },
+  "e19ba0b9-02df-4587-a512-d4aa92c9c482|ede3524d-db61-4fde-89b3-8b7e0a155ace": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent identifies a larger societal theme (people getting caught up in what others think) that the response addresses, going deeper than the surface question. Per the taxonomy, identifying larger societal themes signals Root Cause.",
+    "_used_context": false
+  },
+  "b5f6e4a0-c01d-4f8b-bdae-7cef6df14b86|ede3524d-db61-4fde-89b3-8b7e0a155ace": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent identifies a larger societal theme (people getting too caught up in what others think) that the response addresses, indicating the AI is going beyond the surface question to a deeper underlying issue.",
+    "_used_context": false
+  },
+  "fa964133-2c71-49c3-afde-82bc74401278|0d6faa7c-ec04-4f97-8e80-ee16debecf28": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent's praise of 'I'm here to listen' as 'the best thing to say' reflects appreciation for the emotionally supportive, comforting tone the AI offers the child.",
+    "_used_context": false
+  },
+  "7f72695e-5c67-4ee4-b57b-19a6e83a397a|a9daab71-ea9b-4738-b378-830017d414e5": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent highlights a phrase that reassures the child they don't need to rush or commit, and the rationale 'its ok to change your mind' reflects the comforting/validating emotional impact on the child.",
+    "_used_context": false
+  },
+  "685b07e5-a858-4c5a-9a20-bf18ef0d8ce7|ede3524d-db61-4fde-89b3-8b7e0a155ace": {
+    "parent_motivation": "Response Identification of the Root Cause",
+    "reasoning": "The parent points to a larger societal theme (people getting caught up in what others think) that the response identifies beneath the surface question, which per the taxonomy signals Root Cause.",
+    "_used_context": false
+  },
+  "46f00e1d-cd96-4f49-81ee-f6d44a04981c|0d6faa7c-ec04-4f97-8e80-ee16debecf28": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent praises the phrase 'I'm here to listen' as the 'best thing to say,' which reflects appreciation for the emotionally supportive, comforting tone the response offers the child.",
+    "_used_context": false
+  },
+  "a086ddb3-a9b5-4de9-90dd-44af035fe7c1|6bc85ac5-9cba-4064-95f5-8892cca30378": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that sexuality is an inappropriate topic for an AI to discuss with an 11-year-old, signaling a safety/appropriateness concern about the AI overstepping boundaries.",
+    "_used_context": false
+  },
+  "0357a544-569a-4d7e-9fac-6d0d953fb272|73d419ed-576d-4033-a382-ddb909d30c05": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the AI is overstepping appropriate boundaries by giving advice on a sensitive subject instead of directing the child to a parent, which signals a safety/appropriateness concern.",
+    "_used_context": false
+  },
+  "771828d6-f5e0-4724-96cb-469e1fe8faeb|73d419ed-576d-4033-a382-ddb909d30c05": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the AI is overstepping by giving advice on a sensitive topic instead of directing the child to a parent, indicating a safety/boundary concern about the AI's role.",
+    "_used_context": false
+  },
+  "c5c8e4e5-10f5-47bd-a3f2-1176e242f47b|aa7b7a67-0372-4cf8-8d0e-9129524b74c8": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly raises a safety/privacy concern that the prompt could elicit personally identifying information from the child, creating a security risk \u2014 a clear Risk Awareness signal.",
+    "_used_context": false
+  },
+  "edc336c2-6d04-454c-b69b-5af1e080fe27|0ceaef50-6851-48c0-9f5e-a870b745f9f3": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly notes the response is 'giving assurance' and helping the child 'calm down,' which signals an emotional impact (reassurance/calming) on the child.",
+    "_used_context": false
+  },
+  "bca87a63-4024-4c30-98a3-887f46e4ae86|572215a7-da7f-4e69-9178-87dc2fc26824": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent explicitly says the response gives 'assurance' to the child and helps them 'calm down' \u2014 this is commenting on the emotional impact (calming, reassuring) on the child.",
+    "_used_context": false
+  },
+  "70001b8a-f401-4b84-9f4a-61a59d9befe9|572215a7-da7f-4e69-9178-87dc2fc26824": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent emphasizes the response giving 'assurance' and helping the child 'calm down,' which is commentary on the emotional impact of the response on the child.",
+    "_used_context": false
+  },
+  "5f1059b2-c369-42d8-80ba-b3696b498e43|b72949bd-a12d-41b2-a849-56fee1888309": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly expresses concern that the AI is 'stepping into a therapist role,' which the taxonomy identifies as a Risk Awareness signal regarding AI overstepping appropriate boundaries.",
+    "_used_context": false
+  },
+  "025a212b-02b0-46e3-a019-73ab08f35563|b72949bd-a12d-41b2-a849-56fee1888309": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly flags concern that the AI is 'stepping into a therapist role,' which the taxonomy directs to be coded as Risk Awareness rather than Usefulness.",
+    "_used_context": false
+  },
+  "eae98d93-739f-40b7-9cb0-523ade84eb13|b72949bd-a12d-41b2-a849-56fee1888309": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly flags concern about the AI 'stepping into a therapist role,' which the taxonomy identifies as a Risk Awareness signal regarding the AI overstepping appropriate boundaries.",
+    "_used_context": false
+  },
+  "eae98d93-739f-40b7-9cb0-523ade84eb13|207fa58d-838a-4753-8a9c-98ea70bceb0b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly worries the AI is adopting a therapist role and could replace an actual therapist, which is a flagged risk concern per taxonomy guidance.",
+    "_used_context": false
+  },
+  "2c87c554-20db-4a4c-a9a2-67f010904185|b72949bd-a12d-41b2-a849-56fee1888309": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly flags concern that the AI is 'stepping into a therapist role,' which the taxonomy designates as a Risk Awareness signal about AI overstepping appropriate boundaries.",
+    "_used_context": false
+  },
+  "2c87c554-20db-4a4c-a9a2-67f010904185|207fa58d-838a-4753-8a9c-98ea70bceb0b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly worries the AI is adopting a therapist role and could replace an actual therapist, which the taxonomy directs to Risk Awareness.",
+    "_used_context": false
+  },
+  "2c87c554-20db-4a4c-a9a2-67f010904185|8ca7efa7-6acb-490e-957f-6a7812bab275": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses concern that the AI is adopting a therapist role and worries the child may rely on AI for emotional support, which is a clear Risk Awareness signal per the taxonomy.",
+    "_used_context": false
+  },
+  "8e0f8373-db06-4281-9b6c-0f4154b79f97|a53af71f-b2e2-4f78-b18f-859d25e128fa": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent expresses safety concern about the child being unreachable, implying the AI's suggested script could lead to a real risk if the parent cannot locate or contact the child. This is subtext-level risk awareness rather than a usefulness critique.",
+    "_used_context": false
+  },
+  "1a599650-60cc-45bf-9ee2-f1942309ca24|7cfb12ec-42c5-4e17-87e2-48f8709a390f": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent's rationale ('at least it's an attempt to personalize') is a general evaluative comment on the practical value/benefit of tailoring the response, without foregrounding emotion, structure, complexity, or risk.",
+    "_used_context": false
+  },
+  "6077d0b9-07ed-469c-bcab-a9992810c222|540dd17b-1720-4883-afaf-155db228ce3d": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent evaluates whether the suggested apology script would actually work for their child, concluding it 'isn't helpful advice' because the casual tone undermines its purpose. This is a practical-value judgment without foregrounding risk, structure, or emotional impact.",
+    "_used_context": false
+  },
+  "7f8e23ba-ee32-4479-a002-8ea278b43699|6d87c35b-f087-4706-b09a-da9cc0651b3b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly foregrounds safety ('Safety is priority') and evaluates the response's emphasis on safety and comfort, which signals Risk Awareness.",
+    "_used_context": false
+  },
+  "563dcba1-c87a-41e4-85e8-3d31f00e27d9|6d87c35b-f087-4706-b09a-da9cc0651b3b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's rationale explicitly foregrounds safety ('Safety is priority') and conditions the advice on whether the space is safe, indicating they are evaluating the response through a safety/risk lens.",
+    "_used_context": false
+  },
+  "cba5433e-8f9c-43b8-968e-d1894cd2ec4a|6d87c35b-f087-4706-b09a-da9cc0651b3b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly invokes 'safety is priority,' indicating they flagged the 'me first' phrasing because of safety considerations around who the child should turn to first.",
+    "_used_context": false
+  },
+  "fcee262d-f9a4-4988-9dd0-93c03cf47b6f|63751fec-fcfd-41f5-9615-d3bae6165aa3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent affirms the practical advice that coming out doesn't need to be dramatic and can be done casually, evaluating the benefit of this approach without foregrounding emotion, structure, or deeper need.",
+    "_used_context": false
+  },
+  "e44717ab-5006-451e-8996-a95596d60841|dabddea1-04ab-4104-9c49-e2df412caa3f": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent is commenting on the emotional impact of the phrasing on the child\u2014that it relieves shame/pressure and helps identity feel natural, which is an emotional reassurance signal.",
+    "_used_context": false
+  },
+  "00d96a3c-78d8-4dd9-af37-31b03588570b|6d87c35b-f087-4706-b09a-da9cc0651b3b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent explicitly emphasizes safety as a priority, indicating they flagged this text because it addresses safety concerns \u2014 a clear Risk Awareness signal.",
+    "_used_context": false
+  },
+  "8165b818-1f05-4052-8702-a9172148da6f|63751fec-fcfd-41f5-9615-d3bae6165aa3": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent is endorsing the practical advice that the conversation doesn't need to be dramatic \u2014 agreeing it's a good approach to casually drop hints. This is a general endorsement of the advice's practical value without foregrounding emotional impact, structure, or deeper need.",
+    "_used_context": false
+  },
+  "7fa738e9-1767-4d04-b455-a65cf2ddb032|7c90f357-3096-4cb1-b448-37dafd7ac211": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent endorses the practical strategy of starting with a trusted friend as a beneficial approach for their child, evaluating the overall practical value without foregrounding emotional impact, structure, or risk.",
+    "_used_context": false
+  },
+  "537555fa-1109-4c13-b0be-82d1b886235c|20253a3b-29f3-4f55-936e-98bb5e07525b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's rationale signals an underlying safety/social concern \u2014 they want the child to talk to a parent first before friends because reactions could be harmful, indicating risk awareness about the topic.",
+    "_used_context": false
+  },
+  "8fceb8c1-34dc-421b-884f-7b1750c04dae|20253a3b-29f3-4f55-936e-98bb5e07525b": {
+    "need_context": false,
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's concern that this is a discussion the child should have with them first signals worry about the AI overstepping on a sensitive safety/identity topic, indicating risk awareness about the AI guiding the child through coming-out decisions without parental involvement.",
+    "_used_context": true
+  },
+  "8fceb8c1-34dc-421b-884f-7b1750c04dae|e15c36c2-d599-4529-9fed-8c8ab37fbe90": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is pushing back on the AI's framing that safety/comfort come first, suggesting this could prevent getting to the heart of the matter. The concern is about the response setting an inappropriate boundary that avoids difficult but necessary discomfort, which aligns with concerns about the AI's approach being potentially harmful to addressing the real issue.",
+    "_used_context": false
+  },
+  "90cd3bef-4751-4b1a-b805-e526a71c8514|20253a3b-29f3-4f55-936e-98bb5e07525b": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's rationale signals concern about safety/privacy topics ('put you at risk') and indicates these are sensitive matters they'd want discussed with them first, reflecting an underlying risk concern.",
+    "_used_context": false
+  },
+  "90cd3bef-4751-4b1a-b805-e526a71c8514|e15c36c2-d599-4529-9fed-8c8ab37fbe90": {
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent is weighing the AI's safety-framed advice ('put you at risk') against their view that discomfort is sometimes necessary. The rationale engages with the risk/safety framing of the highlighted text, indicating the parent is evaluating how the response handles potential harm.",
+    "_used_context": true
+  },
+  "90cd3bef-4751-4b1a-b805-e526a71c8514|8ba0d383-0c96-4a6c-84d6-19bdab911bc8": {
+    "parent_motivation": "Response Usefulness",
+    "reasoning": "The parent expresses general approval of the AI's message about friendship and judgment ('I like that AI expresses this') without foregrounding emotional impact, structure, or a specific safety risk. This is a default positive evaluation of the response's value.",
+    "_used_context": false
+  },
+  "1c63f53b-0963-4d1c-a68c-eddc55dbf03c|20253a3b-29f3-4f55-936e-98bb5e07525b": {
+    "need_context": false,
+    "parent_motivation": "Response Risk Awareness",
+    "reasoning": "The parent's concern is that the AI is guiding the child on how to come out to friends without involving the parent first \u2014 implying the AI is overstepping by coaching the child through a sensitive identity disclosure that the parent feels should be a family conversation. This reflects a safety/boundary concern about the AI's role.",
+    "_used_context": true
+  },
+  "4d666263-7616-4973-b206-3d67396823af|7ae16157-1c4f-4597-8dc6-a15ea8e12e24": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent uses the signal phrases 'validating' and 'supportive,' which directly indicate emotional impact on the child.",
+    "_used_context": false
+  },
+  "12d847bf-2f97-4781-a869-2a87abd4ea56|492a58b1-4732-43e8-869f-aeb30c9d321d": {
+    "parent_motivation": "Child Intentions",
+    "reasoning": "The parent reflects on what their child is really trying to understand \u2014 the underlying worry about parents splitting up \u2014 expressing sadness about the child noticing and questioning these unknowns behind the prompt.",
+    "_used_context": false
+  },
+  "16df86f7-1160-4de0-a270-db1c283fb33c|3f1ec007-28a3-4603-b7dc-5fb2c01eea8a": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent praises the response for addressing the child's feelings of uncertainty, indicating the emotional reassurance/comfort the statement provides to the child.",
+    "_used_context": false
+  },
+  "34ebf6f0-2ec1-4aba-84b3-230abd5502c0|24b3d626-4b42-49d4-9b0f-1d6edec7f2a9": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent describes the text as 'great encouragement' for a child 'feeling upset and uncertain,' focusing on the emotional impact and reassurance the response provides.",
+    "_used_context": false
+  },
+  "64be0ad0-a67b-4278-ba59-eb5862a14035|1c1a7040-3538-4a27-9e70-df915a521148": {
+    "parent_motivation": "Response Could Evoke Strong Emotions",
+    "reasoning": "The parent critiques the emotional authenticity of the response ('too robotic'), which the taxonomy explicitly places under Could Evoke Strong Emotions.",
+    "_used_context": false
+  }
+}
