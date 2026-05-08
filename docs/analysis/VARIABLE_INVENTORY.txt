@@ -1,0 +1,77 @@
+VARIABLE INVENTORY
+==================
+267 highlights, 20 parents, 45 scenarios
+
+────────────────────────────────────────────────────────────
+PARENT DEMOGRAPHICS  (constant within parent, N=20)
+────────────────────────────────────────────────────────────
+parent_gender               female, male
+parent_age_group            25-34, 35-44, 45-54
+parent_education            high-school, some-college, associates, bachelors, masters, doctoral
+parent_ethnicity            white, black-african-american, asian, hispanic-latino (multi-select)
+area_of_residency           rural, suburban, urban
+genai_familiarity           tried_few_times, regular_user
+genai_usage_frequency       monthly_or_less, weekly, daily
+parenting_style             multi-select A / B / C / D  [letter→name mapping needs survey lookup]
+parent_llm_monitoring_level no_monitoring, plan_to, occasional_guidance, active_rules,
+                              not_applicable, other
+is_only_child               yes, no
+child_has_ai_use            yes, no, unsure
+child_ai_use_contexts       multi-select: school_homework, general_knowledge, games_chatting,
+                              personal_advice, other  (null for parents whose child doesn't use AI)
+parent_internet_use_frequency   constant = 8 for all parents
+
+────────────────────────────────────────────────────────────
+SCENARIO / PROMPT CHARACTERISTICS  (vary per highlight)
+────────────────────────────────────────────────────────────
+domain              Relationship Domain, Casual Knowledge Domain, Academic Domain
+
+subdomain           Common Sense (57), Privacy (31), Health (30), HW (28), Self (26),
+                    Finance (13), Behavioral Norms (12), Friendship (12),
+                    Protective Measures (11), Academic Standing (10),
+                    Community Engagement (10), Internet Interaction (9),
+                    STEM (7), Family (6), Politics (4), Human Nature (1)
+
+age_band            6-8, 9-12, 13-15, 16-18
+gender_identity     boy, girl, nonbinary
+trait               Agreeableness, Conscientiousness, Extraversion, Neuroticism, Openness
+trait_level         low, high
+sensitivity_level   available, sensitive, intimate
+relationship_frame  tool, companion
+space_type          private_space, shared_family_space
+breakdown_expected  yes, no  (whether scenario was designed to elicit a model failure)
+source              response, prompt  (whether highlight is from AI response or child message)
+
+────────────────────────────────────────────────────────────
+CODES  (from R5_highlights_coded, vary per highlight)
+────────────────────────────────────────────────────────────
+PARENT MOTIVATION  (why the parent flagged this highlight)      n
+  Response Usefulness                                          96
+  Response Risk Awareness                                      48
+  Response Could Evoke Strong Emotions                         46
+  Response Identification of the Root Cause                    20
+  Child Intentions                                             17
+  Response Complexity                                          15
+  Response Organization                                        15
+  Response Confirmation / Contradiction                         3
+  [5 highlights have no motivation code]
+
+MODEL STRATEGY  (what the AI was doing in the highlighted text)  n
+  Prompted Suggestions                                         89
+  Emphasize Emotional Support                                  47
+  Redirect with Alternatives                                   22
+  Clarify Child's Intent                                       19
+  Emphasize Risk Awareness                                     17
+  Consider Age Group                                           17
+  Unprompted Suggestions                                       11
+  Explain Problems in Prompt                                   11
+  Refuse Response and Explain                                   5
+  Encourage Introspection                                       5
+  Defer to Resources                                            2
+  [22 highlights have no strategy code]
+
+────────────────────────────────────────────────────────────
+OUTCOME
+────────────────────────────────────────────────────────────
+highlight_sentiment     1–7 integer  (267 non-null, overall mean 5.40)
+rationale_text          free-text parent explanation of the highlight
